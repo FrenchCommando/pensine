@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     var boards = await LocalStorage.loadBoards();
     if (boards.isEmpty) {
       boards = _defaultBoards();
-      await LocalStorage.saveBoards(boards);
+      await LocalStorage.saveAllBoards(boards);
     }
     setState(() {
       _boards = boards;
@@ -72,8 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  Future<void> _save() async {
-    await LocalStorage.saveBoards(_boards);
+  Future<void> _saveBoard(Board board) async {
+    await LocalStorage.saveBoard(board);
+  }
+
+  Future<void> _deleteBoard(String id) async {
+    await LocalStorage.deleteBoard(id);
   }
 
   void _createBoard() {
@@ -134,10 +138,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
+                final newBoard = Board(name: name, type: selectedType);
                 setState(() {
-                  _boards.add(Board(name: name, type: selectedType));
+                  _boards.add(newBoard);
                 });
-                _save();
+                _saveBoard(newBoard);
                 Navigator.pop(ctx);
               },
               child: const Text('Create'),
@@ -172,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final board = await BoardIO.importBoard(context);
               if (board != null) {
                 setState(() => _boards.add(board));
-                _save();
+                _saveBoard(board);
               }
             },
           ),
@@ -223,8 +228,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Icon(Icons.delete, color: PensineColors.accent),
                       ),
                       onDismissed: (_) {
+                        final removed = _boards[i];
                         setState(() => _boards.removeAt(i));
-                        _save();
+                        _deleteBoard(removed.id);
                       },
                       child: Card(
                         color: PensineColors.card(context),
@@ -242,8 +248,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (value == 'export') {
                                 BoardIO.exportBoard(board, context);
                               } else if (value == 'delete') {
+                                final removed = _boards[i];
                                 setState(() => _boards.removeAt(i));
-                                _save();
+                                _deleteBoard(removed.id);
                               }
                             },
                             itemBuilder: (_) => [
@@ -257,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               MaterialPageRoute(
                                 builder: (_) => BoardScreen(
                                   board: board,
-                                  onChanged: _save,
+                                  onChanged: () => _saveBoard(board),
                                 ),
                               ),
                             );

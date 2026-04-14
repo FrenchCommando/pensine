@@ -1,3 +1,4 @@
-// Stub for web — file storage is not used on web
-Future<String?> loadFromFile() async => null;
-Future<void> saveToFile(String data) async {}
+Future<List<String>> loadAllBoardFiles() async => [];
+Future<void> saveBoardFile(String id, String data) async {}
+Future<void> deleteBoardFile(String id) async {}
+Future<String?> loadLegacyFile() async => null;

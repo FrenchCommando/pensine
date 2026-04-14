@@ -14,10 +14,11 @@
 - Local: `flutter build web && npx serve build/web`
 
 ## Storage
-- `shared_preferences` on web and mobile, `path_provider` + JSON file on desktop (see `lib/storage/local_storage.dart`).
-  - Web: browser localStorage
-  - Mobile: NSUserDefaults (iOS) / SharedPreferences (Android)
-  - Desktop: JSON file in app support directory
+- One file/key per board (UUID as identifier), not a single blob
+- Desktop: `boards/{id}.pensine` files in app support directory via `path_provider`
+- Web/Mobile: one `shared_preferences` key per board + index key for board IDs
+- Legacy single-file format (`pensine_data.json` / `pensine_boards` key) auto-migrates on first load
+- Saves are per-board (only the changed board is written)
 
 ## App Icon
 - Custom pensieve (memory basin) icon in `assets/app_icon.svg`
