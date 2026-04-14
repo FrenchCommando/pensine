@@ -34,5 +34,50 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- iOS PWA install hint -->
+  <style>
+    #ios-install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1A1A2E;
+      color: #F5E6CC;
+      font-family: -apple-system, sans-serif;
+      font-size: 14px;
+      padding: 14px 16px;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
+    }
+    #ios-install-banner button {
+      background: none;
+      border: none;
+      color: #E94560;
+      font-size: 14px;
+      font-weight: bold;
+      margin-left: 12px;
+      cursor: pointer;
+    }
+  </style>
+  <div id="ios-install-banner">
+    Install Pensine: tap <strong>Share</strong> then <strong>Add to Home Screen</strong>
+    <button onclick="dismissIOSBanner()">Got it</button>
+  </div>
+  <script>
+    function dismissIOSBanner() {
+      document.getElementById('ios-install-banner').style.display = 'none';
+      localStorage.setItem('ios_install_dismissed', '1');
+    }
+    // Show only on iOS Safari, not already installed as PWA, not previously dismissed
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var isStandalone = window.navigator.standalone === true;
+    var dismissed = localStorage.getItem('ios_install_dismissed');
+    if (isIOS && !isStandalone && !dismissed) {
+      document.getElementById('ios-install-banner').style.display = 'block';
+    }
+  </script>
 </body>
 </html>
