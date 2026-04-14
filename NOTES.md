@@ -36,9 +36,12 @@
 - iOS: `flutter build ios`
 - Web: `flutter build web`
 
+### CI
+- GitHub Actions workflow in `.github/workflows/ci.yml`
+- Runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+
 ### Not yet set up
-- CI/CD pipeline
-- Web deployment (GitHub Pages)
+- CD: web deployment (GitHub Pages), release builds
 - App store signing
 
 ## Next Steps
