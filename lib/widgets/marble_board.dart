@@ -130,7 +130,8 @@ class MarbleBoardState extends State<MarbleBoard>
         final color =
             PensineColors.bubbles[item.colorIndex % PensineColors.bubbles.length];
         final baseRadius = minRadius + _random.nextDouble() * (maxRadius - minRadius);
-        final radius = baseRadius * item.sizeMultiplier;
+        final maxR = _size.width * 0.4;
+        final radius = (baseRadius * item.sizeMultiplier).clamp(0.0, maxR);
         _marbles.add(Marble(
           item: item,
           color: color,
@@ -150,7 +151,7 @@ class MarbleBoardState extends State<MarbleBoard>
     for (final marble in _marbles) {
       marble.color =
           PensineColors.bubbles[marble.item.colorIndex % PensineColors.bubbles.length];
-      marble.radius = marble.baseRadius * marble.item.sizeMultiplier;
+      marble.radius = (marble.baseRadius * marble.item.sizeMultiplier).clamp(0.0, _size.width * 0.4);
     }
     final currentIds = widget.items.map((i) => i.id).toSet();
     _marbles.removeWhere((m) => !currentIds.contains(m.item.id));
@@ -330,8 +331,9 @@ class MarbleBoardState extends State<MarbleBoard>
                   // Tap flipped card = wrong, flip back and grow slightly
                   setState(() {
                     marble.flipped = false;
-                    marble.baseRadius = (marble.baseRadius * 1.15).clamp(minRadius, maxRadius * 2.5);
-                    marble.radius = marble.baseRadius * marble.item.sizeMultiplier;
+                    final maxInflated = _size.width * 0.4 / marble.item.sizeMultiplier;
+                    marble.baseRadius = (marble.baseRadius * 1.15).clamp(minRadius, maxInflated);
+                    marble.radius = (marble.baseRadius * marble.item.sizeMultiplier).clamp(0.0, _size.width * 0.4);
                   });
                 } else {
                   // Tap unflipped card = reveal

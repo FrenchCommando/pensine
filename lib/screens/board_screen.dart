@@ -168,11 +168,15 @@ class _BoardScreenState extends State<BoardScreen> {
         ],
       ),
       body: widget.board.items.isEmpty
-          ? Center(
-              child: Text(
-                'Empty board.\nLong-press to add something.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: PensineColors.muted(context), fontSize: 16),
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: _addItem,
+              child: Center(
+                child: Text(
+                  'Empty board.\nLong-press to add something.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: PensineColors.muted(context), fontSize: 16),
+                ),
               ),
             )
           : _buildContent(),
