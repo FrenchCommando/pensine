@@ -31,6 +31,7 @@
 - **Thoughts**: tap to expand/collapse, long-press to edit
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
 - **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
+- **Steps (checklist)**: sequential order only — active step inflates and shows description, numbered marbles, tap to complete next step, reset button
 - **All boards**: drag to fling, long-press empty space to add, shake button scatters marbles
 
 ## UI

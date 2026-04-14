@@ -61,6 +61,14 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardItem(content: 'Cœur', backContent: 'Heart', colorIndex: 6),
         BoardItem(content: 'Nuage', backContent: 'Cloud', colorIndex: 7),
       ]),
+      Board(name: 'Pancakes', type: BoardType.checklist, items: [
+        BoardItem(content: 'Mix dry ingredients', description: '1 cup flour, 2 tbsp sugar, pinch of salt.', colorIndex: 0),
+        BoardItem(content: 'Add wet ingredients', description: '1 egg, 3/4 cup milk, 2 tbsp melted butter.', colorIndex: 1),
+        BoardItem(content: 'Whisk until smooth', description: 'A few lumps are fine — don\'t overmix!', colorIndex: 2),
+        BoardItem(content: 'Heat the pan', description: 'Medium heat, small knob of butter. Wait until it sizzles.', colorIndex: 3),
+        BoardItem(content: 'Cook pancakes', description: 'Pour 1/4 cup batter. Flip when bubbles pop on the surface.', colorIndex: 4),
+        BoardItem(content: 'Serve', description: 'Stack them up. Maple syrup, berries, whatever you like.', colorIndex: 5),
+      ]),
     ];
   }
 
@@ -104,6 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: Text('Cards'),
                     icon: Icon(Icons.style),
                   ),
+                  ButtonSegment(
+                    value: BoardType.checklist,
+                    label: Text('Steps'),
+                    icon: Icon(Icons.format_list_numbered),
+                  ),
                 ],
                 selected: {selectedType},
                 onSelectionChanged: (v) {
@@ -143,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardType.thoughts => Icons.cloud,
         BoardType.todo => Icons.check_circle_outline,
         BoardType.flashcards => Icons.style,
+        BoardType.checklist => Icons.format_list_numbered,
       };
 
   @override

@@ -136,7 +136,7 @@ class _BoardScreenState extends State<BoardScreen> {
                 }
               },
             ),
-          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards) &&
+          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards || widget.board.type == BoardType.checklist) &&
               widget.board.items.any((i) => i.done))
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -207,6 +207,13 @@ class _BoardScreenState extends State<BoardScreen> {
           case BoardType.flashcards:
             // Flip is handled inside MarbleBoard
             break;
+          case BoardType.checklist:
+            // Only allow catching the next unchecked item in order
+            final nextIndex = widget.board.items.indexWhere((i) => !i.done);
+            if (nextIndex >= 0 && widget.board.items[nextIndex].id == item.id) {
+              setState(() => item.done = true);
+              widget.onChanged();
+            }
         }
       },
       onLongPress: (item) => _editItem(item),

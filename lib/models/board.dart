@@ -2,7 +2,7 @@ import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
 
-enum BoardType { thoughts, todo, flashcards }
+enum BoardType { thoughts, todo, flashcards, checklist }
 
 class Board {
   final String id;

@@ -26,6 +26,7 @@ void showPensineAbout(BuildContext context) {
           Text('  Thoughts — tap to expand'),
           Text('  To-do — tap to catch in the net'),
           Text('  Flashcards — tap to flip, again to retry, double-tap for correct'),
+          Text('  Steps — tap to complete in order'),
           SizedBox(height: 16),
           Text(
             'Penser = to think',

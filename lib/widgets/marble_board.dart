@@ -168,15 +168,22 @@ class MarbleBoardState extends State<MarbleBoard>
       final m = _marbles[i];
       if (i == _dragIndex) continue;
 
-      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards) && m.item.done;
+      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards || widget.boardType == BoardType.checklist) && m.item.done;
 
       // Animate scale
       final targetScale = isCaught ? caughtScale : 1.0;
       m.scale += (targetScale - m.scale) * 0.08;
 
-      // Animate expand
+      // Determine if this is the active checklist item
+      final isActiveChecklist = widget.boardType == BoardType.checklist &&
+          !m.item.done &&
+          widget.items.indexWhere((i) => !i.done) ==
+              widget.items.indexWhere((i) => i.id == m.item.id);
+
+      // Animate expand (thoughts tap or active checklist item)
       final maxExpand = (_size.shortestSide * 0.45) / (m.radius * m.scale);
-      final targetExpand = m.expanded ? maxExpand.clamp(1.0, 4.0) : 1.0;
+      final shouldExpand = m.expanded || isActiveChecklist;
+      final targetExpand = shouldExpand ? maxExpand.clamp(1.0, 4.0) : 1.0;
       m.expandScale += (targetExpand - m.expandScale) * 0.1;
 
       if (isCaught) {
@@ -385,6 +392,7 @@ class MarbleBoardState extends State<MarbleBoard>
               netY: _netY,
               netSize: _netSize,
               brightness: Theme.of(context).brightness,
+              itemOrder: widget.items.map((i) => i.id).toList(),
             ),
           ),
         );
@@ -400,6 +408,7 @@ class _MarblePainter extends CustomPainter {
   final double netY;
   final double netSize;
   final Brightness brightness;
+  final List<String> itemOrder; // item IDs in board order
 
   _MarblePainter({
     required this.marbles,
@@ -408,6 +417,7 @@ class _MarblePainter extends CustomPainter {
     required this.netY,
     required this.netSize,
     required this.brightness,
+    required this.itemOrder,
   });
 
   Color get _overlayColor => brightness == Brightness.dark ? Colors.white : Colors.black;
@@ -415,7 +425,7 @@ class _MarblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Draw net for to-do and flashcard boards
-    if (boardType == BoardType.todo || boardType == BoardType.flashcards) {
+    if (boardType == BoardType.todo || boardType == BoardType.flashcards || boardType == BoardType.checklist) {
       _drawNet(canvas, size);
     }
 
@@ -429,13 +439,19 @@ class _MarblePainter extends CustomPainter {
           ? m.color
           : m.color;
 
-      final alpha = (boardType == BoardType.todo && isDone) ? 0.7 : 1.0;
+      final alpha = ((boardType == BoardType.todo || boardType == BoardType.checklist) && isDone) ? 0.7 : 1.0;
 
-      // Outer glow
+      // Determine if this is the active checklist item
+      final isActiveChecklist = boardType == BoardType.checklist &&
+          !isDone &&
+          itemOrder.indexWhere((id) => id == m.item.id) ==
+              itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
+
+      // Outer glow (stronger for active checklist item)
       final glowPaint = Paint()
-        ..color = drawColor.withValues(alpha: 0.15 * alpha)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isFlipped ? 18 : 12);
-      canvas.drawCircle(Offset(m.x, m.y), r + 4, glowPaint);
+        ..color = drawColor.withValues(alpha: isActiveChecklist ? 0.4 : 0.15 * alpha)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isActiveChecklist ? 24 : (isFlipped ? 18 : 12));
+      canvas.drawCircle(Offset(m.x, m.y), r + (isActiveChecklist ? 8 : 4), glowPaint);
 
       // Main marble with gradient
       final gradient = isFlipped
@@ -479,19 +495,23 @@ class _MarblePainter extends CustomPainter {
         displayText = m.item.content;
       }
 
-      final isExpanded = m.expanded && m.expandScale > 1.5;
+      final isActiveChecklist2 = boardType == BoardType.checklist &&
+          !isDone &&
+          itemOrder.indexOf(m.item.id) ==
+              itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
+      final isExpanded = (m.expanded || isActiveChecklist2) && m.expandScale > 1.5;
 
       if (isExpanded && m.item.description != null) {
         // Expanded: show title + description
-        final maxWidth = r * 1.4;
+        final maxWidth = r * 1.5;
         final titleStyle = TextStyle(
           color: Colors.white,
-          fontSize: r * 0.15,
+          fontSize: r * 0.2,
           fontWeight: FontWeight.w800,
         );
         final descStyle = TextStyle(
           color: Colors.white.withValues(alpha: 0.85),
-          fontSize: r * 0.1,
+          fontSize: r * 0.13,
           fontWeight: FontWeight.w500,
         );
 
@@ -573,6 +593,30 @@ class _MarblePainter extends CustomPainter {
           canvas,
           Offset(m.x - arrowPainter.width / 2, m.y + r * 0.55),
         );
+      }
+
+      // Step number for checklist
+      if (boardType == BoardType.checklist) {
+        final stepIndex = itemOrder.indexOf(m.item.id);
+        if (stepIndex >= 0) {
+          final stepPainter = TextPainter(
+            text: TextSpan(
+              text: '${stepIndex + 1}',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: isDone ? 0.4 : 0.7),
+                fontSize: r * 0.25,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.ltr,
+          );
+          stepPainter.layout();
+          stepPainter.paint(
+            canvas,
+            Offset(m.x - stepPainter.width / 2, m.y + r * 0.5),
+          );
+        }
       }
 
     }
