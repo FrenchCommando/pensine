@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // Lofi color palette
 class PensineColors {
@@ -47,11 +46,12 @@ ThemeData pensineTheme({Brightness brightness = Brightness.dark}) {
     colorScheme: isDark
         ? ColorScheme.dark(primary: PensineColors.accent, surface: sf)
         : ColorScheme.light(primary: PensineColors.accent, surface: sf),
-    textTheme: GoogleFonts.quicksandTextTheme(base.textTheme),
+    textTheme: base.textTheme.apply(fontFamily: 'Quicksand'),
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      titleTextStyle: GoogleFonts.quicksand(
+      titleTextStyle: TextStyle(
+        fontFamily: 'Quicksand',
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: tt,

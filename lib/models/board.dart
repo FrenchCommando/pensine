@@ -36,6 +36,22 @@ class Board {
         createdAt: DateTime.parse(json['createdAt']),
         items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
       );
+
+  /// Creates a copy with fresh IDs (for import).
+  Board copyWithNewIds() => Board(
+        name: name,
+        type: type,
+        items: items
+            .map((i) => BoardItem(
+                  content: i.content,
+                  description: i.description,
+                  backContent: i.backContent,
+                  done: i.done,
+                  colorIndex: i.colorIndex,
+                  sizeMultiplier: i.sizeMultiplier,
+                ))
+            .toList(),
+      );
 }
 
 class BoardItem {

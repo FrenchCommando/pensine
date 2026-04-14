@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter:*)"
+      "Bash(flutter:*)",
+      "Read(//c/Users/marti/AppData/Roaming/com.pensine/pensine/**)",
+      "Read(//c/Users/marti/AppData/**)"
     ]
   }
 }

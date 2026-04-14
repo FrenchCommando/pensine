@@ -37,8 +37,19 @@
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
 - About dialog accessible from all screens
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
+- Marble diameter capped at 80% of shortest screen side
+- Expanded thoughts bubble capped to fit screen
 - Text in marbles auto-shrinks to fit
 - Color picker in add/edit dialogs
+- iOS PWA install banner in `web/index.html` (shows once, dismissible)
+- Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
+
+## Export / Import
+- `.pensine` file format: versioned JSON envelope (`pensine_version: 1`) wrapping `Board.toJson()`
+- Export: save file dialog on desktop, file download on web, share sheet on mobile
+- Import: file picker on all platforms, generates new IDs to avoid collisions
+- Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
+- Implementation in `lib/services/board_io.dart` with conditional imports for web vs native
 
 ## License
 - Proprietary / All Rights Reserved (see `LICENSE`)
@@ -64,6 +75,11 @@
 ### CD
 - `.github/workflows/deploy.yml` — deploys to GitHub Pages after CI succeeds on main (uses `workflow_run`)
 
+### PWA
+- Flutter web builds include PWA support (manifest.json + service worker) by default
+- Android: browser prompts install natively
+- iOS: manual "Add to Home Screen" (install banner guides users)
+
 ### Not yet set up
-- Release builds (APK/IPA artifacts on GitHub releases)
+- Native mobile builds (APK/IPA) — PWA covers casual use for now
 - App store signing

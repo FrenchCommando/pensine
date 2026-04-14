@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../models/board.dart';
+import '../services/board_io.dart';
 import '../storage/local_storage.dart';
 import '../theme.dart';
 import '../widgets/about_dialog.dart';
@@ -151,6 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Pensine'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.file_open),
+            tooltip: 'Import board',
+            onPressed: () async {
+              final board = await BoardIO.importBoard(context);
+              if (board != null) {
+                setState(() => _boards.add(board));
+                _save();
+              }
+            },
+          ),
+          IconButton(
             icon: Icon(
               PensineApp.of(context)?.brightness == Brightness.dark
                   ? Icons.light_mode
@@ -210,7 +222,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             '${board.items.length} item${board.items.length == 1 ? '' : 's'}',
                             style: TextStyle(color: PensineColors.muted(context)),
                           ),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert),
+                            onSelected: (value) {
+                              if (value == 'export') {
+                                BoardIO.exportBoard(board, context);
+                              } else if (value == 'delete') {
+                                setState(() => _boards.removeAt(i));
+                                _save();
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'export', child: Text('Export')),
+                              const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            ],
+                          ),
                           onTap: () async {
                             await Navigator.push(
                               context,
