@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background gradient - lighter purple -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <!-- Basin glow -->
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.4">
+      <stop offset="0%" stop-color="#EDE9FE" stop-opacity="0.7"/>
+      <stop offset="60%" stop-color="#C4B5FD" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Swirl gradient -->
+    <linearGradient id="swirl" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#DDD6FE"/>
+      <stop offset="50%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#EDE9FE"/>
+    </linearGradient>
+    <!-- Basin body -->
+    <linearGradient id="basin" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#6D28D9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <!-- Subtle stars / particles -->
+  <circle cx="200" cy="180" r="4" fill="#EDE9FE" opacity="0.7"/>
+  <circle cx="780" cy="220" r="3.5" fill="#DDD6FE" opacity="0.6"/>
+  <circle cx="150" cy="450" r="3" fill="#EDE9FE" opacity="0.5"/>
+  <circle cx="870" cy="400" r="4" fill="#DDD6FE" opacity="0.6"/>
+  <circle cx="300" cy="280" r="3" fill="#C4B5FD" opacity="0.5"/>
+  <circle cx="720" cy="150" r="3" fill="#EDE9FE" opacity="0.6"/>
+  <circle cx="850" cy="620" r="3.5" fill="#DDD6FE" opacity="0.5"/>
+  <circle cx="180" cy="700" r="3" fill="#EDE9FE" opacity="0.45"/>
+  <circle cx="620" cy="120" r="2.5" fill="#C4B5FD" opacity="0.5"/>
+  <circle cx="400" cy="160" r="2" fill="#DDD6FE" opacity="0.55"/>
+
+  <!-- Glow behind basin -->
+  <ellipse cx="512" cy="520" rx="300" ry="220" fill="url(#glow)"/>
+
+  <!-- Basin / bowl shape -->
+  <path d="M280 480 Q280 420 360 400 L664 400 Q744 420 744 480 L710 650 Q700 720 620 740 L404 740 Q324 720 314 650 Z"
+        fill="url(#basin)"/>
+  <!-- Basin rim highlight -->
+  <path d="M300 480 Q300 430 370 410 L654 410 Q724 430 724 480"
+        fill="none" stroke="#DDD6FE" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+
+  <!-- Swirling wisps inside basin -->
+  <path d="M400 500 Q460 470 512 500 Q564 530 620 500"
+        fill="none" stroke="#EDE9FE" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <path d="M380 540 Q440 560 500 540 Q560 520 640 550"
+        fill="none" stroke="#DDD6FE" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+  <path d="M420 580 Q480 600 530 580 Q580 560 620 590"
+        fill="none" stroke="#C4B5FD" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Rising memory wisps above basin -->
+  <path d="M460 400 Q440 340 470 290 Q500 240 480 180"
+        fill="none" stroke="url(#swirl)" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+  <path d="M520 390 Q540 320 520 260 Q500 200 530 150"
+        fill="none" stroke="#DDD6FE" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M580 400 Q600 350 580 300 Q560 250 590 200"
+        fill="none" stroke="#EDE9FE" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Small floating orbs (memories) -->
+  <circle cx="475" cy="170" r="12" fill="#DDD6FE" opacity="0.85"/>
+  <circle cx="475" cy="170" r="5" fill="#FFFFFF" opacity="0.5"/>
+  <circle cx="535" cy="140" r="9" fill="#EDE9FE" opacity="0.8"/>
+  <circle cx="535" cy="140" r="4" fill="#FFFFFF" opacity="0.4"/>
+  <circle cx="595" cy="195" r="10" fill="#C4B5FD" opacity="0.75"/>
+  <circle cx="595" cy="195" r="4" fill="#FFFFFF" opacity="0.35"/>
+
+  <!-- Basin foot/pedestal -->
+  <path d="M440 740 L420 800 Q415 820 450 820 L574 820 Q609 820 604 800 L584 740"
+        fill="#6D28D9" opacity="0.9"/>
+  <ellipse cx="512" cy="820" rx="80" ry="10" fill="#7C3AED" opacity="0.7"/>
+</svg>
