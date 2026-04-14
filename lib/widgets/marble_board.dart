@@ -53,29 +53,57 @@ class MarbleBoard extends StatefulWidget {
   });
 
   @override
-  State<MarbleBoard> createState() => _MarbleBoardState();
+  State<MarbleBoard> createState() => MarbleBoardState();
 }
 
-class _MarbleBoardState extends State<MarbleBoard>
+class MarbleBoardState extends State<MarbleBoard>
     with SingleTickerProviderStateMixin {
   final List<Marble> _marbles = [];
+  List<Marble> get marbles => _marbles;
   late Ticker _ticker;
   final _random = Random();
+
+  void flipAll(bool flipped) {
+    setState(() {
+      for (final m in _marbles) {
+        m.flipped = flipped;
+      }
+    });
+  }
+
+  void shake() {
+    setState(() {
+      for (final m in _marbles) {
+        m.vx += (_random.nextDouble() - 0.5) * 600;
+        m.vy += (_random.nextDouble() - 0.5) * 600;
+      }
+    });
+  }
+
+  void resetSizes() {
+    setState(() {
+      for (final m in _marbles) {
+        m.baseRadius = minRadius + _random.nextDouble() * (maxRadius - minRadius);
+        m.radius = m.baseRadius * m.item.sizeMultiplier;
+      }
+    });
+  }
   Size _size = Size.zero;
 
   // Physics constants
   static const double damping = 0.95;
   static const double friction = 0.999;
-  static const double minRadius = 50.0;
-  static const double maxRadius = 72.0;
+  double get minRadius => _size.shortestSide * 0.1;
+  double get maxRadius => _size.shortestSide * 0.14;
   static const double caughtScale = 0.45;
 
   // Dragging
   int? _dragIndex;
 
   // Net position (bottom-right)
-  double get _netX => 70;
-  double get _netY => _size.height - 70;
+  double get _netSize => _size.shortestSide * 0.28;
+  double get _netX => _netSize * 0.8;
+  double get _netY => _size.height - _netSize * 0.8;
 
   @override
   void initState() {
@@ -139,7 +167,7 @@ class _MarbleBoardState extends State<MarbleBoard>
       final m = _marbles[i];
       if (i == _dragIndex) continue;
 
-      final isCaught = widget.boardType == BoardType.todo && m.item.done;
+      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards) && m.item.done;
 
       // Animate scale
       final targetScale = isCaught ? caughtScale : 1.0;
@@ -298,7 +326,17 @@ class _MarbleBoardState extends State<MarbleBoard>
                   marble.expanded = !marble.expanded;
                 });
               } else if (widget.boardType == BoardType.flashcards) {
-                setState(() => marble.flipped = !marble.flipped);
+                if (marble.flipped) {
+                  // Tap flipped card = wrong, flip back and grow slightly
+                  setState(() {
+                    marble.flipped = false;
+                    marble.baseRadius = (marble.baseRadius * 1.15).clamp(minRadius, maxRadius * 2.5);
+                    marble.radius = marble.baseRadius * marble.item.sizeMultiplier;
+                  });
+                } else {
+                  // Tap unflipped card = reveal
+                  setState(() => marble.flipped = true);
+                }
               } else {
                 widget.onTap(marble.item);
               }
@@ -309,6 +347,22 @@ class _MarbleBoardState extends State<MarbleBoard>
                   m.expanded = false;
                 }
               });
+            }
+          },
+          onDoubleTapDown: (details) {
+            if (widget.boardType == BoardType.flashcards) {
+              final idx = _hitTest(details.localPosition);
+              if (idx != null) {
+                final marble = _marbles[idx];
+                if (!marble.item.done) {
+                  // Double-tap = correct (works on either side)
+                  setState(() {
+                    marble.item.done = true;
+                    marble.flipped = false;
+                  });
+                  widget.onChanged();
+                }
+              }
             }
           },
           onLongPressStart: (details) {
@@ -326,6 +380,8 @@ class _MarbleBoardState extends State<MarbleBoard>
               boardType: widget.boardType,
               netX: _netX,
               netY: _netY,
+              netSize: _netSize,
+              brightness: Theme.of(context).brightness,
             ),
           ),
         );
@@ -339,18 +395,24 @@ class _MarblePainter extends CustomPainter {
   final BoardType boardType;
   final double netX;
   final double netY;
+  final double netSize;
+  final Brightness brightness;
 
   _MarblePainter({
     required this.marbles,
     required this.boardType,
     required this.netX,
     required this.netY,
+    required this.netSize,
+    required this.brightness,
   });
+
+  Color get _overlayColor => brightness == Brightness.dark ? Colors.white : Colors.black;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw net for to-do boards
-    if (boardType == BoardType.todo) {
+    // Draw net for to-do and flashcard boards
+    if (boardType == BoardType.todo || boardType == BoardType.flashcards) {
       _drawNet(canvas, size);
     }
 
@@ -460,45 +522,29 @@ class _MarblePainter extends CustomPainter {
           Offset(m.x - descPainter.width / 2, startY + titlePainter.height + 8),
         );
       } else {
-        // Normal: show title only
-        final textColor = Colors.white;
-        final words = displayText.split(' ');
-        final lines = <String>[];
-        var currentLine = '';
-        final measurer = TextPainter(
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        );
-        final maxWidth = r * 1.2;
-        final fontSize = r * 0.28;
-        final style = TextStyle(
-          color: textColor,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-        );
-        for (final word in words) {
-          final test = currentLine.isEmpty ? word : '$currentLine $word';
-          measurer.text = TextSpan(text: test, style: style);
-          measurer.layout();
-          if (measurer.width > maxWidth && currentLine.isNotEmpty) {
-            lines.add(currentLine);
-            currentLine = word;
-            if (lines.length >= 3) break;
-          } else {
-            currentLine = test;
-          }
+        // Normal: show title only, shrink font to fit
+        final maxWidth = r * 1.4;
+        final maxHeight = r * 1.4;
+        var fontSize = r * 0.28;
+
+        late TextPainter textPainter;
+        // Shrink font until text fits inside the marble
+        for (var i = 0; i < 10; i++) {
+          final style = TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+          );
+          textPainter = TextPainter(
+            text: TextSpan(text: displayText, style: style),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.ltr,
+            maxLines: 3,
+          );
+          textPainter.layout(maxWidth: maxWidth);
+          if (textPainter.height <= maxHeight && !textPainter.didExceedMaxLines) break;
+          fontSize *= 0.85;
         }
-        if (currentLine.isNotEmpty && lines.length < 3) {
-          lines.add(currentLine);
-        }
-        final textPainter = TextPainter(
-          text: TextSpan(text: lines.join('\n'), style: style),
-          textAlign: TextAlign.center,
-          textDirection: TextDirection.ltr,
-          maxLines: 3,
-          ellipsis: '..',
-        );
-        textPainter.layout(maxWidth: maxWidth);
         textPainter.paint(
           canvas,
           Offset(m.x - textPainter.width / 2, m.y - textPainter.height / 2),
@@ -531,12 +577,11 @@ class _MarblePainter extends CustomPainter {
 
   void _drawNet(Canvas canvas, Size size) {
     final netPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
+      ..color = _overlayColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
     // Net basket shape — curved lines forming a scoop
-    const netSize = 80.0;
     final cx = netX;
     final cy = netY;
 
@@ -556,7 +601,7 @@ class _MarblePainter extends CustomPainter {
 
     // Handle
     final handlePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.2)
+      ..color = _overlayColor.withValues(alpha: 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
@@ -573,7 +618,7 @@ class _MarblePainter extends CustomPainter {
         text: TextSpan(
           text: '$caught',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: _overlayColor.withValues(alpha: 0.5),
             fontSize: 14,
             fontWeight: FontWeight.w700,
           ),

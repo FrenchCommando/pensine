@@ -27,6 +27,19 @@
 - `remove_alpha_ios: true` set for App Store compliance
 - PNG is gitignored — SVG is the source of truth
 
+## Board Interactions
+- **Thoughts**: tap to expand/collapse, long-press to edit
+- **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
+- **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
+- **All boards**: drag to fling, long-press empty space to add, shake button scatters marbles
+
+## UI
+- Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
+- About dialog accessible from all screens
+- Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
+- Text in marbles auto-shrinks to fit
+- Color picker in add/edit dialogs
+
 ## License
 - Proprietary / All Rights Reserved (see `LICENSE`)
 
@@ -46,8 +59,10 @@
 - Web: `flutter build web`
 
 ### CI
-- GitHub Actions workflow in `.github/workflows/ci.yml`
-- Runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+- `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+
+### CD
+- `.github/workflows/deploy.yml` — deploys to GitHub Pages after CI succeeds on main (uses `workflow_run`)
 
 ### Not yet set up
 - Release builds (APK/IPA artifacts on GitHub releases)

@@ -3,12 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 // Lofi color palette
 class PensineColors {
-  static const background = Color(0xFF1A1A2E);
-  static const surface = Color(0xFF16213E);
-  static const card = Color(0xFF0F3460);
   static const accent = Color(0xFFE94560);
   static const warm = Color(0xFFF5E6CC);
-  static const muted = Color(0xFF8B8BAE);
 
   // Bubble colors for items
   static const bubbles = [
@@ -21,40 +17,59 @@ class PensineColors {
     Color(0xFFFF85A1),
     Color(0xFF00C9A7),
   ];
+
+  // Context-aware colors — use these in widgets
+  static Color background(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+  static Color surface(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
+  static Color muted(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF8B8BAE)
+          : const Color(0xFF8B8B9E);
+  static Color card(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF0F3460)
+          : const Color(0xFFE8E0D8);
 }
 
-ThemeData pensineTheme() {
+ThemeData pensineTheme({Brightness brightness = Brightness.dark}) {
+  final isDark = brightness == Brightness.dark;
+  final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F0EB);
+  final sf = isDark ? const Color(0xFF16213E) : const Color(0xFFFFFFFF);
+  final mt = isDark ? const Color(0xFF8B8BAE) : const Color(0xFF8B8B9E);
+  final tt = isDark ? PensineColors.warm : const Color(0xFF4A3728);
+  final base = isDark ? ThemeData.dark() : ThemeData.light();
+
   return ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: PensineColors.background,
-    colorScheme: ColorScheme.dark(
-      primary: PensineColors.accent,
-      surface: PensineColors.surface,
-    ),
-    textTheme: GoogleFonts.quicksandTextTheme(
-      ThemeData.dark().textTheme,
-    ),
+    brightness: brightness,
+    scaffoldBackgroundColor: bg,
+    colorScheme: isDark
+        ? ColorScheme.dark(primary: PensineColors.accent, surface: sf)
+        : ColorScheme.light(primary: PensineColors.accent, surface: sf),
+    textTheme: GoogleFonts.quicksandTextTheme(base.textTheme),
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
       titleTextStyle: GoogleFonts.quicksand(
         fontSize: 24,
         fontWeight: FontWeight.w700,
-        color: PensineColors.warm,
+        color: tt,
       ),
+      iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: PensineColors.background,
+      fillColor: bg,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: PensineColors.muted.withAlpha(80)),
+        borderSide: BorderSide(color: mt.withAlpha(80)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: PensineColors.muted.withAlpha(80)),
+        borderSide: BorderSide(color: mt.withAlpha(80)),
       ),
-      hintStyle: TextStyle(color: PensineColors.muted),
+      hintStyle: TextStyle(color: mt),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: PensineColors.accent,

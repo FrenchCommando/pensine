@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../main.dart';
 import '../models/board.dart';
 import '../theme.dart';
+import '../widgets/about_dialog.dart';
 import '../widgets/marble_board.dart';
 
 class BoardScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class BoardScreen extends StatefulWidget {
 
 class _BoardScreenState extends State<BoardScreen> {
   final _random = Random();
+  final _marbleBoardKey = GlobalKey<MarbleBoardState>();
 
   void _addItem() {
     final controller = TextEditingController();
@@ -30,7 +33,7 @@ class _BoardScreenState extends State<BoardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: PensineColors.surface,
+          backgroundColor: PensineColors.surface(context),
           title: Text(isFlashcard ? 'New Flashcard' : 'New Item'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -104,13 +107,72 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.board.name)),
+      appBar: AppBar(
+        title: Text(widget.board.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.vibration),
+            tooltip: 'Shake',
+            onPressed: () => _marbleBoardKey.currentState?.shake(),
+          ),
+          if (widget.board.type == BoardType.flashcards)
+            IconButton(
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) =>
+                    RotationTransition(turns: animation, child: child),
+                child: Icon(
+                  Icons.flip,
+                  key: ValueKey(_marbleBoardKey.currentState?.marbles.any((m) => m.flipped) ?? false),
+                ),
+              ),
+              tooltip: 'Flip all',
+              onPressed: () {
+                final state = _marbleBoardKey.currentState;
+                if (state != null) {
+                  final anyFlipped = state.marbles.any((m) => m.flipped);
+                  state.flipAll(!anyFlipped);
+                  setState(() {});
+                }
+              },
+            ),
+          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards) &&
+              widget.board.items.any((i) => i.done))
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Reset',
+              onPressed: () {
+                setState(() {
+                  for (final item in widget.board.items) {
+                    item.done = false;
+                  }
+                });
+                _marbleBoardKey.currentState?.resetSizes();
+                widget.onChanged();
+              },
+            ),
+          IconButton(
+            icon: Icon(
+              PensineApp.of(context)?.brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            tooltip: 'Toggle theme',
+            onPressed: () => PensineApp.of(context)?.toggleBrightness(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'About',
+            onPressed: () => showPensineAbout(context),
+          ),
+        ],
+      ),
       body: widget.board.items.isEmpty
           ? Center(
               child: Text(
                 'Empty board.\nLong-press to add something.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: PensineColors.muted, fontSize: 16),
+                style: TextStyle(color: PensineColors.muted(context), fontSize: 16),
               ),
             )
           : _buildContent(),
@@ -119,9 +181,13 @@ class _BoardScreenState extends State<BoardScreen> {
 
   Widget _buildContent() {
     return MarbleBoard(
+      key: _marbleBoardKey,
       items: widget.board.items,
       boardType: widget.board.type,
-      onChanged: widget.onChanged,
+      onChanged: () {
+        setState(() {});
+        widget.onChanged();
+      },
       onRemove: (item) {
         setState(() => widget.board.items.remove(item));
         widget.onChanged();
@@ -157,7 +223,7 @@ class _BoardScreenState extends State<BoardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: PensineColors.surface,
+          backgroundColor: PensineColors.surface(context),
           title: const Text('Edit'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -263,7 +329,7 @@ class _BoardScreenState extends State<BoardScreen> {
   Widget _sizeSlider(double value, ValueChanged<double> onChanged) {
     return Row(
       children: [
-        const Icon(Icons.circle, size: 12, color: PensineColors.muted),
+        Icon(Icons.circle, size: 12, color: PensineColors.muted(context)),
         Expanded(
           child: Slider(
             value: value,
@@ -272,7 +338,7 @@ class _BoardScreenState extends State<BoardScreen> {
             onChanged: onChanged,
           ),
         ),
-        const Icon(Icons.circle, size: 24, color: PensineColors.muted),
+        Icon(Icons.circle, size: 24, color: PensineColors.muted(context)),
       ],
     );
   }
