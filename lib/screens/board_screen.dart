@@ -24,6 +24,7 @@ class _BoardScreenState extends State<BoardScreen> {
     final isFlashcard = widget.board.type == BoardType.flashcards;
     final isThoughts = widget.board.type == BoardType.thoughts;
     var size = 1.0;
+    var colorIndex = _random.nextInt(PensineColors.bubbles.length);
 
     showDialog(
       context: context,
@@ -62,6 +63,8 @@ class _BoardScreenState extends State<BoardScreen> {
                 ),
               ],
               const SizedBox(height: 16),
+              _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
+              const SizedBox(height: 12),
               _sizeSlider(size, (v) => setDialogState(() => size = v)),
             ],
           ),
@@ -83,7 +86,7 @@ class _BoardScreenState extends State<BoardScreen> {
                     backContent: backController.text.trim().isEmpty
                         ? null
                         : backController.text.trim(),
-                    colorIndex: _random.nextInt(PensineColors.bubbles.length),
+                    colorIndex: colorIndex,
                     sizeMultiplier: size,
                   ));
                 });
@@ -148,6 +151,7 @@ class _BoardScreenState extends State<BoardScreen> {
     final isFlashcard = widget.board.type == BoardType.flashcards;
     final isThoughts = widget.board.type == BoardType.thoughts;
     var size = item.sizeMultiplier;
+    var colorIndex = item.colorIndex;
 
     showDialog(
       context: context,
@@ -186,6 +190,8 @@ class _BoardScreenState extends State<BoardScreen> {
                 ),
               ],
               const SizedBox(height: 16),
+              _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
+              const SizedBox(height: 12),
               _sizeSlider(size, (v) => setDialogState(() => size = v)),
             ],
           ),
@@ -217,6 +223,7 @@ class _BoardScreenState extends State<BoardScreen> {
                       ? null
                       : backController.text.trim();
                   item.sizeMultiplier = size;
+                  item.colorIndex = colorIndex;
                 });
                 widget.onChanged();
                 Navigator.pop(ctx);
@@ -226,6 +233,30 @@ class _BoardScreenState extends State<BoardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _colorPicker(int selected, ValueChanged<int> onChanged) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(PensineColors.bubbles.length, (i) {
+        final isSelected = i == selected;
+        return GestureDetector(
+          onTap: () => onChanged(i),
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: PensineColors.bubbles[i],
+              shape: BoxShape.circle,
+              border: isSelected
+                  ? Border.all(color: Colors.white, width: 2.5)
+                  : null,
+            ),
+          ),
+        );
+      }),
     );
   }
 

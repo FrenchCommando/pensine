@@ -10,7 +10,8 @@
 - GitHub Pages: `https://frenchcommando.github.io/pensine/`
 - Deployed via `.github/workflows/deploy.yml` on every push to `main`
 - Requires GitHub repo Settings → Pages → Source set to **GitHub Actions**
-- Uses `--base-href "/pensine/"` for correct asset paths
+- Base href is set dynamically in `web/index.html` — works on both GitHub Pages and local serving
+- Local: `flutter build web && npx serve build/web`
 
 ## Storage
 - `shared_preferences` on web and mobile, `path_provider` + JSON file on desktop (see `lib/storage/local_storage.dart`).

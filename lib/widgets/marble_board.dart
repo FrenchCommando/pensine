@@ -6,8 +6,9 @@ import '../theme.dart';
 
 class Marble {
   final BoardItem item;
-  final Color color;
-  final double radius;
+  Color color;
+  double baseRadius;
+  double radius;
   double x, y;
   double vx, vy;
   bool flipped; // for flashcards
@@ -18,6 +19,7 @@ class Marble {
   Marble({
     required this.item,
     required this.color,
+    required this.baseRadius,
     required this.radius,
     required this.x,
     required this.y,
@@ -104,6 +106,7 @@ class _MarbleBoardState extends State<MarbleBoard>
         _marbles.add(Marble(
           item: item,
           color: color,
+          baseRadius: baseRadius,
           radius: radius,
           x: _size.width > 0
               ? radius + _random.nextDouble() * (_size.width - radius * 2)
@@ -114,6 +117,12 @@ class _MarbleBoardState extends State<MarbleBoard>
           scale: item.done ? caughtScale : 1.0,
         ));
       }
+    }
+    // Update existing marbles (color/size may have changed)
+    for (final marble in _marbles) {
+      marble.color =
+          PensineColors.bubbles[marble.item.colorIndex % PensineColors.bubbles.length];
+      marble.radius = marble.baseRadius * marble.item.sizeMultiplier;
     }
     final currentIds = widget.items.map((i) => i.id).toSet();
     _marbles.removeWhere((m) => !currentIds.contains(m.item.id));

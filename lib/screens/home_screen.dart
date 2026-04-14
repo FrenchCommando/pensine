@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(height: 12),
             Text('Board types:'),
             SizedBox(height: 4),
-            Text('  Thoughts — tap to expand, long-press to edit'),
+            Text('  Thoughts — tap to expand'),
             Text('  To-do — tap to catch in the net'),
             Text('  Flashcards — tap to flip'),
             SizedBox(height: 16),

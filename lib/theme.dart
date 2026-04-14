@@ -43,6 +43,19 @@ ThemeData pensineTheme() {
         color: PensineColors.warm,
       ),
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: PensineColors.background,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: PensineColors.muted.withAlpha(80)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: PensineColors.muted.withAlpha(80)),
+      ),
+      hintStyle: TextStyle(color: PensineColors.muted),
+    ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: PensineColors.accent,
       foregroundColor: Colors.white,
