@@ -47,7 +47,8 @@
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import
-- `.pensine` file format: versioned JSON envelope (`pensine_version: 1`) wrapping `Board.toJson()`
+- `.pensine` file format spec: see `PENSINE_FORMAT.md`
+- Versioned JSON envelope (`pensine_version: 1`) wrapping `Board.toJson()`
 - Export: save file dialog on desktop, file download on web, share sheet on mobile
 - Import: file picker on all platforms, generates new IDs to avoid collisions
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
