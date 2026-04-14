@@ -7,8 +7,10 @@
 - `Failed to update ui::AXTree` errors on Windows — known Flutter bug with accessibility bridge during rapid widget updates (60fps ticker). Harmless, ignore.
 
 ## Web Deployment
-- Current storage uses `path_provider` + JSON file, which doesn't work on web (no filesystem).
-- Before web deploy, need to switch to `shared_preferences` or similar (handles localStorage/IndexedDB automatically).
+- Storage uses `shared_preferences` on web and mobile, `path_provider` + JSON file on desktop (see `lib/storage/local_storage.dart`).
+  - Web: browser localStorage
+  - Mobile: NSUserDefaults (iOS) / SharedPreferences (Android)
+  - Desktop: JSON file in app support directory
 
 ## App Icon
 - Custom pensieve (memory basin) icon in `assets/app_icon.svg`
@@ -45,5 +47,4 @@
 - App store signing
 
 ## Next Steps
-- Switch storage to `shared_preferences` for cross-platform support
 - Build for web + GitHub Pages
