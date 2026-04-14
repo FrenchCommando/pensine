@@ -7,7 +7,13 @@
 - `Failed to update ui::AXTree` errors on Windows — known Flutter bug with accessibility bridge during rapid widget updates (60fps ticker). Harmless, ignore.
 
 ## Web Deployment
-- Storage uses `shared_preferences` on web and mobile, `path_provider` + JSON file on desktop (see `lib/storage/local_storage.dart`).
+- GitHub Pages: `https://frenchcommando.github.io/pensine/`
+- Deployed via `.github/workflows/deploy.yml` on every push to `main`
+- Requires GitHub repo Settings → Pages → Source set to **GitHub Actions**
+- Uses `--base-href "/pensine/"` for correct asset paths
+
+## Storage
+- `shared_preferences` on web and mobile, `path_provider` + JSON file on desktop (see `lib/storage/local_storage.dart`).
   - Web: browser localStorage
   - Mobile: NSUserDefaults (iOS) / SharedPreferences (Android)
   - Desktop: JSON file in app support directory
