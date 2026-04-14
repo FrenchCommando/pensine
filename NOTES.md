@@ -49,8 +49,5 @@
 - Runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
 
 ### Not yet set up
-- CD: web deployment (GitHub Pages), release builds
+- Release builds (APK/IPA artifacts on GitHub releases)
 - App store signing
-
-## Next Steps
-- Build for web + GitHub Pages
