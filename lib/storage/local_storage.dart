@@ -48,6 +48,17 @@ class LocalStorage {
     for (final board in boards) {
       await saveBoard(board);
     }
+    await saveBoardOrder(boards.map((b) => b.id).toList());
+  }
+
+  /// Persist board ordering.
+  static Future<void> saveBoardOrder(List<String> ids) async {
+    if (_isDesktop) {
+      await saveBoardOrderFile(ids);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_boardListKey, ids);
+    }
   }
 
   // --- Desktop (file-based, one file per board) ---
@@ -65,10 +76,20 @@ class LocalStorage {
     }
 
     final files = await loadAllBoardFiles();
-    return files.map((data) {
+    final boards = files.map((data) {
       final json = jsonDecode(data);
       return Board.fromJson(json);
     }).toList();
+
+    final order = await loadBoardOrderFile();
+    if (order != null) {
+      boards.sort((a, b) {
+        final ai = order.indexOf(a.id);
+        final bi = order.indexOf(b.id);
+        return (ai == -1 ? order.length : ai).compareTo(bi == -1 ? order.length : bi);
+      });
+    }
+    return boards;
   }
 
   // --- Web/Mobile (shared_preferences, one key per board) ---

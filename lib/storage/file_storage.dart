@@ -34,6 +34,22 @@ Future<void> deleteBoardFile(String id) async {
   }
 }
 
+Future<void> saveBoardOrderFile(List<String> ids) async {
+  final dir = await _boardsDir;
+  final file = File('${dir.path}/_order.json');
+  await file.writeAsString(ids.join('\n'));
+}
+
+Future<List<String>?> loadBoardOrderFile() async {
+  final dir = await _boardsDir;
+  final file = File('${dir.path}/_order.json');
+  if (await file.exists()) {
+    final data = await file.readAsString();
+    return data.split('\n').where((s) => s.isNotEmpty).toList();
+  }
+  return null;
+}
+
 // Legacy support — migrate old single-file storage
 Future<String?> loadLegacyFile() async {
   final dir = await getApplicationSupportDirectory();

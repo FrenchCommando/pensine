@@ -17,6 +17,7 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 - Drag and fling marbles around the screen
 - Shake button to scatter
 - Color picker and size slider per item
+- Reorder boards by long-press drag on the home screen
 - Export/import boards as `.pensine` files
 - Installable as a PWA on mobile and desktop
 

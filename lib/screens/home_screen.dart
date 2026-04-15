@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _deleteBoard(String id) async {
     await LocalStorage.deleteBoard(id);
+    await LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
   }
 
   void _createBoard() {
@@ -226,9 +227,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
+              : ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: _boards.length,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex--;
+                      final board = _boards.removeAt(oldIndex);
+                      _boards.insert(newIndex, board);
+                    });
+                    LocalStorage.saveAllBoards(_boards);
+                  },
                   itemBuilder: (ctx, i) {
                     final board = _boards[i];
                     return Dismissible(

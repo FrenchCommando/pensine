@@ -19,6 +19,8 @@
 - Web/Mobile: one `shared_preferences` key per board + index key for board IDs
 - Legacy single-file format (`pensine_data.json` / `pensine_boards` key) auto-migrates on first load
 - Saves are per-board (only the changed board is written)
+- Board order persisted: web/mobile via the index key, desktop via `boards/_order.json`
+- Order updated on reorder, delete, and bulk save
 
 ## App Icon
 - Custom pensieve (memory basin) icon in `assets/app_icon.svg`
@@ -48,6 +50,8 @@
 - Color picker in add/edit dialogs
 - iOS PWA install banner in `web/index.html` (shows once, dismissible)
 - All dialogs use `SingleChildScrollView` to avoid overflow on small screens
+- Avoid `Spacer()` in `AlertDialog.actions` — causes dialog to expand on large screens
+- Boards can be reordered by long-press drag on the home screen
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import
@@ -76,8 +80,13 @@
 - iOS: `flutter build ios`
 - Web: `flutter build web`
 
+### Version
+- Version defined in `pubspec.yaml` (`version:` field), displayed in about dialog via `package_info_plus`
+- Build timestamp passed via `--dart-define=BUILD_DATE=...` in CI; shows "dev" locally by default
+
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+- GitHub Actions use v5 (`actions/checkout@v5`, etc.) for Node.js 24 compatibility
 
 ### CD
 - `.github/workflows/deploy.yml` — deploys to GitHub Pages after CI succeeds on main (uses `workflow_run`)
