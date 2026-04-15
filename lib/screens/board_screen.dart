@@ -35,41 +35,43 @@ class _BoardScreenState extends State<BoardScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: PensineColors.surface(context),
           title: Text(isFlashcard ? 'New Flashcard' : 'New Item'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: isFlashcard ? 'Front side' : 'Title',
-                ),
-                maxLines: 3,
-                minLines: 1,
-              ),
-              if (isThoughts) ...[
-                const SizedBox(height: 12),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
-                  maxLines: 5,
-                  minLines: 2,
-                ),
-              ],
-              if (isFlashcard) ...[
-                const SizedBox(height: 12),
-                TextField(
-                  controller: backController,
-                  decoration: const InputDecoration(hintText: 'Back side (answer)'),
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: isFlashcard ? 'Front side' : 'Title',
+                  ),
                   maxLines: 3,
                   minLines: 1,
                 ),
+                if (isThoughts) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
+                    maxLines: 5,
+                    minLines: 2,
+                  ),
+                ],
+                if (isFlashcard) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: backController,
+                    decoration: const InputDecoration(hintText: 'Back side (answer)'),
+                    maxLines: 3,
+                    minLines: 1,
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
+                const SizedBox(height: 12),
+                _sizeSlider(size, (v) => setDialogState(() => size = v)),
               ],
-              const SizedBox(height: 16),
-              _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
-              const SizedBox(height: 12),
-              _sizeSlider(size, (v) => setDialogState(() => size = v)),
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -236,41 +238,43 @@ class _BoardScreenState extends State<BoardScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: PensineColors.surface(context),
           title: const Text('Edit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: isFlashcard ? 'Front side' : 'Title',
-                ),
-                maxLines: 3,
-                minLines: 1,
-              ),
-              if (isThoughts) ...[
-                const SizedBox(height: 12),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
-                  maxLines: 5,
-                  minLines: 2,
-                ),
-              ],
-              if (isFlashcard) ...[
-                const SizedBox(height: 12),
-                TextField(
-                  controller: backController,
-                  decoration: const InputDecoration(hintText: 'Back side (answer)'),
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: isFlashcard ? 'Front side' : 'Title',
+                  ),
                   maxLines: 3,
                   minLines: 1,
                 ),
+                if (isThoughts) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
+                    maxLines: 5,
+                    minLines: 2,
+                  ),
+                ],
+                if (isFlashcard) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: backController,
+                    decoration: const InputDecoration(hintText: 'Back side (answer)'),
+                    maxLines: 3,
+                    minLines: 1,
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
+                const SizedBox(height: 12),
+                _sizeSlider(size, (v) => setDialogState(() => size = v)),
               ],
-              const SizedBox(height: 16),
-              _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
-              const SizedBox(height: 12),
-              _sizeSlider(size, (v) => setDialogState(() => size = v)),
-            ],
+            ),
           ),
           actions: [
             TextButton(
