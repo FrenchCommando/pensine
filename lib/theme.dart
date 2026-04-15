@@ -17,6 +17,10 @@ class PensineColors {
     Color(0xFF00C9A7),
   ];
 
+  /// Returns the board's accent color, or the default accent if colorIndex is -1.
+  static Color boardAccent(int colorIndex) =>
+      colorIndex >= 0 ? bubbles[colorIndex % bubbles.length] : accent;
+
   // Context-aware colors — use these in widgets
   static Color background(BuildContext context) =>
       Theme.of(context).scaffoldBackgroundColor;

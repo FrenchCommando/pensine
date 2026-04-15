@@ -29,6 +29,7 @@ When stored locally (one file per board), only the board object is saved — no 
   "id": "a1b2c3d4-...",
   "name": "My Board",
   "type": "thoughts",
+  "colorIndex": -1,
   "createdAt": "2026-04-14T12:00:00.000Z",
   "items": [ ... ]
 }
@@ -39,6 +40,7 @@ When stored locally (one file per board), only the board object is saved — no 
 | `id` | string | UUID v4. Unique identifier. Regenerated on import. |
 | `name` | string | Display name. No length limit, can contain any characters. |
 | `type` | string | One of: `thoughts`, `todo`, `flashcards`, `checklist`. |
+| `colorIndex` | integer | Board accent color. `-1` = default red accent, `0-7` = palette color (see color table below). |
 | `createdAt` | string | ISO 8601 timestamp. |
 | `items` | array | Ordered list of board items. Order matters for `checklist`. |
 
@@ -118,6 +120,7 @@ Minimal example — a to-do board with two items:
     "id": "00000000-0000-0000-0000-000000000001",
     "name": "Shopping",
     "type": "todo",
+    "colorIndex": -1,
     "createdAt": "2026-04-14T00:00:00.000Z",
     "items": [
       {

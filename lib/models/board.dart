@@ -8,6 +8,7 @@ class Board {
   final String id;
   String name;
   BoardType type;
+  int colorIndex;
   final DateTime createdAt;
   List<BoardItem> items;
 
@@ -15,6 +16,7 @@ class Board {
     String? id,
     required this.name,
     required this.type,
+    this.colorIndex = -1,
     DateTime? createdAt,
     List<BoardItem>? items,
   })  : id = id ?? _uuid.v4(),
@@ -25,6 +27,7 @@ class Board {
         'id': id,
         'name': name,
         'type': type.name,
+        'colorIndex': colorIndex,
         'createdAt': createdAt.toIso8601String(),
         'items': items.map((i) => i.toJson()).toList(),
       };
@@ -33,6 +36,7 @@ class Board {
         id: json['id'],
         name: json['name'],
         type: BoardType.values.byName(json['type']),
+        colorIndex: json['colorIndex'] ?? -1,
         createdAt: DateTime.parse(json['createdAt']),
         items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
       );
@@ -41,6 +45,7 @@ class Board {
   Board copyWithNewIds() => Board(
         name: name,
         type: type,
+        colorIndex: colorIndex,
         items: items
             .map((i) => BoardItem(
                   content: i.content,

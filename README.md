@@ -16,6 +16,7 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 - Dark/light theme toggle
 - Drag and fling marbles around the screen
 - Shake button to scatter
+- Per-board accent color (tints title, net, and icon)
 - Color picker and size slider per item
 - Reorder boards by long-press drag on the home screen
 - Rename, duplicate, or change board type from the popup menu

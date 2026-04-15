@@ -110,7 +110,10 @@ class _BoardScreenState extends State<BoardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.board.name),
+        title: Text(
+          widget.board.name,
+          style: TextStyle(color: PensineColors.boardAccent(widget.board.colorIndex)),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.vibration),
@@ -190,6 +193,7 @@ class _BoardScreenState extends State<BoardScreen> {
       key: _marbleBoardKey,
       items: widget.board.items,
       boardType: widget.board.type,
+      accentColor: widget.board.colorIndex >= 0 ? PensineColors.boardAccent(widget.board.colorIndex) : null,
       onChanged: () {
         setState(() {});
         widget.onChanged();

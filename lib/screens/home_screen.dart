@@ -203,6 +203,61 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _changeBoardColor(Board board) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PensineColors.surface(context),
+        title: const Text('Board Color'),
+        content: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            // Default (no color)
+            GestureDetector(
+              onTap: () {
+                setState(() => board.colorIndex = -1);
+                _saveBoard(board);
+                Navigator.pop(ctx);
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: PensineColors.accent,
+                  border: board.colorIndex == -1
+                      ? Border.all(color: Colors.white, width: 3)
+                      : null,
+                ),
+              ),
+            ),
+            ...List.generate(PensineColors.bubbles.length, (i) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() => board.colorIndex = i);
+                  _saveBoard(board);
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: PensineColors.bubbles[i],
+                    border: board.colorIndex == i
+                        ? Border.all(color: Colors.white, width: 3)
+                        : null,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmDeleteBoard(int index) async {
     final board = _boards[index];
     final confirm = await showDialog<bool>(
@@ -376,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: PensineColors.card(context),
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          leading: Icon(_iconForType(board.type), color: PensineColors.accent),
+                          leading: Icon(_iconForType(board.type), color: PensineColors.boardAccent(board.colorIndex)),
                           title: Text(board.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           subtitle: Text(
                             '${board.items.length} item${board.items.length == 1 ? '' : 's'}',
@@ -389,6 +444,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _renameBoard(board);
                               } else if (value == 'change_type') {
                                 _changeBoardType(board);
+                              } else if (value == 'change_color') {
+                                _changeBoardColor(board);
                               } else if (value == 'duplicate') {
                                 _duplicateBoard(board);
                               } else if (value == 'export') {
@@ -400,6 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             itemBuilder: (_) => [
                               const PopupMenuItem(value: 'rename', child: Text('Rename')),
                               const PopupMenuItem(value: 'change_type', child: Text('Change type')),
+                              const PopupMenuItem(value: 'change_color', child: Text('Board color')),
                               const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
                               const PopupMenuItem(value: 'export', child: Text('Export')),
                               const PopupMenuItem(value: 'delete', child: Text('Delete')),

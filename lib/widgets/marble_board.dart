@@ -15,6 +15,7 @@ class Marble {
   bool expanded = false; // for thoughts
   double scale = 1.0; // for shrinking into net
   double expandScale = 1.0; // animated expand factor
+  bool dying = false; // exit animation in progress
 
   Marble({
     required this.item,
@@ -40,6 +41,7 @@ class MarbleBoard extends StatefulWidget {
   final void Function(BoardItem) onTap;
   final void Function(BoardItem)? onLongPress;
   final VoidCallback? onLongPressEmpty;
+  final Color? accentColor;
 
   const MarbleBoard({
     super.key,
@@ -50,6 +52,7 @@ class MarbleBoard extends StatefulWidget {
     required this.onTap,
     this.onLongPress,
     this.onLongPressEmpty,
+    this.accentColor,
   });
 
   @override
@@ -154,7 +157,11 @@ class MarbleBoardState extends State<MarbleBoard>
       marble.radius = (marble.baseRadius * marble.item.sizeMultiplier).clamp(0.0, _size.shortestSide * 0.4);
     }
     final currentIds = widget.items.map((i) => i.id).toSet();
-    _marbles.removeWhere((m) => !currentIds.contains(m.item.id));
+    for (final m in _marbles) {
+      if (!currentIds.contains(m.item.id)) {
+        m.dying = true;
+      }
+    }
   }
 
   void _tick(Duration elapsed) {
@@ -168,11 +175,18 @@ class MarbleBoardState extends State<MarbleBoard>
       final m = _marbles[i];
       if (i == _dragIndex) continue;
 
+      if (m.dying) {
+        m.scale *= 0.85;
+        if (m.scale < 0.01) continue;
+      }
+
       final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards || widget.boardType == BoardType.checklist) && m.item.done;
 
-      // Animate scale
-      final targetScale = isCaught ? caughtScale : 1.0;
-      m.scale += (targetScale - m.scale) * 0.08;
+      // Animate scale (skip if dying — dying has its own animation)
+      if (!m.dying) {
+        final targetScale = isCaught ? caughtScale : 1.0;
+        m.scale += (targetScale - m.scale) * 0.08;
+      }
 
       // Determine if this is the active checklist item
       final isActiveChecklist = widget.boardType == BoardType.checklist &&
@@ -233,6 +247,9 @@ class MarbleBoardState extends State<MarbleBoard>
       }
     }
 
+    // Remove fully shrunk dying marbles
+    _marbles.removeWhere((m) => m.dying && m.scale < 0.01);
+
     // Marble-to-marble collisions
     for (var i = 0; i < _marbles.length; i++) {
       for (var j = i + 1; j < _marbles.length; j++) {
@@ -283,6 +300,7 @@ class MarbleBoardState extends State<MarbleBoard>
   int? _hitTest(Offset pos) {
     for (var i = _marbles.length - 1; i >= 0; i--) {
       final m = _marbles[i];
+      if (m.dying) continue;
       final dx = pos.dx - m.x;
       final dy = pos.dy - m.y;
       if (dx * dx + dy * dy <= m.drawRadius * m.drawRadius) return i;
@@ -383,7 +401,9 @@ class MarbleBoardState extends State<MarbleBoard>
               widget.onLongPressEmpty!();
             }
           },
-          child: CustomPaint(
+          child: Semantics(
+            label: '${widget.boardType.name} board with ${widget.items.length} items',
+            child: CustomPaint(
             size: Size.infinite,
             painter: _MarblePainter(
               marbles: _marbles,
@@ -393,8 +413,9 @@ class MarbleBoardState extends State<MarbleBoard>
               netSize: _netSize,
               brightness: Theme.of(context).brightness,
               itemOrder: widget.items.map((i) => i.id).toList(),
+              accentColor: widget.accentColor,
             ),
-          ),
+          )),
         );
       },
     );
@@ -409,6 +430,7 @@ class _MarblePainter extends CustomPainter {
   final double netSize;
   final Brightness brightness;
   final List<String> itemOrder; // item IDs in board order
+  final Color? accentColor;
 
   _MarblePainter({
     required this.marbles,
@@ -418,9 +440,10 @@ class _MarblePainter extends CustomPainter {
     required this.netSize,
     required this.brightness,
     required this.itemOrder,
+    this.accentColor,
   });
 
-  Color get _overlayColor => brightness == Brightness.dark ? Colors.white : Colors.black;
+  Color get _overlayColor => accentColor ?? (brightness == Brightness.dark ? Colors.white : Colors.black);
 
   @override
   void paint(Canvas canvas, Size size) {

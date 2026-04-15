@@ -59,6 +59,9 @@
 - Boards can be duplicated via popup menu (uses `copyWithNewIds`)
 - Board type can be changed after creation via popup menu (data format is universal)
 - Delete from popup menu requires confirmation dialog
+- Per-board accent color via popup menu — tints app bar title, net, and home screen icon (`Board.colorIndex`, -1 = default)
+- Marble exit animation: deleted marbles shrink to zero before removal
+- Accessibility: `Semantics` label on marble board, tooltips on all icon buttons
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import
