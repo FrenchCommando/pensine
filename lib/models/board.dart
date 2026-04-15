@@ -2,7 +2,7 @@ import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
 
-enum BoardType { thoughts, todo, flashcards, checklist }
+enum BoardType { thoughts, todo, flashcards, checklist, timer, countdown }
 
 class Board {
   final String id;
@@ -59,6 +59,7 @@ class Board {
                   done: i.done,
                   colorIndex: i.colorIndex,
                   sizeMultiplier: i.sizeMultiplier,
+                  durationSeconds: i.durationSeconds,
                 ))
             .toList(),
       );
@@ -72,6 +73,7 @@ class BoardItem {
   bool done; // for todo
   int colorIndex;
   double sizeMultiplier; // 0.1 to 5.0, default 1.0
+  int? durationSeconds; // for countdown items
   final DateTime createdAt;
 
   BoardItem({
@@ -82,6 +84,7 @@ class BoardItem {
     this.done = false,
     this.colorIndex = 0,
     this.sizeMultiplier = 1.0,
+    this.durationSeconds,
     DateTime? createdAt,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now();
@@ -94,6 +97,7 @@ class BoardItem {
         'done': done,
         'colorIndex': colorIndex,
         'sizeMultiplier': sizeMultiplier,
+        'durationSeconds': durationSeconds,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -105,6 +109,7 @@ class BoardItem {
         done: json['done'] ?? false,
         colorIndex: json['colorIndex'] ?? 0,
         sizeMultiplier: (json['sizeMultiplier'] ?? 1.0).toDouble(),
+        durationSeconds: json['durationSeconds'],
         createdAt: DateTime.parse(json['createdAt']),
       );
 }

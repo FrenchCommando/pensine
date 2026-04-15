@@ -180,7 +180,7 @@ class MarbleBoardState extends State<MarbleBoard>
         if (m.scale < 0.01) continue;
       }
 
-      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards || widget.boardType == BoardType.checklist) && m.item.done;
+      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards || widget.boardType == BoardType.checklist || widget.boardType == BoardType.timer || widget.boardType == BoardType.countdown) && m.item.done;
 
       // Animate scale (skip if dying — dying has its own animation)
       if (!m.dying) {
@@ -189,7 +189,7 @@ class MarbleBoardState extends State<MarbleBoard>
       }
 
       // Determine if this is the active checklist item
-      final isActiveChecklist = widget.boardType == BoardType.checklist &&
+      final isActiveChecklist = (widget.boardType == BoardType.checklist || widget.boardType == BoardType.timer || widget.boardType == BoardType.countdown) &&
           !m.item.done &&
           widget.items.indexWhere((i) => !i.done) ==
               widget.items.indexWhere((i) => i.id == m.item.id);
@@ -448,7 +448,7 @@ class _MarblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Draw net for to-do and flashcard boards
-    if (boardType == BoardType.todo || boardType == BoardType.flashcards || boardType == BoardType.checklist) {
+    if (boardType == BoardType.todo || boardType == BoardType.flashcards || boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) {
       _drawNet(canvas, size);
     }
 
@@ -462,10 +462,10 @@ class _MarblePainter extends CustomPainter {
           ? m.color
           : m.color;
 
-      final alpha = ((boardType == BoardType.todo || boardType == BoardType.checklist) && isDone) ? 0.7 : 1.0;
+      final alpha = ((boardType == BoardType.todo || boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) && isDone) ? 0.7 : 1.0;
 
       // Determine if this is the active checklist item
-      final isActiveChecklist = boardType == BoardType.checklist &&
+      final isActiveChecklist = (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) &&
           !isDone &&
           itemOrder.indexWhere((id) => id == m.item.id) ==
               itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
@@ -518,7 +518,7 @@ class _MarblePainter extends CustomPainter {
         displayText = m.item.content;
       }
 
-      final isActiveChecklist2 = boardType == BoardType.checklist &&
+      final isActiveChecklist2 = (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) &&
           !isDone &&
           itemOrder.indexOf(m.item.id) ==
               itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
@@ -620,7 +620,7 @@ class _MarblePainter extends CustomPainter {
       }
 
       // Step number for checklist
-      if (boardType == BoardType.checklist) {
+      if (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) {
         final stepIndex = itemOrder.indexOf(m.item.id);
         if (stepIndex >= 0) {
           final stepPainter = TextPainter(

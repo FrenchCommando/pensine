@@ -178,6 +178,25 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardItem(content: 'Mayday call', description: '121.5 MHz — "Mayday, Mayday, Mayday" + callsign, position, intentions.', colorIndex: 0),
         BoardItem(content: 'Secure engine', description: 'If no restart: mixture CUTOFF, fuel selector OFF, mags OFF, master OFF (flaps last).', colorIndex: 7),
       ]),
+      Board(name: 'Flight Log', type: BoardType.timer, workspaceId: pilot.id, items: [
+        BoardItem(content: 'Taxi', description: 'Ground movement to runway holding point.', colorIndex: 4),
+        BoardItem(content: 'Takeoff & Climb', description: 'Departure and climb to cruise altitude.', colorIndex: 0),
+        BoardItem(content: 'Cruise', description: 'En-route level flight.', colorIndex: 1),
+        BoardItem(content: 'Descent & Approach', description: 'Arrival procedures and approach.', colorIndex: 3),
+        BoardItem(content: 'Landing & Taxi', description: 'Touchdown to parking and shutdown.', colorIndex: 7),
+      ]),
+
+      // --- Workout countdown ---
+      Board(name: 'Tabata', type: BoardType.countdown, workspaceId: workout.id, items: [
+        BoardItem(content: 'Jumping Jacks', durationSeconds: 20, colorIndex: 0),
+        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
+        BoardItem(content: 'Squats', durationSeconds: 20, colorIndex: 1),
+        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
+        BoardItem(content: 'Push-ups', durationSeconds: 20, colorIndex: 3),
+        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
+        BoardItem(content: 'Burpees', durationSeconds: 20, colorIndex: 5),
+        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
+      ]),
     ];
 
     return (workspaces: workspaces, boards: boards);
@@ -683,6 +702,8 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardType.todo => Icons.check_circle_outline,
         BoardType.flashcards => Icons.style,
         BoardType.checklist => Icons.format_list_numbered,
+        BoardType.timer => Icons.timer,
+        BoardType.countdown => Icons.hourglass_bottom,
       };
 
   Widget _buildBoardTile(Board board) {

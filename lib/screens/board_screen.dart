@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../main.dart';
@@ -20,14 +21,93 @@ class _BoardScreenState extends State<BoardScreen> {
   final _random = Random();
   final _marbleBoardKey = GlobalKey<MarbleBoardState>();
 
+  // Timer/countdown state
+  DateTime? _timerStartTime;
+  DateTime? _stepStartTime;
+  Timer? _uiTicker;
+  Timer? _countdownTimer;
+
+  bool get _isSequential => const [BoardType.checklist, BoardType.timer, BoardType.countdown].contains(widget.board.type);
+
+  @override
+  void initState() {
+    super.initState();
+    _initTimerState();
+  }
+
+  @override
+  void dispose() {
+    _uiTicker?.cancel();
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _initTimerState() {
+    if (widget.board.type != BoardType.timer && widget.board.type != BoardType.countdown) return;
+    final doneCount = widget.board.items.where((i) => i.done).length;
+    if (doneCount > 0) {
+      _timerStartTime = DateTime.now();
+      _stepStartTime = DateTime.now();
+      _startUiTicker();
+      if (widget.board.type == BoardType.countdown) _startCountdown();
+    }
+  }
+
+  void _startUiTicker() {
+    _uiTicker?.cancel();
+    _uiTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _stopTimers() {
+    _uiTicker?.cancel();
+    _uiTicker = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    _timerStartTime = null;
+    _stepStartTime = null;
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    final nextIndex = widget.board.items.indexWhere((i) => !i.done);
+    if (nextIndex < 0) return; // all done
+    final duration = widget.board.items[nextIndex].durationSeconds;
+    if (duration == null || duration <= 0) return;
+    _countdownTimer = Timer(Duration(seconds: duration), () {
+      if (!mounted) return;
+      // Auto-advance: complete current step
+      setState(() => widget.board.items[nextIndex].done = true);
+      widget.onChanged();
+      _stepStartTime = DateTime.now();
+      if (widget.board.items.every((i) => i.done)) {
+        _countdownTimer = null;
+      } else {
+        _startCountdown();
+      }
+    });
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
+    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s';
+    return '${s}s';
+  }
+
   void _addItem() {
     final controller = TextEditingController();
     final descController = TextEditingController();
     final backController = TextEditingController();
     final isFlashcard = widget.board.type == BoardType.flashcards;
     final isThoughts = widget.board.type == BoardType.thoughts;
+    final isCountdown = widget.board.type == BoardType.countdown;
     var size = 1.0;
     var colorIndex = _random.nextInt(PensineColors.bubbles.length);
+    final durationController = TextEditingController(text: '60');
 
     showDialog(
       context: context,
@@ -66,6 +146,17 @@ class _BoardScreenState extends State<BoardScreen> {
                     minLines: 1,
                   ),
                 ],
+                if (isCountdown) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: durationController,
+                    decoration: const InputDecoration(
+                      hintText: 'Duration (seconds)',
+                      labelText: 'Duration (seconds)',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
                 const SizedBox(height: 12),
@@ -93,6 +184,7 @@ class _BoardScreenState extends State<BoardScreen> {
                         : backController.text.trim(),
                     colorIndex: colorIndex,
                     sizeMultiplier: size,
+                    durationSeconds: isCountdown ? int.tryParse(durationController.text) : null,
                   ));
                 });
                 widget.onChanged();
@@ -141,7 +233,7 @@ class _BoardScreenState extends State<BoardScreen> {
                 }
               },
             ),
-          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards || widget.board.type == BoardType.checklist) &&
+          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards || _isSequential) &&
               widget.board.items.any((i) => i.done))
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -152,6 +244,7 @@ class _BoardScreenState extends State<BoardScreen> {
                     item.done = false;
                   }
                 });
+                _stopTimers();
                 _marbleBoardKey.currentState?.resetSizes();
                 widget.onChanged();
               },
@@ -172,20 +265,122 @@ class _BoardScreenState extends State<BoardScreen> {
           ),
         ],
       ),
-      body: widget.board.items.isEmpty
-          ? GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onLongPress: _addItem,
-              child: Center(
-                child: Text(
-                  'Empty board.\nLong-press to add something.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: PensineColors.muted(context), fontSize: 16),
+      body: Stack(
+        children: [
+          widget.board.items.isEmpty
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onLongPress: _addItem,
+                  child: Center(
+                    child: Text(
+                      'Empty board.\nLong-press to add something.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: PensineColors.muted(context), fontSize: 16),
+                    ),
+                  ),
+                )
+              : _buildContent(),
+          if ((widget.board.type == BoardType.timer || widget.board.type == BoardType.countdown) && _timerStartTime != null)
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: _buildTimerOverlay(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimerOverlay() {
+    final now = DateTime.now();
+    final total = now.difference(_timerStartTime!);
+    final stepElapsed = _stepStartTime != null ? now.difference(_stepStartTime!) : Duration.zero;
+    final allDone = widget.board.items.every((i) => i.done);
+    final accentColor = widget.board.colorIndex >= 0
+        ? PensineColors.boardAccent(widget.board.colorIndex)
+        : Theme.of(context).colorScheme.primary;
+
+    // For countdown: show remaining time on current step
+    String? stepText;
+    if (!allDone) {
+      if (widget.board.type == BoardType.countdown) {
+        final nextIndex = widget.board.items.indexWhere((i) => !i.done);
+        final dur = widget.board.items[nextIndex].durationSeconds;
+        if (dur != null && dur > 0) {
+          final remaining = Duration(seconds: dur) - stepElapsed;
+          final clamped = remaining.isNegative ? Duration.zero : remaining;
+          stepText = _formatDuration(clamped);
+        }
+      } else {
+        stepText = 'step ${_formatDuration(stepElapsed)}';
+      }
+    }
+
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              widget.board.type == BoardType.countdown ? Icons.hourglass_bottom : Icons.timer_outlined,
+              size: 16,
+              color: accentColor,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _formatDuration(total),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: accentColor,
+              ),
+            ),
+            if (stepText != null) ...[
+              Text(' · ', style: TextStyle(color: PensineColors.muted(context))),
+              Text(
+                stepText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: PensineColors.muted(context),
                 ),
               ),
-            )
-          : _buildContent(),
+            ],
+          ],
+        ),
+      ),
     );
+  }
+
+  void _handleSequentialTap(BoardItem item) {
+    final tappedIndex = widget.board.items.indexOf(item);
+    final nextIndex = widget.board.items.indexWhere((i) => !i.done);
+    final targetDone = (tappedIndex == nextIndex) ? tappedIndex + 1 : tappedIndex;
+    setState(() {
+      for (var i = 0; i < widget.board.items.length; i++) {
+        widget.board.items[i].done = i < targetDone;
+      }
+    });
+    // Timer/countdown management
+    if (widget.board.type == BoardType.timer || widget.board.type == BoardType.countdown) {
+      if (targetDone == 0) {
+        _stopTimers();
+      } else {
+        _timerStartTime ??= DateTime.now();
+        _stepStartTime = DateTime.now();
+        if (_uiTicker == null) _startUiTicker();
+        if (widget.board.type == BoardType.countdown) {
+          _startCountdown();
+        }
+      }
+    }
+    widget.onChanged();
   }
 
   Widget _buildContent() {
@@ -214,12 +409,9 @@ class _BoardScreenState extends State<BoardScreen> {
             // Flip is handled inside MarbleBoard
             break;
           case BoardType.checklist:
-            // Only allow catching the next unchecked item in order
-            final nextIndex = widget.board.items.indexWhere((i) => !i.done);
-            if (nextIndex >= 0 && widget.board.items[nextIndex].id == item.id) {
-              setState(() => item.done = true);
-              widget.onChanged();
-            }
+          case BoardType.timer:
+          case BoardType.countdown:
+            _handleSequentialTap(item);
         }
       },
       onLongPress: (item) => _editItem(item),
@@ -233,8 +425,10 @@ class _BoardScreenState extends State<BoardScreen> {
     final backController = TextEditingController(text: item.backContent ?? '');
     final isFlashcard = widget.board.type == BoardType.flashcards;
     final isThoughts = widget.board.type == BoardType.thoughts;
+    final isCountdown = widget.board.type == BoardType.countdown;
     var size = item.sizeMultiplier;
     var colorIndex = item.colorIndex;
+    final durationController = TextEditingController(text: '${item.durationSeconds ?? 60}');
 
     showDialog(
       context: context,
@@ -273,6 +467,17 @@ class _BoardScreenState extends State<BoardScreen> {
                     minLines: 1,
                   ),
                 ],
+                if (isCountdown) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: durationController,
+                    decoration: const InputDecoration(
+                      hintText: 'Duration (seconds)',
+                      labelText: 'Duration (seconds)',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
                 const SizedBox(height: 12),
@@ -308,6 +513,7 @@ class _BoardScreenState extends State<BoardScreen> {
                       : backController.text.trim();
                   item.sizeMultiplier = size;
                   item.colorIndex = colorIndex;
+                  if (isCountdown) item.durationSeconds = int.tryParse(durationController.text);
                 });
                 widget.onChanged();
                 Navigator.pop(ctx);

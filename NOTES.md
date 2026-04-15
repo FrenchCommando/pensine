@@ -44,14 +44,16 @@
 - Delete workspace deletes all its boards (with confirmation)
 - Storage: desktop uses `{id}.workspace` files + `_workspace_order.json`; web/mobile uses `pensine_workspace_{id}` keys + `pensine_workspace_ids` order key
 - Migration: existing boards (pre-workspace) are assigned to a new "General" workspace on first load
-- Default example workspaces: Welcome, Cooking Recipes, Workout Routines, French Vocab, Pilot Checklists — each with 2-3 boards showcasing different board types
+- Default example workspaces: Welcome, Cooking Recipes, Workout Routines, French Vocab, Pilot Checklists — each with 2-4 boards showcasing different board types (including timer and countdown)
 - Default workspaces defined in `home_screen.dart` (`_defaults()`) — shown on first launch and after reset
 
 ## Board Interactions
 - **Thoughts**: tap to expand/collapse, long-press to edit
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
 - **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
-- **Steps (checklist)**: sequential order only — active step inflates and shows description, numbered marbles, tap to complete next step, reset button
+- **Steps (checklist)**: sequential order — active step inflates and shows description, numbered marbles, tap active step to complete, tap any other marble to jump there (sets everything before it as done), reset button
+- **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Reset clears timer.
+- **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Reset clears countdown.
 - **All boards**: drag to fling, long-press empty space to add, shake button scatters marbles
 
 ## UI

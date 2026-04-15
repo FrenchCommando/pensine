@@ -49,6 +49,8 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
           _boardTypeRow(Icons.check_circle_outline, 'To-do — tap to catch in the net'),
           _boardTypeRow(Icons.style, 'Flashcards — tap to flip, again to retry, double-tap for correct'),
           _boardTypeRow(Icons.format_list_numbered, 'Steps — tap to complete in order'),
+          _boardTypeRow(Icons.timer, 'Timer — steps with elapsed time tracking'),
+          _boardTypeRow(Icons.hourglass_bottom, 'Countdown — steps auto-advance when time runs out'),
           if (boardCount > 0) ...[
             SizedBox(height: 12),
             Text(
