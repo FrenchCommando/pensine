@@ -125,7 +125,8 @@
 - iOS: manual "Add to Home Screen" (install banner guides users)
 
 ### Not yet set up
-- Native mobile builds (APK/IPA) — PWA covers casual use for now
-- App store signing (Google Play $25 one-time, Apple $99/year)
-- Microsoft Store ($19 one-time) — easiest store option for native Windows distribution; use `msix` pub package to build MSIX from `pubspec.yaml`, Microsoft handles code signing
 - `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly (Android intent filters, iOS UTI/document types, Windows file type registry, macOS UTI). Do this when native apps are deployed.
+
+## App Store Deployment
+
+See `DEPLOYMENT.md` for full details.
