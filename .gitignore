@@ -23,8 +23,6 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
-# Generated app icon (SVG is the source)
-assets/app_icon.png
 
 # Flutter/Dart/Pub related
 **/doc/api/
