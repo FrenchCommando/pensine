@@ -836,11 +836,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Pensine'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.create_new_folder_outlined),
-            tooltip: 'New workspace',
-            onPressed: _createWorkspace,
-          ),
-          IconButton(
             icon: const Icon(Icons.file_open),
             tooltip: 'Import',
             onPressed: () async {
@@ -900,9 +895,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(16),
                   children: _workspaces.map(_buildWorkspaceSection).toList(),
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _createBoard(),
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'new_workspace',
+            tooltip: 'New workspace',
+            onPressed: _createWorkspace,
+            child: const Icon(Icons.create_new_folder_outlined),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'new_board',
+            tooltip: 'New board',
+            onPressed: () => _createBoard(),
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
