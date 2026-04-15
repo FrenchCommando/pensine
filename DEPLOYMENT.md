@@ -32,29 +32,33 @@
 
 ## iOS (App Store)
 
-**Account:** Apple Developer — $99/year at developer.apple.com
+**Account:** Apple Developer — $99/year at developer.apple.com (enrolled 2026-04-15)
 
-**Requires macOS:** Xcode only runs on Mac. Options:
-- Cheap used Mac Mini ($200-300) as a build/debug box
-- Cloud Mac (MacStadium, AWS EC2 Mac instances)
-- GitHub Actions macOS runners (free tier includes them) — realistic for building/shipping once set up, but initial setup and debugging signing issues is painful without a local Mac
-- Flutter CI services (Codemagic, Bitrise) — have macOS runners with free tiers
+**App Store Connect listing (partially done):**
+- App name: Pensine
+- Subtitle: "Visual notes with marbles"
+- Bundle ID: `com.pensine.pensine`
+- SKU: `pensine`
+- Description, promotional text, keywords: filled in
+- Marketing URL: `https://frenchcommando.github.io/pensine/site/`
+- Support URL: `https://github.com/FrenchCommando/pensine/issues`
+- Copyright: © 2025-2026 Martial Ren
+- No sign-in required, no Game Center, no routing coverage file
+- **Still needed:** screenshots/preview, build upload
 
-**Signing setup:**
-1. Set Development Team ID in Xcode project settings
-2. Xcode handles provisioning profiles and certificates automatically with Apple account
-3. For CI: use `fastlane match` or manual certificate injection via GitHub Secrets
+**No local Mac — fully CI-based:**
+- GitHub Actions macOS runners (free for public repos)
+- `.github/workflows/build-ios.yml` — builds iOS (no signing) on push to main
+- Signing setup still needed: certificates + provisioning profiles via GitHub Secrets
+
+**Signing setup (TODO):**
+1. Create certificates and provisioning profiles in Apple Developer portal
+2. Store as GitHub Secrets for CI injection
+3. For CI: use `fastlane match` or manual certificate injection
 
 **Build:** `flutter build ipa`
 
-**Store listing requirements:**
-- App name, description, category, bundle ID (`com.pensine.pensine`)
-- Screenshots for multiple device sizes (6.7", 6.5", 5.5" iPhones, iPad)
-- Privacy policy URL (required)
-- Upload via Xcode Organizer or Transporter CLI
-- Submit for review (usually 1-2 days)
-
-**Recommendation:** Start with Android (fully doable from Windows), tackle iOS when Mac access is available.
+**Upload:** via Transporter CLI or `xcrun altool` in CI
 
 ## Microsoft Store
 

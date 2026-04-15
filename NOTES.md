@@ -118,7 +118,9 @@
 
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+- `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
 - GitHub Actions use v5 (`actions/checkout@v5`, etc.) for Node.js 24 compatibility
+- Free for public repos using standard GitHub-hosted runners (`ubuntu-latest`, `macos-latest`)
 
 ### CD
 - `.github/workflows/deploy.yml` — deploys to GitHub Pages after CI succeeds on main (uses `workflow_run`)
@@ -130,6 +132,11 @@
 
 ### Not yet set up
 - `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly (Android intent filters, iOS UTI/document types, Windows file type registry, macOS UTI). Do this when native apps are deployed.
+
+## Feature Graphic
+- Play Store banner (1024x500) in `assets/feature_graphic.svg`
+- Yellow background with mortar bowl and scattered marbles
+- Convert to PNG via `tool\generate_feature_graphic.bat`
 
 ## App Store Deployment
 
