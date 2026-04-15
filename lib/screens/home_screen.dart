@@ -159,6 +159,69 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _duplicateBoard(Board board) {
+    final copy = board.copyWithNewIds();
+    copy.name = '${board.name} (copy)';
+    setState(() => _boards.add(copy));
+    _saveBoard(copy);
+    LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
+  }
+
+  void _changeBoardType(Board board) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PensineColors.surface(context),
+        title: const Text('Change Type'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: BoardType.values.map((type) {
+            final isSelected = type == board.type;
+            return ListTile(
+              dense: true,
+              leading: Icon(
+                _iconForType(type),
+                color: isSelected ? PensineColors.accent : null,
+              ),
+              title: Text(
+                type.name[0].toUpperCase() + type.name.substring(1),
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? PensineColors.accent : null,
+                ),
+              ),
+              selected: isSelected,
+              onTap: () {
+                setState(() => board.type = type);
+                _saveBoard(board);
+                Navigator.pop(ctx);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteBoard(int index) async {
+    final board = _boards[index];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Delete board?'),
+        content: Text('Delete "${board.name}" and all its items?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      setState(() => _boards.removeAt(index));
+      _deleteBoard(board.id);
+    }
+  }
+
   void _renameBoard(Board board) {
     final controller = TextEditingController(text: board.name);
     showDialog(
@@ -199,7 +262,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAbout() {
-    showPensineAbout(context, onReset: () async {
+    final totalItems = _boards.fold<int>(0, (sum, b) => sum + b.items.length);
+    showPensineAbout(context, boardCount: _boards.length, itemCount: totalItems, onReset: () async {
       for (final board in _boards) {
         await LocalStorage.deleteBoard(board.id);
       }
@@ -323,16 +387,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             onSelected: (value) {
                               if (value == 'rename') {
                                 _renameBoard(board);
+                              } else if (value == 'change_type') {
+                                _changeBoardType(board);
+                              } else if (value == 'duplicate') {
+                                _duplicateBoard(board);
                               } else if (value == 'export') {
                                 BoardIO.exportBoard(board, context);
                               } else if (value == 'delete') {
-                                final removed = _boards[i];
-                                setState(() => _boards.removeAt(i));
-                                _deleteBoard(removed.id);
+                                _confirmDeleteBoard(i);
                               }
                             },
                             itemBuilder: (_) => [
                               const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                              const PopupMenuItem(value: 'change_type', child: Text('Change type')),
+                              const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
                               const PopupMenuItem(value: 'export', child: Text('Export')),
                               const PopupMenuItem(value: 'delete', child: Text('Delete')),
                             ],

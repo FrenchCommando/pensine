@@ -17,7 +17,7 @@ Widget _boardTypeRow(IconData icon, String text) {
 
 const String _buildDate = String.fromEnvironment('BUILD_DATE', defaultValue: 'dev');
 
-void showPensineAbout(BuildContext context, {VoidCallback? onReset}) async {
+void showPensineAbout(BuildContext context, {VoidCallback? onReset, int boardCount = 0, int itemCount = 0}) async {
   final info = await PackageInfo.fromPlatform();
 
   if (!context.mounted) return;
@@ -47,6 +47,13 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset}) async {
           _boardTypeRow(Icons.check_circle_outline, 'To-do — tap to catch in the net'),
           _boardTypeRow(Icons.style, 'Flashcards — tap to flip, again to retry, double-tap for correct'),
           _boardTypeRow(Icons.format_list_numbered, 'Steps — tap to complete in order'),
+          if (boardCount > 0) ...[
+            SizedBox(height: 12),
+            Text(
+              '$boardCount board${boardCount == 1 ? '' : 's'}, $itemCount marble${itemCount == 1 ? '' : 's'}',
+              style: TextStyle(fontSize: 13, color: PensineColors.muted(context)),
+            ),
+          ],
           SizedBox(height: 16),
           Text(
             'Penser = to think',

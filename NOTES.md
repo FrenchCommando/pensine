@@ -55,6 +55,10 @@
 - Boards can be renamed via popup menu (three dots)
 - Swipe-to-delete shows undo snackbar instead of deleting immediately
 - About dialog shows board type icons next to descriptions
+- About dialog shows board/marble count stats (home screen only)
+- Boards can be duplicated via popup menu (uses `copyWithNewIds`)
+- Board type can be changed after creation via popup menu (data format is universal)
+- Delete from popup menu requires confirmation dialog
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import

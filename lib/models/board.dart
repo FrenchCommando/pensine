@@ -7,7 +7,7 @@ enum BoardType { thoughts, todo, flashcards, checklist }
 class Board {
   final String id;
   String name;
-  final BoardType type;
+  BoardType type;
   final DateTime createdAt;
   List<BoardItem> items;
 

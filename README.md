@@ -18,8 +18,8 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 - Shake button to scatter
 - Color picker and size slider per item
 - Reorder boards by long-press drag on the home screen
-- Rename boards from the popup menu
-- Swipe to delete with undo
+- Rename, duplicate, or change board type from the popup menu
+- Swipe to delete with undo, or delete from menu with confirmation
 - Export/import boards as `.pensine` files
 - Installable as a PWA on mobile and desktop
 
