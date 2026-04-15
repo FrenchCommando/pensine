@@ -286,7 +286,6 @@ class _BoardScreenState extends State<BoardScreen> {
               style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
               child: const Text('Delete'),
             ),
-            const Spacer(),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
