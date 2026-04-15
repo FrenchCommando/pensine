@@ -97,35 +97,38 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: nameController,
                 autofocus: true,
                 decoration: const InputDecoration(hintText: 'Board name'),
+                onSubmitted: (_) {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) return;
+                  final newBoard = Board(name: name, type: selectedType);
+                  setState(() {
+                    _boards.add(newBoard);
+                  });
+                  _saveBoard(newBoard);
+                  Navigator.pop(ctx);
+                },
               ),
               const SizedBox(height: 16),
-              SegmentedButton<BoardType>(
-                segments: const [
-                  ButtonSegment(
-                    value: BoardType.thoughts,
-                    label: Text('Thoughts'),
-                    icon: Icon(Icons.cloud),
-                  ),
-                  ButtonSegment(
-                    value: BoardType.todo,
-                    label: Text('To-do'),
-                    icon: Icon(Icons.check_circle_outline),
-                  ),
-                  ButtonSegment(
-                    value: BoardType.flashcards,
-                    label: Text('Cards'),
-                    icon: Icon(Icons.style),
-                  ),
-                  ButtonSegment(
-                    value: BoardType.checklist,
-                    label: Text('Steps'),
-                    icon: Icon(Icons.format_list_numbered),
-                  ),
-                ],
-                selected: {selectedType},
-                onSelectionChanged: (v) {
-                  setDialogState(() => selectedType = v.first);
-                },
+              Column(
+                children: BoardType.values.map((type) {
+                  final isSelected = type == selectedType;
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      _iconForType(type),
+                      color: isSelected ? PensineColors.accent : null,
+                    ),
+                    title: Text(
+                      type.name[0].toUpperCase() + type.name.substring(1),
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? PensineColors.accent : null,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onTap: () => setDialogState(() => selectedType = type),
+                  );
+                }).toList(),
               ),
             ],
           ),
