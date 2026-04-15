@@ -105,7 +105,7 @@ When stored locally (one file per board), only the board object is saved — no 
 | `backContent` | string \| null | null | Back side text. Used by `flashcards` only. |
 | `done` | boolean | false | Completion state. Used by `todo`, `flashcards` (correct), and `checklist`. |
 | `colorIndex` | integer | 0 | Index into the color palette (0-7). |
-| `sizeMultiplier` | number | 1.0 | Marble size multiplier. Range: 0.5 to 2.0. |
+| `sizeMultiplier` | number | 1.0 | Marble size multiplier. Range: 0.1 to 5.0. |
 | `createdAt` | string | generated | ISO 8601 timestamp. |
 
 ## Board types and how fields are used

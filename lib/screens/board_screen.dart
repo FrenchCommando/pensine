@@ -351,8 +351,8 @@ class _BoardScreenState extends State<BoardScreen> {
         Expanded(
           child: Slider(
             value: value,
-            min: 0.5,
-            max: 2.0,
+            min: 0.1,
+            max: 5.0,
             onChanged: onChanged,
           ),
         ),

@@ -71,7 +71,7 @@ class BoardItem {
   String? backContent; // for flashcards
   bool done; // for todo
   int colorIndex;
-  double sizeMultiplier; // 0.5 to 2.0, default 1.0
+  double sizeMultiplier; // 0.1 to 5.0, default 1.0
   final DateTime createdAt;
 
   BoardItem({
