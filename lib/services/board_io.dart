@@ -2,8 +2,16 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../models/board.dart';
+import '../models/workspace.dart';
 
 import 'board_io_native.dart' if (dart.library.html) 'board_io_web.dart' as platform;
+
+class ImportResult {
+  final Workspace? workspace;
+  final List<Board> boards;
+
+  ImportResult({this.workspace, required this.boards});
+}
 
 class BoardIO {
   static Future<void> exportBoard(Board board, BuildContext context) async {
@@ -24,7 +32,31 @@ class BoardIO {
     }
   }
 
-  static Future<Board?> importBoard(BuildContext context) async {
+  static Future<void> exportWorkspace(Workspace workspace, List<Board> boards, BuildContext context) async {
+    try {
+      final envelope = jsonEncode({
+        'pensine_version': 2,
+        'exported_at': DateTime.now().toIso8601String(),
+        'workspace': {
+          ...workspace.toJson(),
+          'boards': boards.map((b) => b.toJson()).toList(),
+        },
+      });
+      final safeName = workspace.name.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
+      await platform.exportFile('$safeName.pensine', envelope);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  /// Import a .pensine file. Returns an ImportResult with either:
+  /// - A workspace + boards (v2 format)
+  /// - Just boards (v1 format, assigned to chosen workspace)
+  static Future<ImportResult?> importFile(BuildContext context, List<Workspace> workspaces) async {
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.any,
@@ -45,8 +77,14 @@ class BoardIO {
 
       final content = utf8.decode(bytes);
       final json = jsonDecode(content) as Map<String, dynamic>;
+      final version = json['pensine_version'];
 
-      if (json['pensine_version'] == null || json['board'] == null) {
+      if (version == 2 && json['workspace'] != null) {
+        return _importV2(json);
+      } else if (json['board'] != null) {
+        if (!context.mounted) return null;
+        return await _importV1(json, context, workspaces);
+      } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Not a valid .pensine file')),
@@ -54,9 +92,6 @@ class BoardIO {
         }
         return null;
       }
-
-      final board = Board.fromJson(json['board']);
-      return board.copyWithNewIds();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,5 +100,59 @@ class BoardIO {
       }
       return null;
     }
+  }
+
+  static ImportResult _importV2(Map<String, dynamic> json) {
+    final wsJson = json['workspace'] as Map<String, dynamic>;
+    final boardsJson = wsJson['boards'] as List;
+
+    final newWs = Workspace(
+      name: wsJson['name'] ?? 'Imported',
+      colorIndex: wsJson['colorIndex'] ?? -1,
+    );
+
+    final boards = boardsJson.map((b) {
+      final board = Board.fromJson(b).copyWithNewIds();
+      board.workspaceId = newWs.id;
+      return board;
+    }).toList();
+
+    return ImportResult(workspace: newWs, boards: boards);
+  }
+
+  static Future<ImportResult?> _importV1(
+    Map<String, dynamic> json,
+    BuildContext context,
+    List<Workspace> workspaces,
+  ) async {
+    final board = Board.fromJson(json['board']).copyWithNewIds();
+
+    if (workspaces.length == 1) {
+      board.workspaceId = workspaces.first.id;
+      return ImportResult(boards: [board]);
+    }
+
+    // Let user pick workspace
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import to which workspace?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: workspaces.map((ws) {
+            return ListTile(
+              dense: true,
+              leading: const Icon(Icons.folder),
+              title: Text(ws.name),
+              onTap: () => Navigator.pop(ctx, ws.id),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+
+    if (chosen == null) return null;
+    board.workspaceId = chosen;
+    return ImportResult(boards: [board]);
   }
 }

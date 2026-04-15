@@ -17,7 +17,7 @@ Widget _boardTypeRow(IconData icon, String text) {
 
 const String _buildDate = String.fromEnvironment('BUILD_DATE', defaultValue: 'dev');
 
-void showPensineAbout(BuildContext context, {VoidCallback? onReset, int boardCount = 0, int itemCount = 0}) async {
+void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspaceCount = 0, int boardCount = 0, int itemCount = 0}) async {
   final info = await PackageInfo.fromPlatform();
 
   if (!context.mounted) return;
@@ -50,7 +50,9 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int boardCou
           if (boardCount > 0) ...[
             SizedBox(height: 12),
             Text(
-              '$boardCount board${boardCount == 1 ? '' : 's'}, $itemCount marble${itemCount == 1 ? '' : 's'}',
+              '$workspaceCount workspace${workspaceCount == 1 ? '' : 's'}, '
+              '$boardCount board${boardCount == 1 ? '' : 's'}, '
+              '$itemCount marble${itemCount == 1 ? '' : 's'}',
               style: TextStyle(fontSize: 13, color: PensineColors.muted(context)),
             ),
           ],

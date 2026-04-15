@@ -30,6 +30,20 @@
 - `remove_alpha_ios: true` set for App Store compliance
 - PNG is gitignored — SVG is the source of truth
 
+## Workspaces
+- Boards are grouped into workspaces (collections of related boards)
+- Every board belongs to exactly one workspace (`Board.workspaceId`)
+- Workspace model: `lib/models/workspace.dart` (id, name, colorIndex, createdAt)
+- Home screen shows expandable/collapsible workspace sections; collapsed state persisted via `shared_preferences` key `pensine_collapsed_workspaces`
+- Workspace operations via popup menu: rename, color, add board, export, delete
+- Board popup menu includes "Move to workspace" when multiple workspaces exist
+- New board dialog includes workspace picker dropdown when multiple workspaces exist
+- Delete workspace deletes all its boards (with confirmation)
+- Storage: desktop uses `{id}.workspace` files + `_workspace_order.json`; web/mobile uses `pensine_workspace_{id}` keys + `pensine_workspace_ids` order key
+- Migration: existing boards (pre-workspace) are assigned to a new "General" workspace on first load
+- Default example workspaces: Welcome, Cooking Recipes, Workout Routines, French Vocab, Pilot Checklists — each with 2-3 boards showcasing different board types
+- Default workspaces defined in `home_screen.dart` (`_defaults()`) — shown on first launch and after reset
+
 ## Board Interactions
 - **Thoughts**: tap to expand/collapse, long-press to edit
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
@@ -66,7 +80,10 @@
 
 ## Export / Import
 - `.pensine` file format spec: see `PENSINE_FORMAT.md`
-- Versioned JSON envelope (`pensine_version: 1`) wrapping `Board.toJson()`
+- **V2 (workspace)**: `pensine_version: 2`, wraps workspace metadata + all its boards — primary export unit
+- **V1 (board)**: `pensine_version: 1`, wraps a single `Board.toJson()` — still supported for single-board export
+- Import auto-detects v1 vs v2 by checking for `workspace` vs `board` key
+- V2 import creates a new workspace with all boards; V1 import prompts which workspace to add the board to
 - Export: save file dialog on desktop, file download on web, share sheet on mobile
 - Import: file picker on all platforms, generates new IDs to avoid collisions
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)

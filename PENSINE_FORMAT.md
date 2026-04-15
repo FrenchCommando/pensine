@@ -1,10 +1,48 @@
-# .pensine File Format (v1)
+# .pensine File Format
 
-A `.pensine` file is a JSON document representing a single board. It can be used for sharing boards between users or devices.
+A `.pensine` file is a JSON document representing either a single board (v1) or a workspace with multiple boards (v2). It can be used for sharing between users or devices.
 
-## Envelope (export only)
+The app auto-detects the version on import by checking for `workspace` (v2) vs `board` (v1) keys.
 
-When exported via the app, the file has a wrapper envelope:
+---
+
+## V2 — Workspace (recommended)
+
+```json
+{
+  "pensine_version": 2,
+  "exported_at": "2026-04-14T12:00:00.000Z",
+  "workspace": {
+    "id": "...",
+    "name": "Cooking Recipes",
+    "colorIndex": -1,
+    "createdAt": "2026-04-14T12:00:00.000Z",
+    "boards": [ ... ]
+  }
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `pensine_version` | integer | `2` |
+| `exported_at` | string | ISO 8601 timestamp of export. |
+| `workspace` | object | Workspace object containing boards. |
+
+### Workspace object
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | UUID v4. Regenerated on import. |
+| `name` | string | Display name. |
+| `colorIndex` | integer | Accent color. `-1` = default, `0-7` = palette. |
+| `createdAt` | string | ISO 8601 timestamp. |
+| `boards` | array | Ordered list of board objects (same schema as v1). |
+
+On import, all IDs (workspace, boards, items) are regenerated to avoid collisions.
+
+---
+
+## V1 — Single Board
 
 ```json
 {

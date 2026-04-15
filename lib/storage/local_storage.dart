@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/board.dart';
+import '../models/workspace.dart';
 
 // Conditional import for file-based storage
 import 'file_storage.dart' if (dart.library.html) 'file_storage_stub.dart';
@@ -49,6 +50,53 @@ class LocalStorage {
       await saveBoard(board);
     }
     await saveBoardOrder(boards.map((b) => b.id).toList());
+  }
+
+  // --- Workspace CRUD ---
+
+  static Future<List<Workspace>> loadWorkspaces() async {
+    try {
+      if (_isDesktop) {
+        return await _loadWorkspacesDesktop();
+      } else {
+        return await _loadWorkspacesPrefs();
+      }
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> saveWorkspace(Workspace workspace) async {
+    final json = jsonEncode(workspace.toJson());
+    if (_isDesktop) {
+      await saveWorkspaceFile(workspace.id, json);
+    } else {
+      await _saveWorkspacePref(workspace);
+    }
+  }
+
+  static Future<void> deleteWorkspace(String id) async {
+    if (_isDesktop) {
+      await deleteWorkspaceFile(id);
+    } else {
+      await _deleteWorkspacePref(id);
+    }
+  }
+
+  static Future<void> saveAllWorkspaces(List<Workspace> workspaces) async {
+    for (final ws in workspaces) {
+      await saveWorkspace(ws);
+    }
+    await saveWorkspaceOrder(workspaces.map((w) => w.id).toList());
+  }
+
+  static Future<void> saveWorkspaceOrder(List<String> ids) async {
+    if (_isDesktop) {
+      await saveWorkspaceOrderFile(ids);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_workspaceListKey, ids);
+    }
   }
 
   /// Persist board ordering.
@@ -138,5 +186,60 @@ class LocalStorage {
     ids.remove(id);
     await prefs.setStringList(_boardListKey, ids);
     await prefs.remove('pensine_board_$id');
+  }
+
+  // --- Workspace desktop ---
+
+  static Future<List<Workspace>> _loadWorkspacesDesktop() async {
+    final files = await loadAllWorkspaceFiles();
+    final workspaces = files.map((data) {
+      final json = jsonDecode(data);
+      return Workspace.fromJson(json);
+    }).toList();
+
+    final order = await loadWorkspaceOrderFile();
+    if (order != null) {
+      workspaces.sort((a, b) {
+        final ai = order.indexOf(a.id);
+        final bi = order.indexOf(b.id);
+        return (ai == -1 ? order.length : ai).compareTo(bi == -1 ? order.length : bi);
+      });
+    }
+    return workspaces;
+  }
+
+  // --- Workspace prefs ---
+
+  static const _workspaceListKey = 'pensine_workspace_ids';
+
+  static Future<List<Workspace>> _loadWorkspacesPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(_workspaceListKey) ?? [];
+    final workspaces = <Workspace>[];
+    for (final id in ids) {
+      final data = prefs.getString('pensine_workspace_$id');
+      if (data != null) {
+        workspaces.add(Workspace.fromJson(jsonDecode(data)));
+      }
+    }
+    return workspaces;
+  }
+
+  static Future<void> _saveWorkspacePref(Workspace workspace) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(_workspaceListKey) ?? [];
+    if (!ids.contains(workspace.id)) {
+      ids.add(workspace.id);
+      await prefs.setStringList(_workspaceListKey, ids);
+    }
+    await prefs.setString('pensine_workspace_${workspace.id}', jsonEncode(workspace.toJson()));
+  }
+
+  static Future<void> _deleteWorkspacePref(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(_workspaceListKey) ?? [];
+    ids.remove(id);
+    await prefs.setStringList(_workspaceListKey, ids);
+    await prefs.remove('pensine_workspace_$id');
   }
 }

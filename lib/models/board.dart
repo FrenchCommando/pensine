@@ -9,6 +9,7 @@ class Board {
   String name;
   BoardType type;
   int colorIndex;
+  String workspaceId;
   final DateTime createdAt;
   List<BoardItem> items;
 
@@ -17,6 +18,7 @@ class Board {
     required this.name,
     required this.type,
     this.colorIndex = -1,
+    this.workspaceId = '',
     DateTime? createdAt,
     List<BoardItem>? items,
   })  : id = id ?? _uuid.v4(),
@@ -28,6 +30,7 @@ class Board {
         'name': name,
         'type': type.name,
         'colorIndex': colorIndex,
+        'workspaceId': workspaceId,
         'createdAt': createdAt.toIso8601String(),
         'items': items.map((i) => i.toJson()).toList(),
       };
@@ -37,6 +40,7 @@ class Board {
         name: json['name'],
         type: BoardType.values.byName(json['type']),
         colorIndex: json['colorIndex'] ?? -1,
+        workspaceId: json['workspaceId'] ?? '',
         createdAt: DateTime.parse(json['createdAt']),
         items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
       );
@@ -46,6 +50,7 @@ class Board {
         name: name,
         type: type,
         colorIndex: colorIndex,
+        workspaceId: workspaceId,
         items: items
             .map((i) => BoardItem(
                   content: i.content,
