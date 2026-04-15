@@ -90,11 +90,12 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: PensineColors.surface(context),
           title: const Text('New Board'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
                 autofocus: true,
                 decoration: const InputDecoration(hintText: 'Board name'),
                 onSubmitted: (_) {
@@ -130,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }).toList(),
               ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
