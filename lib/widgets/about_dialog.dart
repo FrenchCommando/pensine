@@ -7,7 +7,7 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
     builder: (ctx) => AlertDialog(
       backgroundColor: PensineColors.surface(context),
       title: const Text('Pensine'),
-      content: Column(
+      content: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -33,7 +33,7 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
             style: TextStyle(fontStyle: FontStyle.italic, color: PensineColors.muted(context)),
           ),
         ],
-      ),
+      )),
       actions: [
         TextButton(
           onPressed: () async {
@@ -56,7 +56,6 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
           style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
           child: const Text('Reset data'),
         ),
-        const Spacer(),
         TextButton(
           onPressed: () => Navigator.pop(ctx),
           child: const Text('Close'),
