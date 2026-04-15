@@ -1,17 +1,42 @@
-# pensine
+# Pensine
 
-A new Flutter project.
+A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your way through different board types — lofi vibes, gamified interactions, no backend required.
 
-## Getting Started
+**Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/)
 
-This project is a starting point for a Flutter application.
+## Board Types
 
-A few resources to get you started if this is your first Flutter project:
+- **Thoughts** — free-form notes that expand on tap
+- **To-do** — tap to catch in the net (mark done), reset to release all
+- **Flashcards** — tap to flip, double-tap when correct (shrinks to net), grows on wrong answer
+- **Steps** — sequential checklist with numbered marbles, one active at a time
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Dark/light theme toggle
+- Drag and fling marbles around the screen
+- Shake button to scatter
+- Color picker and size slider per item
+- Export/import boards as `.pensine` files
+- Installable as a PWA on mobile and desktop
+
+## Stack
+
+- Flutter / Dart
+- Local storage only (no backend, no account)
+- Multiplatform: web, Windows, macOS, Android, iOS
+
+## Running locally
+
+```bash
+flutter run -d chrome    # web
+flutter run -d windows   # desktop
+```
+
+## Deployment
+
+Web builds deploy automatically to GitHub Pages on every push to `main` via GitHub Actions.
+
+## License
+
+All Rights Reserved. See [LICENSE](LICENSE).
