@@ -42,8 +42,11 @@
 - Marble diameter capped at 80% of shortest screen side
 - Expanded thoughts bubble capped to fit screen
 - Text in marbles auto-shrinks to fit
+- New board dialog: vertical list of board types (not horizontal segmented button — too narrow on phones)
+- New board dialog: Enter key submits
 - Color picker in add/edit dialogs
 - iOS PWA install banner in `web/index.html` (shows once, dismissible)
+- All dialogs use `SingleChildScrollView` to avoid overflow on small screens
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import
@@ -80,7 +83,7 @@
 
 ### PWA
 - Flutter web builds include PWA support (manifest.json + service worker) by default
-- Android: browser prompts install natively
+- Android: browser prompts install natively; PWA storage is tied to the installing browser (clear site data in browser settings to reset)
 - iOS: manual "Add to Home Screen" (install banner guides users)
 
 ### Not yet set up
