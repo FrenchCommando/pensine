@@ -574,6 +574,7 @@ class _MarblePainter extends CustomPainter {
         var fontSize = r * 0.28;
 
         late TextPainter textPainter;
+        final isSingleWord = !displayText.contains(' ');
         // Shrink font until text fits inside the marble
         for (var i = 0; i < 10; i++) {
           final style = TextStyle(
@@ -585,7 +586,7 @@ class _MarblePainter extends CustomPainter {
             text: TextSpan(text: displayText, style: style),
             textAlign: TextAlign.center,
             textDirection: TextDirection.ltr,
-            maxLines: 3,
+            maxLines: isSingleWord ? 1 : 3,
           );
           textPainter.layout(maxWidth: maxWidth);
           if (textPainter.height <= maxHeight && !textPainter.didExceedMaxLines) break;

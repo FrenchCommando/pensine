@@ -30,7 +30,7 @@
 - Regenerate with `tool\generate_icon.bat` (Windows) or `tool/generate_icon.sh` (Unix)
 - Config in `pubspec.yaml` under `flutter_launcher_icons:`
 - `remove_alpha_ios: true` set for App Store compliance
-- PNG is gitignored — SVG is the source of truth
+- PNG is tracked in git (was previously gitignored, but CI needs it)
 - `assets/app_icon.png` also registered as a Flutter asset for in-app usage (app bar title, empty state, about dialog)
 
 ## Workspaces
@@ -61,7 +61,7 @@
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
 - Marble diameter capped at 80% of shortest screen side
 - Expanded thoughts bubble capped to fit screen
-- Text in marbles auto-shrinks to fit
+- Text in marbles auto-shrinks to fit; single-word labels forced to one line (no mid-word wrap)
 - New board dialog: vertical list of board types (not horizontal segmented button — too narrow on phones)
 - New board dialog: Enter key submits
 - Color picker in add/edit dialogs
