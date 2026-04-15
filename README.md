@@ -11,6 +11,10 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 - **Flashcards** — tap to flip, double-tap when correct (shrinks to net), grows on wrong answer
 - **Steps** — sequential checklist with numbered marbles, one active at a time
 
+## Workspaces
+
+Boards are grouped into workspaces — collections of related boards (e.g. Cooking Recipes, French Vocab, Pilot Checklists). Create, rename, recolor, and reorder workspaces from the home screen. Export a whole workspace as a single `.pensine` file.
+
 ## Features
 
 - Dark/light theme toggle
@@ -28,6 +32,7 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 
 - Flutter / Dart
 - Local storage only (no backend, no account)
+
 ## Development
 
 ```bash

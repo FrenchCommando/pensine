@@ -29,6 +29,7 @@
 - Config in `pubspec.yaml` under `flutter_launcher_icons:`
 - `remove_alpha_ios: true` set for App Store compliance
 - PNG is gitignored — SVG is the source of truth
+- `assets/app_icon.png` also registered as a Flutter asset for in-app usage (app bar title, empty state, about dialog)
 
 ## Workspaces
 - Boards are grouped into workspaces (collections of related boards)
@@ -54,7 +55,7 @@
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
 - About dialog accessible from all screens, includes "Reset data" to restore default example boards
-- Default example boards are hardcoded in `home_screen.dart` (`_defaultBoards()`), used on first launch and reset
+- Default example boards are hardcoded in `home_screen.dart` (`_defaults()`), used on first launch and reset
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
 - Marble diameter capped at 80% of shortest screen side
 - Expanded thoughts bubble capped to fit screen

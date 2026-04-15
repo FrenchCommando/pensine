@@ -833,7 +833,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pensine'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/app_icon.png', width: 28, height: 28),
+            const SizedBox(width: 8),
+            const Text('Pensine'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.file_open),
@@ -881,7 +888,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.water_drop, size: 64, color: PensineColors.muted(context)),
+                      Image.asset('assets/app_icon.png', width: 64, height: 64),
                       const SizedBox(height: 16),
                       Text(
                         'No workspaces yet.\nTap the folder icon to create one.',

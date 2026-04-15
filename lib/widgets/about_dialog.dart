@@ -31,6 +31,8 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Center(child: Image.asset('assets/app_icon.png', width: 80, height: 80)),
+          SizedBox(height: 12),
           Text(
             'A place for your thoughts.',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

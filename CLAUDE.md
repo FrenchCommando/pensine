@@ -1,6 +1,6 @@
 # Pensine
 
-A fun, visual notes app with different board types (thoughts, to-do, flashcards). Lofi vibes, gamified interactions.
+A fun, visual notes app with different board types (thoughts, to-do, flashcards, steps). Lofi vibes, gamified interactions.
 
 ## Stack
 
