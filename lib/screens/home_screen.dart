@@ -159,6 +159,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _renameBoard(Board board) {
+    final controller = TextEditingController(text: board.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PensineColors.surface(context),
+        title: const Text('Rename Board'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Board name'),
+          onSubmitted: (_) {
+            final name = controller.text.trim();
+            if (name.isEmpty) return;
+            setState(() => board.name = name);
+            _saveBoard(board);
+            Navigator.pop(ctx);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              setState(() => board.name = name);
+              _saveBoard(board);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAbout() {
     showPensineAbout(context, onReset: () async {
       for (final board in _boards) {
@@ -248,10 +287,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.only(right: 20),
                         child: const Icon(Icons.delete, color: PensineColors.accent),
                       ),
-                      onDismissed: (_) {
+                      confirmDismiss: (_) async {
                         final removed = _boards[i];
+                        final removedIndex = i;
                         setState(() => _boards.removeAt(i));
                         _deleteBoard(removed.id);
+                        final snackBar = ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Deleted "${removed.name}"'),
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              onPressed: () {
+                                setState(() => _boards.insert(removedIndex, removed));
+                                _saveBoard(removed);
+                                LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
+                              },
+                            ),
+                          ),
+                        );
+                        await snackBar.closed;
+                        return false;
                       },
                       child: Card(
                         color: PensineColors.card(context),
@@ -266,7 +321,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           trailing: PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert),
                             onSelected: (value) {
-                              if (value == 'export') {
+                              if (value == 'rename') {
+                                _renameBoard(board);
+                              } else if (value == 'export') {
                                 BoardIO.exportBoard(board, context);
                               } else if (value == 'delete') {
                                 final removed = _boards[i];
@@ -275,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                             },
                             itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'rename', child: Text('Rename')),
                               const PopupMenuItem(value: 'export', child: Text('Export')),
                               const PopupMenuItem(value: 'delete', child: Text('Delete')),
                             ],

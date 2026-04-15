@@ -25,4 +25,4 @@ jobs:
         run: flutter test
 
       - name: Build web
-        run: flutter build web --dart-define=BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        run: flutter build web "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"

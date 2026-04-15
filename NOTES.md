@@ -52,6 +52,9 @@
 - All dialogs use `SingleChildScrollView` to avoid overflow on small screens
 - Avoid `Spacer()` in `AlertDialog.actions` — causes dialog to expand on large screens
 - Boards can be reordered by long-press drag on the home screen
+- Boards can be renamed via popup menu (three dots)
+- Swipe-to-delete shows undo snackbar instead of deleting immediately
+- About dialog shows board type icons next to descriptions
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Export / Import
