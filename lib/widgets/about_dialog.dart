@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../theme.dart';
 
-void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
+const String _buildDate = String.fromEnvironment('BUILD_DATE', defaultValue: 'dev');
+
+void showPensineAbout(BuildContext context, {VoidCallback? onReset}) async {
+  final info = await PackageInfo.fromPlatform();
+
+  if (!context.mounted) return;
+
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: PensineColors.surface(context),
-      title: const Text('Pensine'),
+      title: Text('Pensine v${info.version}'),
       content: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,6 +38,11 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
           Text(
             'Penser = to think',
             style: TextStyle(fontStyle: FontStyle.italic, color: PensineColors.muted(context)),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Build: $_buildDate',
+            style: TextStyle(fontSize: 12, color: PensineColors.muted(context)),
           ),
         ],
       )),

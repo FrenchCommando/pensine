@@ -15,9 +15,6 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     if: github.event.workflow_run.conclusion == 'success'
@@ -26,7 +23,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -35,12 +32,12 @@ jobs:
       - run: flutter pub get
 
       - name: Build web
-        run: flutter build web
+        run: flutter build web --dart-define=BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: build/web
 
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
