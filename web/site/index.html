@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pensine — A place for your thoughts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      max-width: 600px;
+    }
+    .hero img {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: 2.5em;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .hero .tagline {
+      font-size: 1.2em;
+      color: #aaa;
+      margin-bottom: 32px;
+    }
+    .hero .description {
+      font-size: 1.05em;
+      line-height: 1.7;
+      color: #ccc;
+      margin-bottom: 40px;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1em;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary {
+      background: #FF6B6B;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #2a2a4a;
+      color: #e0e0e0;
+      border: 1px solid #444;
+    }
+    .features {
+      max-width: 600px;
+      padding: 0 20px 60px;
+      width: 100%;
+    }
+    .features h2 {
+      font-size: 1.3em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 480px) {
+      .feature-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2em; }
+    }
+    .feature {
+      background: #2a2a4a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .feature .name {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+    .feature .desc {
+      font-size: 0.9em;
+      color: #aaa;
+      line-height: 1.5;
+    }
+    .footer {
+      padding: 24px 20px;
+      text-align: center;
+      color: #666;
+      font-size: 0.85em;
+    }
+    .footer a { color: #4D96FF; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <img src="../icons/Icon-192.png" alt="Pensine icon">
+    <h1>Pensine</h1>
+    <p class="tagline">A place for your thoughts.</p>
+    <p class="description">
+      A fun, visual notes app where ideas float as marbles.
+      Drag, fling, and tap your way through different board types.
+      Lofi vibes, gamified interactions, no account required.
+    </p>
+    <div class="buttons">
+      <a href="../" class="btn btn-primary">Try it now</a>
+      <!-- Uncomment when store links are available:
+      <a href="#" class="btn btn-secondary">Google Play</a>
+      <a href="#" class="btn btn-secondary">App Store</a>
+      -->
+    </div>
+  </div>
+
+  <div class="features">
+    <h2>Board types</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="name">Thoughts</div>
+        <div class="desc">Free-form notes that expand on tap</div>
+      </div>
+      <div class="feature">
+        <div class="name">To-do</div>
+        <div class="desc">Tap to catch in the net, reset to release all</div>
+      </div>
+      <div class="feature">
+        <div class="name">Flashcards</div>
+        <div class="desc">Tap to flip, double-tap when correct</div>
+      </div>
+      <div class="feature">
+        <div class="name">Steps</div>
+        <div class="desc">Sequential checklist, one active at a time</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="features">
+    <h2>Features</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="name">Workspaces</div>
+        <div class="desc">Group boards into collections</div>
+      </div>
+      <div class="feature">
+        <div class="name">Offline first</div>
+        <div class="desc">No account, no backend, everything on your device</div>
+      </div>
+      <div class="feature">
+        <div class="name">Export & share</div>
+        <div class="desc">Share boards as .pensine files</div>
+      </div>
+      <div class="feature">
+        <div class="name">Install anywhere</div>
+        <div class="desc">PWA on mobile and desktop</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="../privacy.html">Privacy Policy</a>
+  </div>
+</body>
+</html>

@@ -7,7 +7,9 @@
 - `Failed to update ui::AXTree` errors on Windows — known Flutter bug with accessibility bridge during rapid widget updates (60fps ticker). Harmless, ignore.
 
 ## Web Deployment
-- GitHub Pages: `https://frenchcommando.github.io/pensine/`
+- GitHub Pages: `https://frenchcommando.github.io/pensine/` (the app)
+- Landing page: `https://frenchcommando.github.io/pensine/site/` (static, in `web/site/`)
+- Privacy policy: `https://frenchcommando.github.io/pensine/privacy.html` (static, in `web/`)
 - Deployed via `.github/workflows/deploy.yml` on every push to `main`
 - Requires GitHub repo Settings → Pages → Source set to **GitHub Actions**
 - Base href is set dynamically in `web/index.html` — works on both GitHub Pages and local serving
