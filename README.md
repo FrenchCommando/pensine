@@ -24,9 +24,7 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 
 - Flutter / Dart
 - Local storage only (no backend, no account)
-- Multiplatform: web, Windows, macOS, Android, iOS
-
-## Running locally
+## Development
 
 ```bash
 flutter run -d chrome    # web
@@ -35,7 +33,7 @@ flutter run -d windows   # desktop
 
 ## Deployment
 
-Web builds deploy automatically to GitHub Pages on every push to `main` via GitHub Actions.
+Web builds deploy automatically to GitHub Pages on every push to `main` via GitHub Actions. Installable as a PWA on mobile and desktop.
 
 ## License
 

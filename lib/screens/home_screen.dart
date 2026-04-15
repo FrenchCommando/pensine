@@ -159,7 +159,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAbout() {
-    showPensineAbout(context);
+    showPensineAbout(context, onReset: () async {
+      for (final board in _boards) {
+        await LocalStorage.deleteBoard(board.id);
+      }
+      final boards = _defaultBoards();
+      await LocalStorage.saveAllBoards(boards);
+      setState(() => _boards = boards);
+    });
   }
 
   IconData _iconForType(BoardType type) => switch (type) {

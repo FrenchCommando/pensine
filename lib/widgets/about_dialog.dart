@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-void showPensineAbout(BuildContext context) {
+void showPensineAbout(BuildContext context, {VoidCallback? onReset}) {
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -35,6 +35,28 @@ void showPensineAbout(BuildContext context) {
         ],
       ),
       actions: [
+        TextButton(
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: ctx,
+              builder: (c) => AlertDialog(
+                title: const Text('Reset all data?'),
+                content: const Text('This will delete all boards and settings.'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                  FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Reset')),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              if (ctx.mounted) Navigator.pop(ctx);
+              onReset?.call();
+            }
+          },
+          style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
+          child: const Text('Reset data'),
+        ),
+        const Spacer(),
         TextButton(
           onPressed: () => Navigator.pop(ctx),
           child: const Text('Close'),

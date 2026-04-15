@@ -37,7 +37,8 @@
 
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
-- About dialog accessible from all screens
+- About dialog accessible from all screens, includes "Reset data" to restore default example boards
+- Default example boards are hardcoded in `home_screen.dart` (`_defaultBoards()`), used on first launch and reset
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
 - Marble diameter capped at 80% of shortest screen side
 - Expanded thoughts bubble capped to fit screen
@@ -88,4 +89,5 @@
 
 ### Not yet set up
 - Native mobile builds (APK/IPA) — PWA covers casual use for now
-- App store signing
+- App store signing (Google Play $25 one-time, Apple $99/year)
+- Microsoft Store ($19 one-time) — easiest store option for native Windows distribution; use `msix` pub package to build MSIX from `pubspec.yaml`, Microsoft handles code signing
