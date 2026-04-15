@@ -1,0 +1,22 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Build iOS (no signing)
+        run: flutter build ios --release --no-codesign "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
