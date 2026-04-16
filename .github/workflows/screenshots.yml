@@ -79,18 +79,16 @@ jobs:
       - name: Wait for simulator to boot
         run: xcrun simctl bootstatus "$UDID" -b
 
-      - name: Record preview
+      - name: Run preview test
         run: |
-          # Start recording in background
-          xcrun simctl io "$UDID" recordVideo --codec h264 build/preview-ios.mp4 &
-          RECORD_PID=$!
-          sleep 2
+          flutter test integration_test/preview_test.dart \
+            --device-id "$UDID"
 
-          flutter test integration_test/preview_test.dart --device-id "$UDID" || true
-
-          # Stop recording
-          kill -INT $RECORD_PID
-          wait $RECORD_PID || true
+      - name: Stitch frames into video
+        run: |
+          ffmpeg -framerate 10 -i build/screenshots/frame_%04d.png \
+            -c:v libx264 -pix_fmt yuv420p -r 30 \
+            build/preview-ios.mp4
 
       - name: Upload preview
         uses: actions/upload-artifact@v4
@@ -161,21 +159,20 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Record Android preview
+      - name: Run Android preview test
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           emulator-boot-timeout: 300
           profile: pixel_7
-          script: |
-            adb shell screenrecord /sdcard/preview.mp4 &
-            RECORD_PID=$!
-            sleep 2
-            flutter test integration_test/preview_test.dart || true
-            kill $RECORD_PID || true
-            sleep 2
-            adb pull /sdcard/preview.mp4 build/preview-android.mp4
+          script: flutter test integration_test/preview_test.dart
+
+      - name: Stitch frames into video
+        run: |
+          ffmpeg -framerate 10 -i build/screenshots/frame_%04d.png \
+            -c:v libx264 -pix_fmt yuv420p -r 30 \
+            build/preview-android.mp4
 
       - name: Upload preview
         uses: actions/upload-artifact@v4

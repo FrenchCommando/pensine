@@ -46,8 +46,9 @@ void main() {
         final position = box.localToGlobal(Offset.zero);
         final screenSize = tester.view.physicalSize /
             tester.view.devicePixelRatio;
-        if (position.dy >= 0 &&
-            position.dy + box.size.height <= screenSize.height) {
+        // 100px accounts for AppBar + status bar
+        if (position.dy >= 100 &&
+            position.dy + box.size.height <= screenSize.height - 50) {
           return;
         }
       }
