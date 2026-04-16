@@ -1,19 +1,17 @@
 import 'dart:io';
-import 'dart:ui' as ui;
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pensine/main.dart';
 
 /// Captures frames while walking through the app. The CI workflow stitches
-/// them into a preview video with ffmpeg.
+/// them into a preview video with ffmpeg via the test driver.
 ///
 /// Run with:
-///   flutter test integration_test/preview_test.dart
+///   flutter drive --driver=test_driver/integration_test.dart \
+///       --target=integration_test/preview_test.dart
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  final frameDir = Directory('build/screenshots');
 
   var frameIndex = 0;
 
@@ -24,19 +22,6 @@ void main() {
     final name = 'frame_${frameIndex.toString().padLeft(4, '0')}';
     await binding.takeScreenshot(name);
     frameIndex++;
-
-    // Write PNG to disk for ffmpeg stitching.
-    if (!frameDir.existsSync()) frameDir.createSync(recursive: true);
-    final renderView = binding.renderViews.first;
-    final layer = renderView.debugLayer! as OffsetLayer;
-    final image = await layer.toImage(
-        Offset.zero & renderView.size,
-        pixelRatio: binding.platformDispatcher.views.first.devicePixelRatio);
-    final byteData =
-        await image.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-    File('${frameDir.path}/$name.png')
-        .writeAsBytesSync(byteData!.buffer.asUint8List());
   }
 
   /// Pumps frames until no more are scheduled, or [timeout] elapses.
