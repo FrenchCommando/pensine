@@ -119,6 +119,9 @@
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
 - `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
+- `.github/workflows/screenshots.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md)
+- `.github/workflows/release.yml` — tag-push (`v*.*.*`) or manual; uploads to Play internal + TestFlight (see DEPLOYMENT.md)
+- All workflows enable `cache: true` on `subosito/flutter-action` to restore Flutter SDK + pub cache across runs
 - GitHub Actions use v5 (`actions/checkout@v5`, etc.) for Node.js 24 compatibility
 - Free for public repos using standard GitHub-hosted runners (`ubuntu-latest`, `macos-latest`)
 
