@@ -2,12 +2,16 @@ import 'dart:io';
 import 'package:integration_test/integration_test_driver.dart';
 
 Future<void> main() => integrationDriver(
-      timeout: const Duration(minutes: 20),
-      onScreenshot: (String name, List<int> bytes,
-          [Map<String, Object?>? args]) async {
+      responseDataCallback: (data) async {
+        if (data == null) return;
+        final screenshots = data['screenshots'] as List<dynamic>?;
+        if (screenshots == null) return;
         final dir = Directory('build/screenshots');
         if (!dir.existsSync()) dir.createSync(recursive: true);
-        File('${dir.path}/$name.png').writeAsBytesSync(bytes);
-        return true;
+        for (final screenshot in screenshots) {
+          final name = screenshot['screenshotName'] as String;
+          final bytes = (screenshot['bytes'] as List<dynamic>).cast<int>();
+          File('${dir.path}/$name.png').writeAsBytesSync(bytes);
+        }
       },
     );
