@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:integration_test/integration_test_driver.dart';
 
 Future<void> main() => integrationDriver(
+      timeout: const Duration(minutes: 20),
       onScreenshot: (String name, List<int> bytes,
           [Map<String, Object?>? args]) async {
         final dir = Directory('build/screenshots');
