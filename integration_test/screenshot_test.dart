@@ -37,20 +37,25 @@ void main() {
   Future<void> scrollTo(WidgetTester tester, Finder finder,
       {double delta = 200}) async {
     final scrollable = find.byType(Scrollable).first;
-    for (var i = 0; i < 30; i++) {
+    final screenSize =
+        tester.view.physicalSize / tester.view.devicePixelRatio;
+    final midY = screenSize.height / 2;
+    for (var i = 0; i < 50; i++) {
       await settle(tester, timeout: const Duration(seconds: 1));
       if (finder.evaluate().isNotEmpty) {
-        // Check the widget is within the screen bounds
-        final box =
-            finder.evaluate().first.renderObject as RenderBox;
-        final position = box.localToGlobal(Offset.zero);
-        final screenSize = tester.view.physicalSize /
-            tester.view.devicePixelRatio;
-        // 100px accounts for AppBar + status bar
-        if (position.dy >= 100 &&
-            position.dy + box.size.height <= screenSize.height - 50) {
+        final box = finder.evaluate().first.renderObject as RenderBox;
+        final center = box.localToGlobal(
+            Offset(box.size.width / 2, box.size.height / 2));
+        // Widget center is in the tappable area (between AppBar and bottom)
+        if (center.dy > 120 && center.dy < screenSize.height - 50) {
           return;
         }
+        // Widget is in the tree but not in the right zone — use smaller
+        // drags to nudge it into view instead of overshooting.
+        final nudge = (center.dy - midY).clamp(-80, 80).toDouble();
+        await tester.drag(scrollable, Offset(0, -nudge));
+        await tester.pump(const Duration(milliseconds: 200));
+        continue;
       }
       await tester.drag(scrollable, Offset(0, -delta));
       await tester.pump(const Duration(milliseconds: 300));
