@@ -44,3 +44,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Signing artifacts (sensitive — must never be committed)
+/android/key.properties
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+
+# fastlane generated files
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/test_output
+/fastlane/README.md

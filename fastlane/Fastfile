@@ -1,0 +1,20 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build signed AAB and upload to Play Console internal track"
+  lane :beta do
+    build_number = (ENV["GITHUB_RUN_NUMBER"] || "1").to_i
+
+    sh("cd .. && flutter build appbundle --release --build-number=#{build_number}")
+
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      json_key: ENV["PLAY_JSON_KEY_FILE"],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: "draft",
+    )
+  end
+end
