@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pensine/main.dart';
@@ -19,60 +20,81 @@ void main() {
     await binding.takeScreenshot(name);
   }
 
+  /// Pumps frames until no more are scheduled, or [timeout] elapses.
+  /// Unlike pumpAndSettle this won't throw on continuous animations.
+  Future<void> settle(WidgetTester tester,
+      {Duration timeout = const Duration(seconds: 5)}) async {
+    final end = tester.binding.clock.now().add(timeout);
+    do {
+      await tester.pump(const Duration(milliseconds: 100));
+    } while (tester.binding.hasScheduledFrame &&
+        tester.binding.clock.now().isBefore(end));
+  }
+
+  /// Scrolls until [finder] is visible, using drag gestures + pump() instead
+  /// of scrollUntilVisible (which calls pumpAndSettle and hangs on animations).
+  Future<void> scrollTo(WidgetTester tester, Finder finder,
+      {double delta = 200}) async {
+    final scrollable = find.byType(Scrollable).first;
+    for (var i = 0; i < 30; i++) {
+      await settle(tester, timeout: const Duration(seconds: 1));
+      if (finder.evaluate().isNotEmpty) return;
+      await tester.drag(scrollable, Offset(0, -delta));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    throw StateError('Could not scroll to find ${finder.description}');
+  }
+
   testWidgets('Store screenshots', (tester) async {
     await tester.pumpWidget(const PensineApp());
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 1 — Home screen with default workspaces
     await takeScreenshot('01_home');
 
     // 2 — Open "Getting Started" thoughts board (first board in Welcome)
     await tester.tap(find.text('Getting Started'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     // Wait for marbles to settle after physics
     await tester.pump(const Duration(seconds: 2));
     await takeScreenshot('02_thoughts');
 
     // Go back to home
     await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 3 — Open "Essentials" flashcards board (French Vocab workspace)
-    // Scroll down to find it
-    await tester.scrollUntilVisible(find.text('Essentials'), 200);
-    await tester.pumpAndSettle();
+    await scrollTo(tester, find.text('Essentials'));
     await tester.tap(find.text('Essentials'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.pump(const Duration(seconds: 2));
     await takeScreenshot('03_flashcards');
 
     // 4 — Flip all flashcards
     await tester.tap(find.byTooltip('Flip all'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.pump(const Duration(milliseconds: 500));
     await takeScreenshot('04_flashcards_flipped');
 
     // Go back to home
     await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 5 — Open "Pancakes" checklist board (Cooking Recipes workspace)
-    await tester.scrollUntilVisible(find.text('Pancakes'), 200);
-    await tester.pumpAndSettle();
+    await scrollTo(tester, find.text('Pancakes'));
     await tester.tap(find.text('Pancakes'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.pump(const Duration(seconds: 2));
     await takeScreenshot('05_checklist');
 
     // Go back to home
     await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 6 — Open "Weekend" todo board (Welcome workspace)
-    await tester.scrollUntilVisible(find.text('Weekend'), -200);
-    await tester.pumpAndSettle();
+    await scrollTo(tester, find.text('Weekend'), delta: -200);
     await tester.tap(find.text('Weekend'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.pump(const Duration(seconds: 2));
     await takeScreenshot('06_todo');
   });
