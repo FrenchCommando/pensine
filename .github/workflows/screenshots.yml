@@ -6,6 +6,11 @@ on:
 jobs:
   ios-screenshots:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        device:
+          - "iPhone 16 Pro Max"
+          - "iPhone 16 Pro"
     steps:
       - uses: actions/checkout@v5
 
@@ -15,25 +20,19 @@ jobs:
 
       - run: flutter pub get
 
-      - name: List available simulators
-        run: xcrun simctl list devices available
-
       - name: Boot simulator
         run: |
-          # Pick the first available iPhone
           UDID=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
           data = json.load(sys.stdin)
-          for runtime, devices in sorted(data['devices'].items(), reverse=True):
+          for runtime, devices in data['devices'].items():
               for d in devices:
-                  if 'iPhone' in d['name'] and d['isAvailable']:
+                  if d['name'] == '${{ matrix.device }}' and d['isAvailable']:
                       print(d['udid'])
-                      print(d['name'], file=sys.stderr)
                       sys.exit(0)
           sys.exit(1)
           ")
-          echo "Using simulator: $UDID"
-          xcrun simctl boot "$UDID" || true
+          xcrun simctl boot "$UDID"
           echo "UDID=$UDID" >> $GITHUB_ENV
 
       - name: Run screenshot tests
@@ -45,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: screenshots-ios
+          name: screenshots-ios-${{ matrix.device }}
           path: build/screenshots/
 
   android-screenshots:
