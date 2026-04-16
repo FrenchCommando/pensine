@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pensine/main.dart';
@@ -12,7 +13,9 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> takeScreenshot(String name) async {
-    await binding.convertFlutterSurfaceToImage();
+    if (Platform.isAndroid) {
+      await binding.convertFlutterSurfaceToImage();
+    }
     await binding.takeScreenshot(name);
   }
 

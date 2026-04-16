@@ -73,8 +73,8 @@ Automated via `.github/workflows/screenshots.yml` (manual trigger).
 
 - Uses Flutter integration tests (`integration_test/screenshot_test.dart`)
 - Captures 6 screens: home, thoughts board, flashcards (front + flipped), checklist, todo
-- **iOS:** runs on iPhone 15 Pro Max + iPhone 15 Pro simulators in parallel
-- **Android:** runs on Pixel 7 emulator
+- **iOS:** runs on iPhone 16 Pro Max + iPhone 16 Pro simulators in parallel (macOS runner)
+- **Android:** runs on Pixel 7 emulator (Linux runner, requires KVM for hardware acceleration)
 - Screenshots uploaded as downloadable CI artifacts (Actions tab > run > Artifacts)
 - Download and upload manually to App Store Connect / Google Play Console
 
