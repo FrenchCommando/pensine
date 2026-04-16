@@ -12,12 +12,14 @@ jobs:
         device:
           - "iPhone 16 Pro Max"
           - "iPhone 16 Pro"
+          - "iPad Pro 13-inch (M4)"
     steps:
       - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - run: flutter pub get
 
@@ -62,6 +64,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - run: flutter pub get
 
@@ -106,12 +109,18 @@ jobs:
   android-screenshots:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        profile:
+          - pixel_7
+          - pixel_tablet
     steps:
       - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - run: flutter pub get
 
@@ -133,14 +142,14 @@ jobs:
           api-level: 35
           arch: x86_64
           emulator-boot-timeout: 300
-          profile: pixel_7
+          profile: ${{ matrix.profile }}
           script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshot_test.dart
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: screenshots-android
+          name: screenshots-android-${{ matrix.profile }}
           path: build/screenshots/
 
   android-preview:
@@ -152,6 +161,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - run: flutter pub get
 
