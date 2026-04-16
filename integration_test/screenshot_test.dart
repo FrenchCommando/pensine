@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -8,16 +10,32 @@ import 'package:pensine/main.dart';
 ///
 /// Run with:
 ///   flutter test integration_test/screenshot_test.dart
-///
-/// On CI the workflow converts these into PNG files via the binding.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  final screenshotDir = Directory('build/screenshots');
+
+  /// Captures a screenshot and writes it to build/screenshots/<name>.png.
   Future<void> takeScreenshot(String name) async {
     if (Platform.isAndroid) {
       await binding.convertFlutterSurfaceToImage();
     }
     await binding.takeScreenshot(name);
+
+    // Also write PNG to disk so artifacts are available on all platforms.
+    if (!screenshotDir.existsSync()) {
+      screenshotDir.createSync(recursive: true);
+    }
+    final renderView = binding.renderViews.first;
+    final layer = renderView.debugLayer! as OffsetLayer;
+    final image = await layer.toImage(
+        Offset.zero & renderView.size,
+        pixelRatio: binding.platformDispatcher.views.first.devicePixelRatio);
+    final byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    File('${screenshotDir.path}/$name.png')
+        .writeAsBytesSync(byteData!.buffer.asUint8List());
   }
 
   /// Pumps frames until no more are scheduled, or [timeout] elapses.
