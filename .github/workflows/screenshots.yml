@@ -35,6 +35,9 @@ jobs:
           xcrun simctl boot "$UDID"
           echo "UDID=$UDID" >> $GITHUB_ENV
 
+      - name: Wait for simulator to boot
+        run: xcrun simctl bootstatus "$UDID" -b
+
       - name: Run screenshot tests
         run: |
           flutter test integration_test/screenshot_test.dart \
