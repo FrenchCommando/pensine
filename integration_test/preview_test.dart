@@ -1,27 +1,18 @@
-import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pensine/main.dart';
 
-/// Takes store-listing screenshots on a fresh install (default workspaces).
+/// Walks through the app for ~30 seconds to produce a store-listing preview
+/// video.  The CI workflow records the simulator/emulator screen while this
+/// test runs.
 ///
 /// Run with:
-///   flutter test integration_test/screenshot_test.dart
-///
-/// On CI the workflow converts these into PNG files via the binding.
+///   flutter test integration_test/preview_test.dart
 void main() {
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  Future<void> takeScreenshot(String name) async {
-    if (Platform.isAndroid) {
-      await binding.convertFlutterSurfaceToImage();
-    }
-    await binding.takeScreenshot(name);
-  }
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   /// Pumps frames until no more are scheduled, or [timeout] elapses.
-  /// Unlike pumpAndSettle this won't throw on continuous animations.
   Future<void> settle(WidgetTester tester,
       {Duration timeout = const Duration(seconds: 5)}) async {
     final end = tester.binding.clock.now().add(timeout);
@@ -31,8 +22,10 @@ void main() {
         tester.binding.clock.now().isBefore(end));
   }
 
-  /// Scrolls until [finder] is visible, using drag gestures + pump() instead
-  /// of scrollUntilVisible (which calls pumpAndSettle and hangs on animations).
+  Future<void> pause(WidgetTester tester, {int seconds = 3}) async {
+    await tester.pump(Duration(seconds: seconds));
+  }
+
   Future<void> scrollTo(WidgetTester tester, Finder finder,
       {double delta = 200}) async {
     final scrollable = find.byType(Scrollable).first;
@@ -42,60 +35,54 @@ void main() {
       await tester.drag(scrollable, Offset(0, -delta));
       await tester.pump(const Duration(milliseconds: 300));
     }
-    throw StateError('Could not scroll to find widget');
   }
 
-  testWidgets('Store screenshots', (tester) async {
+  testWidgets('Preview walkthrough', (tester) async {
     await tester.pumpWidget(const PensineApp());
     await settle(tester);
+    await pause(tester); // linger on home screen
 
-    // 1 — Home screen with default workspaces
-    await takeScreenshot('01_home');
-
-    // 2 — Open "Getting Started" thoughts board (first board in Welcome)
+    // Open thoughts board
     await tester.tap(find.text('Getting Started'));
     await settle(tester);
-    // Wait for marbles to settle after physics
-    await tester.pump(const Duration(seconds: 2));
-    await takeScreenshot('02_thoughts');
+    await pause(tester, seconds: 4); // show marbles settling
 
-    // Go back to home
+    // Back to home
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
+    await pause(tester, seconds: 2);
 
-    // 3 — Open "Essentials" flashcards board (French Vocab workspace)
+    // Open flashcards
     await scrollTo(tester, find.text('Essentials'));
     await tester.tap(find.text('Essentials'));
     await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
-    await takeScreenshot('03_flashcards');
+    await pause(tester);
 
-    // 4 — Flip all flashcards
+    // Flip cards
     await tester.tap(find.byTooltip('Flip all'));
     await settle(tester);
-    await tester.pump(const Duration(milliseconds: 500));
-    await takeScreenshot('04_flashcards_flipped');
+    await pause(tester);
 
-    // Go back to home
+    // Back to home
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
+    await pause(tester, seconds: 2);
 
-    // 5 — Open "Pancakes" checklist board (Cooking Recipes workspace)
+    // Open checklist
     await scrollTo(tester, find.text('Pancakes'));
     await tester.tap(find.text('Pancakes'));
     await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
-    await takeScreenshot('05_checklist');
+    await pause(tester);
 
-    // Go back to home
+    // Back to home
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
+    await pause(tester, seconds: 2);
 
-    // 6 — Open "Weekend" todo board (Welcome workspace)
+    // Open todo
     await scrollTo(tester, find.text('Weekend'), delta: -200);
     await tester.tap(find.text('Weekend'));
     await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
-    await takeScreenshot('06_todo');
+    await pause(tester, seconds: 4); // end on todo board
   });
 }

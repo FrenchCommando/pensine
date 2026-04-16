@@ -50,6 +50,55 @@ jobs:
           name: screenshots-ios-${{ matrix.device }}
           path: build/screenshots/
 
+  ios-preview:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+              for d in devices:
+                  if d['name'] == 'iPhone 16 Pro Max' and d['isAvailable']:
+                      print(d['udid'])
+                      sys.exit(0)
+          sys.exit(1)
+          ")
+          xcrun simctl boot "$UDID"
+          echo "UDID=$UDID" >> $GITHUB_ENV
+
+      - name: Wait for simulator to boot
+        run: xcrun simctl bootstatus "$UDID" -b
+
+      - name: Record preview
+        run: |
+          # Start recording in background
+          xcrun simctl io "$UDID" recordVideo --codec h264 build/preview-ios.mp4 &
+          RECORD_PID=$!
+          sleep 2
+
+          flutter test integration_test/preview_test.dart --device-id "$UDID" || true
+
+          # Stop recording
+          kill -INT $RECORD_PID
+          wait $RECORD_PID || true
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preview-ios
+          path: build/preview-ios.mp4
+
   android-screenshots:
     runs-on: ubuntu-latest
     steps:
@@ -88,3 +137,49 @@ jobs:
         with:
           name: screenshots-android
           path: build/screenshots/
+
+  android-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Record Android preview
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          emulator-boot-timeout: 300
+          profile: pixel_7
+          script: |
+            adb shell screenrecord /sdcard/preview.mp4 &
+            RECORD_PID=$!
+            sleep 2
+            flutter test integration_test/preview_test.dart || true
+            kill $RECORD_PID || true
+            sleep 2
+            adb pull /sdcard/preview.mp4 build/preview-android.mp4
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preview-android
+          path: build/preview-android.mp4
