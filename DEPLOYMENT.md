@@ -67,7 +67,17 @@
 - Microsoft handles code signing
 - Easiest store option for native Windows distribution
 
+## Screenshots
+
+Automated via `.github/workflows/screenshots.yml` (manual trigger).
+
+- Uses Flutter integration tests (`integration_test/screenshot_test.dart`)
+- Captures 6 screens: home, thoughts board, flashcards (front + flipped), checklist, todo
+- **iOS:** runs on iPhone 15 Pro Max + iPhone 15 Pro simulators in parallel
+- **Android:** runs on Pixel 7 emulator
+- Screenshots uploaded as downloadable CI artifacts (Actions tab > run > Artifacts)
+- Download and upload manually to App Store Connect / Google Play Console
+
 ## Shared requirements (all stores)
 - Privacy policy page — host on GitHub Pages (e.g. `frenchcommando.github.io/pensine/privacy`)
-- Screenshots / promotional graphics per platform
 - Version bump in `pubspec.yaml` before each release
