@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -31,7 +32,17 @@ void main() {
     final scrollable = find.byType(Scrollable).first;
     for (var i = 0; i < 30; i++) {
       await settle(tester, timeout: const Duration(seconds: 1));
-      if (finder.evaluate().isNotEmpty) return;
+      if (finder.evaluate().isNotEmpty) {
+        final box =
+            finder.evaluate().first.renderObject as RenderBox;
+        final position = box.localToGlobal(Offset.zero);
+        final screenSize = tester.view.physicalSize /
+            tester.view.devicePixelRatio;
+        if (position.dy >= 0 &&
+            position.dy + box.size.height <= screenSize.height) {
+          return;
+        }
+      }
       await tester.drag(scrollable, Offset(0, -delta));
       await tester.pump(const Duration(milliseconds: 300));
     }

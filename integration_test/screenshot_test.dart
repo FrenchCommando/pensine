@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -31,14 +32,26 @@ void main() {
         tester.binding.clock.now().isBefore(end));
   }
 
-  /// Scrolls until [finder] is visible, using drag gestures + pump() instead
-  /// of scrollUntilVisible (which calls pumpAndSettle and hangs on animations).
+  /// Scrolls until [finder] is visible and tappable on screen, using drag
+  /// gestures + pump() instead of scrollUntilVisible (which calls
+  /// pumpAndSettle and hangs on continuous animations).
   Future<void> scrollTo(WidgetTester tester, Finder finder,
       {double delta = 200}) async {
     final scrollable = find.byType(Scrollable).first;
     for (var i = 0; i < 30; i++) {
       await settle(tester, timeout: const Duration(seconds: 1));
-      if (finder.evaluate().isNotEmpty) return;
+      if (finder.evaluate().isNotEmpty) {
+        // Check the widget is within the screen bounds
+        final box =
+            finder.evaluate().first.renderObject as RenderBox;
+        final position = box.localToGlobal(Offset.zero);
+        final screenSize = tester.view.physicalSize /
+            tester.view.devicePixelRatio;
+        if (position.dy >= 0 &&
+            position.dy + box.size.height <= screenSize.height) {
+          return;
+        }
+      }
       await tester.drag(scrollable, Offset(0, -delta));
       await tester.pump(const Duration(milliseconds: 300));
     }
