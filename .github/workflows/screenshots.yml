@@ -41,6 +41,15 @@ jobs:
       - name: Wait for simulator to boot
         run: xcrun simctl bootstatus "$UDID" -b
 
+      - name: Override status bar for store-quality screenshots
+        run: |
+          xcrun simctl status_bar "$UDID" override \
+            --time "9:41" \
+            --batteryState charged \
+            --batteryLevel 100 \
+            --cellularBars 4 \
+            --wifiBars 3
+
       - name: Run screenshot tests
         run: |
           flutter drive \
@@ -85,6 +94,15 @@ jobs:
 
       - name: Wait for simulator to boot
         run: xcrun simctl bootstatus "$UDID" -b
+
+      - name: Override status bar for store-quality recording
+        run: |
+          xcrun simctl status_bar "$UDID" override \
+            --time "9:41" \
+            --batteryState charged \
+            --batteryLevel 100 \
+            --cellularBars 4 \
+            --wifiBars 3
 
       - name: Record preview walkthrough
         run: |
@@ -143,7 +161,15 @@ jobs:
           arch: x86_64
           emulator-boot-timeout: 300
           profile: ${{ matrix.profile }}
-          script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshot_test.dart
+          script: |
+            adb shell settings put global sysui_demo_allowed 1
+            adb shell am broadcast -a com.android.systemui.demo -e command enter
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+            adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none
+            adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+            flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshot_test.dart
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
@@ -185,6 +211,13 @@ jobs:
           emulator-boot-timeout: 300
           profile: pixel_7
           script: |
+            adb shell settings put global sysui_demo_allowed 1
+            adb shell am broadcast -a com.android.systemui.demo -e command enter
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+            adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none
+            adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
             mkdir -p build
             adb shell screenrecord --time-limit=180 /sdcard/preview.mp4 &
             REC_PID=$!
