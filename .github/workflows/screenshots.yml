@@ -48,7 +48,7 @@ jobs:
           path: build/screenshots/
 
   android-screenshots:
-    runs-on: macos-latest  # hardware accel for Android emulator
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
@@ -68,7 +68,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          arch: arm64-v8a
+          arch: x86_64
           profile: pixel_7
           script: flutter test integration_test/screenshot_test.dart
 
