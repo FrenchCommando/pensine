@@ -155,6 +155,8 @@ This is the **upload key**. On first Play Console release, opt into Play App Sig
 - `IOS_DIST_CERT_P12_BASE64`
 - `IOS_DIST_CERT_PASSWORD`
 - `IOS_PROVISIONING_PROFILE_BASE64`
+- `IOS_PROVISIONING_PROFILE_NAME` — the human-readable name you gave the profile when creating it in the Apple Developer portal (not the UUID)
+- `APPLE_TEAM_ID` — 10-character alphanumeric, visible at developer.apple.com → Membership
 - `APPSTORE_CONNECT_API_KEY_ID`
 - `APPSTORE_CONNECT_API_ISSUER_ID`
 - `APPSTORE_CONNECT_API_KEY_P8_BASE64`
