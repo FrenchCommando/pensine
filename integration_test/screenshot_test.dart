@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -34,6 +35,7 @@ void main() {
   const host = String.fromEnvironment('SCREENSHOT_HOST');
 
   Future<void> takeScreenshot(String name) async {
+    log('capture:$name start');
     debugPauseMarblePhysics = true;
     try {
       if (host.isNotEmpty) {
@@ -50,49 +52,53 @@ void main() {
       await binding.takeScreenshot(name);
     } finally {
       debugPauseMarblePhysics = false;
+      log('capture:$name done');
     }
   }
 
   testWidgets('Store screenshots', (tester) async {
+    log('pumpWidget');
     await tester.pumpWidget(const PensineApp());
+    log('initial settle');
     await settle(tester);
 
-    // 1 — Home screen with default workspaces
     await takeScreenshot('01_home');
 
-    // 2 — Open "Getting Started" thoughts board (first board in Welcome)
+    log('tap Getting Started');
     await tester.tap(find.text('Getting Started'));
     await settle(tester);
-    // Wait for marbles to settle after physics
     await tester.pump(const Duration(seconds: 2));
     await takeScreenshot('02_thoughts');
 
-    // Go back to home
+    log('tap Back (from thoughts)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    // 3 — Open "Essentials" flashcards board (French Vocab workspace)
+    log('openBoard Essentials');
     await openBoard(tester, 'Essentials');
     await takeScreenshot('03_flashcards');
 
-    // 4 — Flip all flashcards
+    log('tap Flip all');
     await tester.tap(find.byTooltip('Flip all'));
     await settle(tester);
     await tester.pump(const Duration(milliseconds: 500));
     await takeScreenshot('04_flashcards_flipped');
 
+    log('tap Back (from flashcards)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    // 5 — Open "Pancakes" checklist board (Cooking Recipes workspace)
+    log('openBoard Pancakes');
     await openBoard(tester, 'Pancakes');
     await takeScreenshot('05_checklist');
 
+    log('tap Back (from checklist)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    // 6 — Open "Weekend" todo board (Welcome workspace)
+    log('openBoard Weekend');
     await openBoard(tester, 'Weekend', scrollDelta: -200);
     await takeScreenshot('06_todo');
+    log('done');
   });
 }

@@ -4,13 +4,14 @@
 #   2. Waits until the driver reports "Connected to Flutter application"
 #      (i.e. build/install/launch is done — recording shouldn't waste time
 #      on the build phase).
-#   3. Records for a fixed window using `timeout -s INT`, which simctl
-#      treats as the proper end-of-recording signal — finalizes the moov
-#      atom and produces a playable MP4.
+#   3. Records for a fixed window, then sends SIGINT and waits for simctl
+#      to exit — simctl treats SIGINT as a clean shutdown, which finalizes
+#      the moov atom and produces a playable MP4. The `wait` is critical:
+#      exiting the shell before simctl finishes flushing truncates the file.
 #   4. Waits for the test to finish, propagates its exit code.
 #
-# Lives in a single script because reactivecircus/android-emulator-runner-style
-# YAML script blocks fragment multi-line bash; same goes for our iOS step.
+# macOS runners don't have GNU `timeout`, so we do the "send signal after
+# N seconds" dance manually.
 set -euo pipefail
 
 UDID=${UDID:?UDID env var required}
@@ -33,7 +34,6 @@ flutter drive \
   >"$LOG" 2>&1 &
 DRIVE_PID=$!
 
-# Wait until the driver attaches to the app (build/install/launch finished).
 while ! grep -q "Connected to Flutter application" "$LOG"; do
   if ! kill -0 "$DRIVE_PID" 2>/dev/null; then
     exit 1
@@ -41,10 +41,11 @@ while ! grep -q "Connected to Flutter application" "$LOG"; do
   sleep 1
 done
 
-# Clean SIGINT-on-timeout = simctl finalizes the file properly.
-# timeout exits 124 on success; that's expected, not an error.
-timeout -s INT "${RECORD_SECONDS}s" \
-  xcrun simctl io "$UDID" recordVideo --codec=h264 "$OUT" || true
+xcrun simctl io "$UDID" recordVideo --codec=h264 "$OUT" &
+REC_PID=$!
+sleep "$RECORD_SECONDS"
+kill -INT "$REC_PID" 2>/dev/null || true
+wait "$REC_PID" 2>/dev/null || true
 
 TEST_EXIT=0
 wait "$DRIVE_PID" || TEST_EXIT=$?
