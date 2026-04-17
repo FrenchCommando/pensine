@@ -1,11 +1,9 @@
 name: Setup Flutter
-description: Check out the repo, install the Flutter SDK with cache, and fetch packages.
+description: Install the Flutter SDK with cache and fetch packages. Caller must run actions/checkout first (composite actions can't do their own checkout — the loader needs the repo on disk to find this file).
 
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v5
-
     - uses: subosito/flutter-action@v2
       with:
         channel: stable

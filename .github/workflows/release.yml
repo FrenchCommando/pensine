@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - uses: ruby/setup-ruby@v1
@@ -56,6 +57,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - uses: ruby/setup-ruby@v1

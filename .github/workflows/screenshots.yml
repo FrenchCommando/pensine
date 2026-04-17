@@ -14,6 +14,7 @@ jobs:
           - "iPhone 16 Pro"
           - "iPad Pro 13-inch (M4)"
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Boot simulator
@@ -40,6 +41,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Boot simulator
@@ -67,6 +69,7 @@ jobs:
           - pixel_7
           - pixel_tablet
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
       - uses: ./.github/actions/setup-android-emulator-host
 
@@ -92,6 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
       - uses: ./.github/actions/setup-android-emulator-host
 
