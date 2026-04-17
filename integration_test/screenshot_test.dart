@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +13,33 @@ import 'package:pensine/main.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // Trust scoped to exactly the cert the workflow minted for this run.
+  // Cert bytes arrive as base64 via --dart-define; nothing checked in.
+  final httpClient = () {
+    const certB64 = String.fromEnvironment('SCREENSHOT_CERT_B64');
+    if (certB64.isEmpty) return HttpClient();
+    final ctx = SecurityContext(withTrustedRoots: false)
+      ..setTrustedCertificatesBytes(base64Decode(certB64));
+    return HttpClient(context: ctx);
+  }();
+
   Future<void> takeScreenshot(String name) async {
     if (Platform.isAndroid) {
-      await binding.convertFlutterSurfaceToImage();
+      // convertFlutterSurfaceToImage deadlocks on Android emulators. The host
+      // workflow runs an HTTPS server that grabs frames via `adb screencap`;
+      // we POST over the emulator's host alias 10.0.2.2 and wait for 200,
+      // which means the PNG is written.
+      final port = const String.fromEnvironment('SCREENSHOT_PORT',
+          defaultValue: '8765');
+      final req = await httpClient
+          .postUrl(Uri.parse('https://10.0.2.2:$port/screenshot/$name'));
+      final res = await req.close();
+      await res.drain();
+      if (res.statusCode != 200) {
+        throw StateError(
+            'Screenshot capture failed for "$name": HTTP ${res.statusCode}');
+      }
+      return;
     }
     await binding.takeScreenshot(name);
   }
