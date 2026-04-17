@@ -136,12 +136,14 @@
 - iOS: manual "Add to Home Screen" (install banner guides users)
 
 ### Local Testing (WSL2)
-- Scripts in `tool/`: `setup_wsl_android.sh` (one-shot installer), `boot_android_emulator.sh` (boots AVD + status bar)
-- `.bat` wrappers call `wsl bash` so they work from Windows: `setup_wsl_android_wrapper.bat`, `boot_android_emulator_wrapper.bat`, `run_screenshot_test_wrapper.bat`
-- Requires WSL2 with nested virtualization (`C:\Users\Martial\.wslconfig` → `nestedVirtualization=true`)
-- Installs Linux-native JDK 17, Android SDK (API 35, x86_64), Flutter SDK, and creates `pixel_7` / `pixel_tablet` AVDs matching CI
-- Workflow: `tool\setup_wsl_android_wrapper.bat` (once) → `tool\boot_android_emulator_wrapper.bat pixel_7` → `tool\run_screenshot_test_wrapper.bat`
-- Same scripts CI runs — no env-specific forks
+- Local-only scripts live in `local/` (separate from `tool/`, which holds CI/shared scripts):
+  - `setup_wsl_android.sh` — idempotent installer (JDK 17, Android SDK API 35 x86_64, Flutter SDK, AVDs)
+  - `boot_android_emulator.sh` — boots the AVD and configures the status bar
+  - `wsl_env.sh` — canonical env (JAVA_HOME, ANDROID_HOME, FLUTTER_HOME, PATH); sourced by setup, the `.bat`, and `~/.bashrc`
+  - `screenshot_test.bat` — single Windows entry point: setup + boot + `tool/run_screenshot_test.sh`, in one WSL session
+- Requires WSL2 with nested virtualization (toggle in the WSL Settings app → System tab)
+- Workflow from cmd in repo root: `local\screenshot_test.bat` (defaults to `pixel_7`; pass `pixel_tablet` for the larger AVD)
+- The screenshot test itself (`tool/run_screenshot_test.sh`) is the same script CI runs — no env-specific forks
 - See `LOCAL_TESTING_PLAN.md` for full context and iOS (OSX-KVM) plan
 
 ### Not yet set up

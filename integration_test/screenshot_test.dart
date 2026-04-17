@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -34,8 +33,7 @@ void main() {
   // Host-driven capture bypasses that entirely.
   const host = String.fromEnvironment('SCREENSHOT_HOST');
 
-  Future<void> takeScreenshot(String name) async {
-    log('capture:$name start');
+  Future<void> takeScreenshot(WidgetTester tester, String name) async {
     debugPauseMarblePhysics = true;
     try {
       if (host.isNotEmpty) {
@@ -51,54 +49,45 @@ void main() {
       }
       await binding.takeScreenshot(name);
     } finally {
-      debugPauseMarblePhysics = false;
-      log('capture:$name done');
+      // Physics stays paused after the shot — resumed only during openBoard's
+      // hold so marbles settle for the next screenshot. This keeps the emulator
+      // load near zero between screenshots and prevents emulator crashes from
+      // sustained swiftshader rendering.
     }
   }
 
   testWidgets('Store screenshots', (tester) async {
-    log('pumpWidget');
     await tester.pumpWidget(const PensineApp());
-    log('initial settle');
     await settle(tester);
 
-    await takeScreenshot('01_home');
+    await takeScreenshot(tester, '01_home');
 
-    log('tap Getting Started');
     await tester.tap(find.text('Getting Started'));
     await settle(tester);
     await tester.pump(const Duration(seconds: 2));
-    await takeScreenshot('02_thoughts');
+    await takeScreenshot(tester, '02_thoughts');
 
-    log('tap Back (from thoughts)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    log('openBoard Essentials');
-    await openBoard(tester, 'Essentials');
-    await takeScreenshot('03_flashcards');
+    await openBoard(tester, 'Essentials', resumePhysics: true);
+    await takeScreenshot(tester, '03_flashcards');
 
-    log('tap Flip all');
     await tester.tap(find.byTooltip('Flip all'));
     await settle(tester);
     await tester.pump(const Duration(milliseconds: 500));
-    await takeScreenshot('04_flashcards_flipped');
+    await takeScreenshot(tester, '04_flashcards_flipped');
 
-    log('tap Back (from flashcards)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    log('openBoard Pancakes');
-    await openBoard(tester, 'Pancakes');
-    await takeScreenshot('05_checklist');
+    await openBoard(tester, 'Pancakes', resumePhysics: true);
+    await takeScreenshot(tester, '05_checklist');
 
-    log('tap Back (from checklist)');
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    log('openBoard Weekend');
-    await openBoard(tester, 'Weekend', scrollDelta: -200);
-    await takeScreenshot('06_todo');
-    log('done');
+    await openBoard(tester, 'Weekend', scrollDelta: -200, resumePhysics: true);
+    await takeScreenshot(tester, '06_todo');
   });
 }

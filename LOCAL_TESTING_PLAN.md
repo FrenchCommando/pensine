@@ -51,20 +51,20 @@ Build a local iteration loop in WSL2 that runs the same scripts CI runs, for bot
 
 ### Android (WSL2, native via KVM) ✅ DONE
 
-Scripts created:
-- `tool/setup_wsl_android.sh` — one-shot installer (JDK 17, Android SDK, Flutter Linux SDK, AVDs)
-- `tool/boot_android_emulator.sh` — boots AVD, waits for boot, runs `setup_android_status_bar.sh`
-- `.bat` wrappers for Windows invocation: `setup_wsl_android_wrapper.bat`, `boot_android_emulator_wrapper.bat`, `run_screenshot_test_wrapper.bat`
+Scripts (in `local/` — separated from `tool/` which holds CI/shared scripts):
+- `local/setup_wsl_android.sh` — idempotent installer (JDK 17, Android SDK, Flutter Linux SDK, AVDs)
+- `local/boot_android_emulator.sh` — boots AVD, waits for boot, runs `tool/setup_android_status_bar.sh`
+- `local/wsl_env.sh` — canonical env (JAVA_HOME / ANDROID_HOME / FLUTTER_HOME / PATH); sourced by setup, the `.bat`, and `~/.bashrc`
+- `local/screenshot_test.bat` — single Windows entry point: setup + boot + `tool/run_screenshot_test.sh`, all in one WSL session
 
 Prerequisites (user):
 - Install WSL2 (`wsl --install`, reboot)
-- `nestedVirtualization=true` already added to `C:\Users\Martial\.wslconfig`
+- Nested virtualization enabled in the WSL Settings app (System tab)
 
-Workflow from Windows:
+Workflow from Windows (cmd in repo root):
 ```
-tool\setup_wsl_android_wrapper.bat          (once — installs everything in WSL2)
-tool\boot_android_emulator_wrapper.bat pixel_7
-tool\run_screenshot_test_wrapper.bat
+local\screenshot_test.bat              (defaults to pixel_7)
+local\screenshot_test.bat pixel_tablet
 ```
 
 ### iOS (WSL2 via OSX-KVM)
@@ -101,7 +101,7 @@ Once the env is up, fix the 4 CI jobs in this order (each verified locally, then
 
 This work is scaffolding for every future Flutter project that needs CI-based integration tests. Extract the setup into a reusable form after this project's tests are green:
 
-- `tool/setup_wsl_android.sh` — one-shot installer for the Android side of WSL2.
+- `local/setup_wsl_android.sh` + `local/wsl_env.sh` — one-shot installer for the Android side of WSL2.
 - Separate doc / repo for the OSX-KVM setup (it's heavier and more interesting to maintain outside a project repo).
 - A short runbook: "boot Android emulator in WSL2 → run flutter drive → iterate" that someone else could follow in 30 minutes.
 
