@@ -13,7 +13,6 @@ set -euo pipefail
 
 OUT_DIR=build/screenshots
 PORT=8765
-mkdir -p "$OUT_DIR"
 
 CERT_DIR=$(mktemp -d)
 SERVER_PID=
@@ -37,7 +36,7 @@ python3 tool/screenshot_server.py \
 SERVER_PID=$!
 
 # Wait for the server to bind before starting the test.
-for _ in 1 2 3 4 5 6 7 8 9 10; do
+for _ in {1..10}; do
   if curl -sf --cacert "$CERT_DIR/cert.pem" "https://127.0.0.1:$PORT/health"; then
     break
   fi
