@@ -44,13 +44,9 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 0.5
 done
 
-set +e
+TEST_EXIT=0
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/screenshot_test.dart \
-  --dart-define=SCREENSHOT_CERT_B64="$CERT_B64"
-TEST_EXIT=$?
-set -e
-
-kill $SERVER_PID 2>/dev/null || true
+  --dart-define=SCREENSHOT_CERT_B64="$CERT_B64" || TEST_EXIT=$?
 exit $TEST_EXIT

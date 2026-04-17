@@ -29,7 +29,7 @@ void main() {
       // workflow runs an HTTPS server that grabs frames via `adb screencap`;
       // we POST over the emulator's host alias 10.0.2.2 and wait for 200,
       // which means the PNG is written.
-      final port = const String.fromEnvironment('SCREENSHOT_PORT',
+      const port = String.fromEnvironment('SCREENSHOT_PORT',
           defaultValue: '8765');
       final req = await httpClient
           .postUrl(Uri.parse('https://10.0.2.2:$port/screenshot/$name'));

@@ -17,7 +17,12 @@ UDID=${UDID:?UDID env var required}
 RECORD_SECONDS=${RECORD_SECONDS:-40}
 OUT=build/preview-ios.mp4
 LOG=$(mktemp)
-trap 'rm -f "$LOG"' EXIT
+
+cleanup() {
+  cat "$LOG" 2>/dev/null || true
+  rm -f "$LOG"
+}
+trap cleanup EXIT
 
 mkdir -p build
 
@@ -31,17 +36,16 @@ DRIVE_PID=$!
 # Wait until the driver attaches to the app (build/install/launch finished).
 while ! grep -q "Connected to Flutter application" "$LOG"; do
   if ! kill -0 "$DRIVE_PID" 2>/dev/null; then
-    cat "$LOG"
     exit 1
   fi
   sleep 1
 done
 
 # Clean SIGINT-on-timeout = simctl finalizes the file properly.
+# timeout exits 124 on success; that's expected, not an error.
 timeout -s INT "${RECORD_SECONDS}s" \
   xcrun simctl io "$UDID" recordVideo --codec=h264 "$OUT" || true
 
-wait "$DRIVE_PID"
-TEST_EXIT=$?
-cat "$LOG"
+TEST_EXIT=0
+wait "$DRIVE_PID" || TEST_EXIT=$?
 exit $TEST_EXIT

@@ -18,7 +18,12 @@ RECORD_SECONDS=${RECORD_SECONDS:-40}
 DEVICE_PATH=/sdcard/preview.mp4
 OUT=build/preview-android.mp4
 LOG=$(mktemp)
-trap 'rm -f "$LOG"' EXIT
+
+cleanup() {
+  cat "$LOG" 2>/dev/null || true
+  rm -f "$LOG"
+}
+trap cleanup EXIT
 
 mkdir -p build
 
@@ -30,7 +35,6 @@ DRIVE_PID=$!
 
 while ! grep -q "Connected to Flutter application" "$LOG"; do
   if ! kill -0 "$DRIVE_PID" 2>/dev/null; then
-    cat "$LOG"
     exit 1
   fi
   sleep 1
@@ -38,9 +42,8 @@ done
 
 # Clean exit at --time-limit = finalized MP4 (no SIGINT).
 adb shell screenrecord --time-limit="$RECORD_SECONDS" "$DEVICE_PATH"
-
-wait "$DRIVE_PID"
-TEST_EXIT=$?
 adb pull "$DEVICE_PATH" "$OUT"
-cat "$LOG"
+
+TEST_EXIT=0
+wait "$DRIVE_PID" || TEST_EXIT=$?
 exit $TEST_EXIT
