@@ -105,17 +105,9 @@ jobs:
             --wifiBars 3
 
       - name: Record preview walkthrough
-        run: |
-          mkdir -p build
-          xcrun simctl io "$UDID" recordVideo --codec=h264 build/preview-ios.mp4 &
-          REC_PID=$!
-          sleep 2
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/preview_test.dart \
-            --device-id "$UDID"
-          kill -INT $REC_PID
-          wait $REC_PID || true
+        run: bash tool/run_ios_preview.sh
+        env:
+          UDID: ${{ env.UDID }}
 
       - name: Upload preview
         uses: actions/upload-artifact@v4
@@ -169,33 +161,7 @@ jobs:
             adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
             adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none
             adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
-            mkdir -p build/screenshots
-            # Mint a fresh self-signed cert/key for this run. Cert bytes are
-            # passed to the test via --dart-define so it can pin trust at
-            # runtime. Nothing touches the source tree; private key stays on
-            # the runner.
-            CERT_DIR=$(mktemp -d)
-            openssl req -x509 -newkey rsa:2048 -nodes \
-              -keyout "$CERT_DIR/key.pem" -out "$CERT_DIR/cert.pem" \
-              -days 1 -subj "/CN=10.0.2.2" \
-              -addext "subjectAltName=IP:10.0.2.2,IP:127.0.0.1"
-            CERT_B64=$(base64 -w0 "$CERT_DIR/cert.pem")
-            python3 tool/screenshot_server.py \
-              --port 8765 --out build/screenshots \
-              --cert "$CERT_DIR/cert.pem" --key "$CERT_DIR/key.pem" &
-            SERVER_PID=$!
-            # Wait for server to bind before starting the test.
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              curl -sf --cacert "$CERT_DIR/cert.pem" https://127.0.0.1:8765/health && break
-              sleep 0.5
-            done
-            flutter drive \
-              --driver=test_driver/integration_test.dart \
-              --target=integration_test/screenshot_test.dart \
-              --dart-define=SCREENSHOT_CERT_B64="$CERT_B64"
-            TEST_EXIT=$?
-            kill $SERVER_PID 2>/dev/null || true
-            exit $TEST_EXIT
+            bash tool/run_screenshot_test.sh
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
@@ -244,15 +210,7 @@ jobs:
             adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
             adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none
             adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
-            mkdir -p build
-            adb shell screenrecord --time-limit=180 /sdcard/preview.mp4 &
-            REC_PID=$!
-            sleep 2
-            flutter drive --driver=test_driver/integration_test.dart --target=integration_test/preview_test.dart
-            adb shell pkill -SIGINT screenrecord || true
-            wait $REC_PID 2>/dev/null || true
-            sleep 2
-            adb pull /sdcard/preview.mp4 build/preview-android.mp4
+            bash tool/run_android_preview.sh
 
       - name: Upload preview
         uses: actions/upload-artifact@v4
