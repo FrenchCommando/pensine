@@ -3,7 +3,9 @@
     "allow": [
       "Bash(flutter:*)",
       "Read(//c/Users/marti/AppData/Roaming/com.pensine/pensine/**)",
-      "Read(//c/Users/marti/AppData/**)"
+      "Read(//c/Users/marti/AppData/**)",
+      "Bash(gh run *)",
+      "Bash(gh api *)"
     ]
   }
 }
