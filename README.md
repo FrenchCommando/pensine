@@ -1,5 +1,9 @@
 # Pensine
 
+[![CI](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml)
+[![Screenshots](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml)
+[![Deploy to GitHub Pages](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml)
+
 A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your way through different board types — lofi vibes, gamified interactions, no backend required.
 
 **Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/)
