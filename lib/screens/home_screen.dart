@@ -6,8 +6,14 @@ import '../models/workspace.dart';
 import '../services/board_io.dart';
 import '../storage/local_storage.dart';
 import '../theme.dart';
+import '../utils/pluralize.dart';
 import '../widgets/about_dialog.dart';
+import '../widgets/color_picker.dart';
 import 'board_screen.dart';
+
+enum _BoardAction { rename, changeType, changeColor, move, duplicate, export, delete }
+
+enum _WorkspaceAction { addBoard, rename, color, export, delete }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Workspace> _workspaces = [];
   List<Board> _boards = [];
+  Map<String, List<Board>> _byWorkspace = {};
   Set<String> _collapsed = {};
   bool _loading = true;
 
@@ -28,9 +35,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _load();
   }
 
+  void _rebuildIndex() {
+    _byWorkspace = {};
+    for (final b in _boards) {
+      (_byWorkspace[b.workspaceId] ??= []).add(b);
+    }
+  }
+
   Future<void> _load() async {
-    var workspaces = await LocalStorage.loadWorkspaces();
-    var boards = await LocalStorage.loadBoards();
+    final results = await Future.wait([
+      LocalStorage.loadWorkspaces(),
+      LocalStorage.loadBoards(),
+    ]);
+    var workspaces = results[0].cast<Workspace>();
+    var boards = results[1].cast<Board>();
 
     // Migration: if no workspaces exist, create defaults or migrate existing boards
     if (workspaces.isEmpty) {
@@ -50,15 +68,15 @@ class _HomeScreenState extends State<HomeScreen> {
       await LocalStorage.saveAllBoards(boards);
     }
 
-    // Load collapsed state
     final prefs = await SharedPreferences.getInstance();
-    final collapsedList = prefs.getStringList('pensine_collapsed_workspaces') ?? [];
+    final collapsedList = prefs.getStringList(PrefKeys.collapsedWorkspaces) ?? [];
 
     setState(() {
       _workspaces = workspaces;
       _boards = boards;
       _collapsed = collapsedList.toSet();
       _loading = false;
+      _rebuildIndex();
     });
   }
 
@@ -204,151 +222,129 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveCollapsed() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('pensine_collapsed_workspaces', _collapsed.toList());
+    await prefs.setStringList(PrefKeys.collapsedWorkspaces, _collapsed.toList());
   }
 
-  List<Board> _boardsForWorkspace(String workspaceId) {
-    return _boards.where((b) => b.workspaceId == workspaceId).toList();
-  }
+  List<Board> _boardsForWorkspace(String workspaceId) =>
+      _byWorkspace[workspaceId] ?? const [];
 
-  Future<void> _saveBoard(Board board) async {
+  List<String> _boardIds() => _boards.map((b) => b.id).toList();
+
+  List<String> _workspaceIds() => _workspaces.map((w) => w.id).toList();
+
+  Future<void> _saveBoard(Board board) => LocalStorage.saveBoard(board);
+
+  Future<void> _addBoard(Board board) async {
+    setState(() {
+      _boards.add(board);
+      _rebuildIndex();
+    });
     await LocalStorage.saveBoard(board);
+    await LocalStorage.saveBoardOrder(_boardIds());
   }
 
   Future<void> _deleteBoard(String id) async {
     await LocalStorage.deleteBoard(id);
-    await LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
+    await LocalStorage.saveBoardOrder(_boardIds());
+  }
+
+  Future<String?> _promptName({
+    required String title,
+    String initial = '',
+    String hint = 'Name',
+    String submitLabel = 'OK',
+  }) async {
+    final controller = TextEditingController(text: initial);
+    String? result;
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        void submit() {
+          final name = controller.text.trim();
+          if (name.isEmpty) return;
+          result = name;
+          Navigator.pop(ctx);
+        }
+        return AlertDialog(
+          backgroundColor: PensineColors.surface(context),
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(hintText: hint),
+            onSubmitted: (_) => submit(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(onPressed: submit, child: Text(submitLabel)),
+          ],
+        );
+      },
+    );
+    return result;
+  }
+
+  Future<void> _pickColor({
+    required String title,
+    required int current,
+    required ValueChanged<int> onPicked,
+  }) {
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PensineColors.surface(context),
+        title: Text(title),
+        content: PensineColorPicker(
+          selected: current,
+          allowDefault: true,
+          size: 36,
+          onChanged: (i) {
+            onPicked(i);
+            Navigator.pop(ctx);
+          },
+        ),
+      ),
+    );
   }
 
   // --- Workspace operations ---
 
-  void _createWorkspace() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PensineColors.surface(context),
-        title: const Text('New Workspace'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Workspace name'),
-          onSubmitted: (_) => _submitNewWorkspace(ctx, controller),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => _submitNewWorkspace(ctx, controller),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+  Future<void> _createWorkspace() async {
+    final name = await _promptName(
+      title: 'New Workspace',
+      hint: 'Workspace name',
+      submitLabel: 'Create',
     );
-  }
-
-  void _submitNewWorkspace(BuildContext ctx, TextEditingController controller) {
-    final name = controller.text.trim();
-    if (name.isEmpty) return;
+    if (name == null) return;
     final ws = Workspace(name: name);
     setState(() => _workspaces.add(ws));
-    LocalStorage.saveWorkspace(ws);
-    LocalStorage.saveWorkspaceOrder(_workspaces.map((w) => w.id).toList());
-    Navigator.pop(ctx);
+    await LocalStorage.saveWorkspace(ws);
+    await LocalStorage.saveWorkspaceOrder(_workspaceIds());
   }
 
-  void _renameWorkspace(Workspace ws) {
-    final controller = TextEditingController(text: ws.name);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PensineColors.surface(context),
-        title: const Text('Rename Workspace'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Workspace name'),
-          onSubmitted: (_) {
-            final name = controller.text.trim();
-            if (name.isEmpty) return;
-            setState(() => ws.name = name);
-            LocalStorage.saveWorkspace(ws);
-            Navigator.pop(ctx);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              setState(() => ws.name = name);
-              LocalStorage.saveWorkspace(ws);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Rename'),
-          ),
-        ],
-      ),
+  Future<void> _renameWorkspace(Workspace ws) async {
+    final name = await _promptName(
+      title: 'Rename Workspace',
+      initial: ws.name,
+      hint: 'Workspace name',
+      submitLabel: 'Rename',
     );
+    if (name == null) return;
+    setState(() => ws.name = name);
+    await LocalStorage.saveWorkspace(ws);
   }
 
-  void _changeWorkspaceColor(Workspace ws) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PensineColors.surface(context),
-        title: const Text('Workspace Color'),
-        content: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() => ws.colorIndex = -1);
-                LocalStorage.saveWorkspace(ws);
-                Navigator.pop(ctx);
-              },
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: PensineColors.accent,
-                  border: ws.colorIndex == -1
-                      ? Border.all(color: Colors.white, width: 3)
-                      : null,
-                ),
-              ),
-            ),
-            ...List.generate(PensineColors.bubbles.length, (i) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() => ws.colorIndex = i);
-                  LocalStorage.saveWorkspace(ws);
-                  Navigator.pop(ctx);
-                },
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: PensineColors.bubbles[i],
-                    border: ws.colorIndex == i
-                        ? Border.all(color: Colors.white, width: 3)
-                        : null,
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
+  Future<void> _changeWorkspaceColor(Workspace ws) {
+    return _pickColor(
+      title: 'Workspace Color',
+      current: ws.colorIndex,
+      onPicked: (i) {
+        setState(() => ws.colorIndex = i);
+        LocalStorage.saveWorkspace(ws);
+      },
     );
   }
 
@@ -358,27 +354,29 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Delete workspace?'),
-        content: Text(
-          'Delete "${ws.name}" and its ${wsBoards.length} board${wsBoards.length == 1 ? '' : 's'}?',
-        ),
+        content: Text('Delete "${ws.name}" and its ${pluralize(wsBoards.length, 'board')}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
         ],
       ),
     );
-    if (confirm == true) {
-      setState(() {
-        for (final board in wsBoards) {
-          _boards.remove(board);
-          LocalStorage.deleteBoard(board.id);
-        }
-        _workspaces.remove(ws);
-      });
-      await LocalStorage.deleteWorkspace(ws.id);
-      await LocalStorage.saveWorkspaceOrder(_workspaces.map((w) => w.id).toList());
-      await LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
-    }
+    if (confirm != true) return;
+
+    final toDelete = List<Board>.from(wsBoards);
+    setState(() {
+      _boards.removeWhere((b) => b.workspaceId == ws.id);
+      _workspaces.remove(ws);
+      _rebuildIndex();
+    });
+    await Future.wait([
+      LocalStorage.deleteWorkspace(ws.id),
+      ...toDelete.map((b) => LocalStorage.deleteBoard(b.id)),
+    ]);
+    await Future.wait([
+      LocalStorage.saveWorkspaceOrder(_workspaceIds()),
+      LocalStorage.saveBoardOrder(_boardIds()),
+    ]);
   }
 
   void _exportWorkspace(Workspace ws) {
@@ -388,10 +386,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- Board operations ---
 
+  Widget _boardTypeList(BoardType selected, ValueChanged<BoardType> onTap) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: BoardType.values.map((type) {
+        final isSelected = type == selected;
+        return ListTile(
+          dense: true,
+          leading: Icon(type.icon, color: isSelected ? PensineColors.accent : null),
+          title: Text(
+            type.displayName,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? PensineColors.accent : null,
+            ),
+          ),
+          selected: isSelected,
+          onTap: () => onTap(type),
+        );
+      }).toList(),
+    );
+  }
+
   void _createBoard({String? workspaceId}) {
     final nameController = TextEditingController();
     var selectedType = BoardType.thoughts;
     var selectedWorkspaceId = workspaceId ?? _workspaces.first.id;
+
+    void submit(BuildContext ctx) {
+      final name = nameController.text.trim();
+      if (name.isEmpty) return;
+      _addBoard(Board(name: name, type: selectedType, workspaceId: selectedWorkspaceId));
+      Navigator.pop(ctx);
+    }
 
     showDialog(
       context: context,
@@ -407,15 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: nameController,
                   autofocus: true,
                   decoration: const InputDecoration(hintText: 'Board name'),
-                  onSubmitted: (_) {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    final newBoard = Board(name: name, type: selectedType, workspaceId: selectedWorkspaceId);
-                    setState(() => _boards.add(newBoard));
-                    _saveBoard(newBoard);
-                    LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
-                    Navigator.pop(ctx);
-                  },
+                  onSubmitted: (_) => submit(ctx),
                 ),
                 if (_workspaces.length > 1) ...[
                   const SizedBox(height: 16),
@@ -431,27 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                Column(
-                  children: BoardType.values.map((type) {
-                    final isSelected = type == selectedType;
-                    return ListTile(
-                      dense: true,
-                      leading: Icon(
-                        _iconForType(type),
-                        color: isSelected ? PensineColors.accent : null,
-                      ),
-                      title: Text(
-                        type.name[0].toUpperCase() + type.name.substring(1),
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? PensineColors.accent : null,
-                        ),
-                      ),
-                      selected: isSelected,
-                      onTap: () => setDialogState(() => selectedType = type),
-                    );
-                  }).toList(),
-                ),
+                _boardTypeList(selectedType, (t) => setDialogState(() => selectedType = t)),
               ],
             ),
           ),
@@ -461,15 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isEmpty) return;
-                final newBoard = Board(name: name, type: selectedType, workspaceId: selectedWorkspaceId);
-                setState(() => _boards.add(newBoard));
-                _saveBoard(newBoard);
-                LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
-                Navigator.pop(ctx);
-              },
+              onPressed: () => submit(ctx),
               child: const Text('Create'),
             ),
           ],
@@ -481,9 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _duplicateBoard(Board board) {
     final copy = board.copyWithNewIds();
     copy.name = '${board.name} (copy)';
-    setState(() => _boards.add(copy));
-    _saveBoard(copy);
-    LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
+    _addBoard(copy);
   }
 
   void _changeBoardType(Board board) {
@@ -492,87 +481,23 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: PensineColors.surface(context),
         title: const Text('Change Type'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: BoardType.values.map((type) {
-            final isSelected = type == board.type;
-            return ListTile(
-              dense: true,
-              leading: Icon(
-                _iconForType(type),
-                color: isSelected ? PensineColors.accent : null,
-              ),
-              title: Text(
-                type.name[0].toUpperCase() + type.name.substring(1),
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? PensineColors.accent : null,
-                ),
-              ),
-              selected: isSelected,
-              onTap: () {
-                setState(() => board.type = type);
-                _saveBoard(board);
-                Navigator.pop(ctx);
-              },
-            );
-          }).toList(),
-        ),
+        content: _boardTypeList(board.type, (type) {
+          setState(() => board.type = type);
+          _saveBoard(board);
+          Navigator.pop(ctx);
+        }),
       ),
     );
   }
 
-  void _changeBoardColor(Board board) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PensineColors.surface(context),
-        title: const Text('Board Color'),
-        content: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() => board.colorIndex = -1);
-                _saveBoard(board);
-                Navigator.pop(ctx);
-              },
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: PensineColors.accent,
-                  border: board.colorIndex == -1
-                      ? Border.all(color: Colors.white, width: 3)
-                      : null,
-                ),
-              ),
-            ),
-            ...List.generate(PensineColors.bubbles.length, (i) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() => board.colorIndex = i);
-                  _saveBoard(board);
-                  Navigator.pop(ctx);
-                },
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: PensineColors.bubbles[i],
-                    border: board.colorIndex == i
-                        ? Border.all(color: Colors.white, width: 3)
-                        : null,
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
+  Future<void> _changeBoardColor(Board board) {
+    return _pickColor(
+      title: 'Board Color',
+      current: board.colorIndex,
+      onPicked: (i) {
+        setState(() => board.colorIndex = i);
+        _saveBoard(board);
+      },
     );
   }
 
@@ -625,49 +550,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (confirm == true) {
-      setState(() => _boards.remove(board));
-      _deleteBoard(board.id);
-    }
+    if (confirm != true) return;
+    setState(() {
+      _boards.remove(board);
+      _rebuildIndex();
+    });
+    _deleteBoard(board.id);
   }
 
-  void _renameBoard(Board board) {
-    final controller = TextEditingController(text: board.name);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PensineColors.surface(context),
-        title: const Text('Rename Board'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Board name'),
-          onSubmitted: (_) {
-            final name = controller.text.trim();
-            if (name.isEmpty) return;
-            setState(() => board.name = name);
-            _saveBoard(board);
-            Navigator.pop(ctx);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              setState(() => board.name = name);
-              _saveBoard(board);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Rename'),
-          ),
-        ],
-      ),
+  Future<void> _renameBoard(Board board) async {
+    final name = await _promptName(
+      title: 'Rename Board',
+      initial: board.name,
+      hint: 'Board name',
+      submitLabel: 'Rename',
     );
+    if (name == null) return;
+    setState(() => board.name = name);
+    await _saveBoard(board);
   }
 
   void _showAbout() {
@@ -678,73 +578,68 @@ class _HomeScreenState extends State<HomeScreen> {
       boardCount: _boards.length,
       itemCount: totalItems,
       onReset: () async {
-        for (final board in _boards) {
-          await LocalStorage.deleteBoard(board.id);
-        }
-        for (final ws in _workspaces) {
-          await LocalStorage.deleteWorkspace(ws.id);
-        }
+        await Future.wait([
+          ..._boards.map((b) => LocalStorage.deleteBoard(b.id)),
+          ..._workspaces.map((w) => LocalStorage.deleteWorkspace(w.id)),
+        ]);
         final defaults = _defaults();
-        await LocalStorage.saveAllWorkspaces(defaults.workspaces);
-        await LocalStorage.saveAllBoards(defaults.boards);
+        await Future.wait([
+          LocalStorage.saveAllWorkspaces(defaults.workspaces),
+          LocalStorage.saveAllBoards(defaults.boards),
+        ]);
         setState(() {
           _workspaces = defaults.workspaces;
           _boards = defaults.boards;
           _collapsed = {};
+          _rebuildIndex();
         });
         _saveCollapsed();
       },
     );
   }
 
-  IconData _iconForType(BoardType type) => switch (type) {
-        BoardType.thoughts => Icons.cloud,
-        BoardType.todo => Icons.check_circle_outline,
-        BoardType.flashcards => Icons.style,
-        BoardType.checklist => Icons.format_list_numbered,
-        BoardType.timer => Icons.timer,
-        BoardType.countdown => Icons.hourglass_bottom,
-      };
+  void _handleBoardAction(_BoardAction action, Board board) {
+    switch (action) {
+      case _BoardAction.rename:
+        _renameBoard(board);
+      case _BoardAction.changeType:
+        _changeBoardType(board);
+      case _BoardAction.changeColor:
+        _changeBoardColor(board);
+      case _BoardAction.move:
+        _moveBoardToWorkspace(board);
+      case _BoardAction.duplicate:
+        _duplicateBoard(board);
+      case _BoardAction.export:
+        BoardIO.exportBoard(board, context);
+      case _BoardAction.delete:
+        _confirmDeleteBoard(board);
+    }
+  }
 
   Widget _buildBoardTile(Board board) {
     return Card(
       color: PensineColors.card(context),
       margin: const EdgeInsets.only(bottom: 8, left: 16, right: 0),
       child: ListTile(
-        leading: Icon(_iconForType(board.type), color: PensineColors.boardAccent(board.colorIndex)),
+        leading: Icon(board.type.icon, color: PensineColors.boardAccent(board.colorIndex)),
         title: Text(board.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          '${board.items.length} item${board.items.length == 1 ? '' : 's'}',
+          pluralize(board.items.length, 'item'),
           style: TextStyle(color: PensineColors.muted(context)),
         ),
-        trailing: PopupMenuButton<String>(
+        trailing: PopupMenuButton<_BoardAction>(
           icon: const Icon(Icons.more_vert),
-          onSelected: (value) {
-            if (value == 'rename') {
-              _renameBoard(board);
-            } else if (value == 'change_type') {
-              _changeBoardType(board);
-            } else if (value == 'change_color') {
-              _changeBoardColor(board);
-            } else if (value == 'move') {
-              _moveBoardToWorkspace(board);
-            } else if (value == 'duplicate') {
-              _duplicateBoard(board);
-            } else if (value == 'export') {
-              BoardIO.exportBoard(board, context);
-            } else if (value == 'delete') {
-              _confirmDeleteBoard(board);
-            }
-          },
+          onSelected: (action) => _handleBoardAction(action, board),
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'rename', child: Text('Rename')),
-            const PopupMenuItem(value: 'change_type', child: Text('Change type')),
-            const PopupMenuItem(value: 'change_color', child: Text('Board color')),
+            const PopupMenuItem(value: _BoardAction.rename, child: Text('Rename')),
+            const PopupMenuItem(value: _BoardAction.changeType, child: Text('Change type')),
+            const PopupMenuItem(value: _BoardAction.changeColor, child: Text('Board color')),
             if (_workspaces.length > 1)
-              const PopupMenuItem(value: 'move', child: Text('Move to workspace')),
-            const PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
-            const PopupMenuItem(value: 'export', child: Text('Export')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              const PopupMenuItem(value: _BoardAction.move, child: Text('Move to workspace')),
+            const PopupMenuItem(value: _BoardAction.duplicate, child: Text('Duplicate')),
+            const PopupMenuItem(value: _BoardAction.export, child: Text('Export')),
+            const PopupMenuItem(value: _BoardAction.delete, child: Text('Delete')),
           ],
         ),
         onTap: () async {
@@ -805,31 +700,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: Text(
-                      '${wsBoards.length} board${wsBoards.length == 1 ? '' : 's'}',
+                      pluralize(wsBoards.length, 'board'),
                       style: TextStyle(fontSize: 12, color: PensineColors.muted(context)),
                     ),
                   ),
-                PopupMenuButton<String>(
+                PopupMenuButton<_WorkspaceAction>(
                   icon: const Icon(Icons.more_vert, size: 20),
-                  onSelected: (value) {
-                    if (value == 'rename') {
-                      _renameWorkspace(ws);
-                    } else if (value == 'color') {
-                      _changeWorkspaceColor(ws);
-                    } else if (value == 'add_board') {
-                      _createBoard(workspaceId: ws.id);
-                    } else if (value == 'export') {
-                      _exportWorkspace(ws);
-                    } else if (value == 'delete') {
-                      _confirmDeleteWorkspace(ws);
+                  onSelected: (action) {
+                    switch (action) {
+                      case _WorkspaceAction.addBoard:
+                        _createBoard(workspaceId: ws.id);
+                      case _WorkspaceAction.rename:
+                        _renameWorkspace(ws);
+                      case _WorkspaceAction.color:
+                        _changeWorkspaceColor(ws);
+                      case _WorkspaceAction.export:
+                        _exportWorkspace(ws);
+                      case _WorkspaceAction.delete:
+                        _confirmDeleteWorkspace(ws);
                     }
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'add_board', child: Text('Add board')),
-                    const PopupMenuItem(value: 'rename', child: Text('Rename')),
-                    const PopupMenuItem(value: 'color', child: Text('Color')),
-                    const PopupMenuItem(value: 'export', child: Text('Export workspace')),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    const PopupMenuItem(value: _WorkspaceAction.addBoard, child: Text('Add board')),
+                    const PopupMenuItem(value: _WorkspaceAction.rename, child: Text('Rename')),
+                    const PopupMenuItem(value: _WorkspaceAction.color, child: Text('Color')),
+                    const PopupMenuItem(value: _WorkspaceAction.export, child: Text('Export workspace')),
+                    const PopupMenuItem(value: _WorkspaceAction.delete, child: Text('Delete')),
                   ],
                 ),
               ],
@@ -868,22 +764,22 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Import',
             onPressed: () async {
               final result = await BoardIO.importFile(context, _workspaces);
-              if (result != null) {
-                setState(() {
-                  if (result.workspace != null) {
-                    _workspaces.add(result.workspace!);
-                    _boards.addAll(result.boards);
-                    LocalStorage.saveWorkspace(result.workspace!);
-                    LocalStorage.saveWorkspaceOrder(_workspaces.map((w) => w.id).toList());
-                  } else {
-                    _boards.addAll(result.boards);
-                  }
-                  for (final board in result.boards) {
-                    LocalStorage.saveBoard(board);
-                  }
-                  LocalStorage.saveBoardOrder(_boards.map((b) => b.id).toList());
-                });
-              }
+              if (result == null) return;
+              setState(() {
+                if (result.workspace != null) {
+                  _workspaces.add(result.workspace!);
+                }
+                _boards.addAll(result.boards);
+                _rebuildIndex();
+              });
+              await Future.wait([
+                if (result.workspace != null) ...[
+                  LocalStorage.saveWorkspace(result.workspace!),
+                  LocalStorage.saveWorkspaceOrder(_workspaceIds()),
+                ],
+                ...result.boards.map(LocalStorage.saveBoard),
+                LocalStorage.saveBoardOrder(_boardIds()),
+              ]);
             },
           ),
           IconButton(

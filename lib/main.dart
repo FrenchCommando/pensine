@@ -30,8 +30,10 @@ class PensineAppState extends State<PensineApp> {
 
   Future<void> _loadBrightness() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('dark_mode') ?? true;
-    setState(() => _brightness = isDark ? Brightness.dark : Brightness.light);
+    final loaded = (prefs.getBool('dark_mode') ?? true)
+        ? Brightness.dark
+        : Brightness.light;
+    if (loaded != _brightness) setState(() => _brightness = loaded);
   }
 
   void toggleBrightness() async {

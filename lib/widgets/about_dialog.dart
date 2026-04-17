@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../models/board.dart';
 import '../theme.dart';
+import '../utils/pluralize.dart';
 
 Widget _boardTypeRow(IconData icon, String text) {
   return Padding(
@@ -17,8 +19,10 @@ Widget _boardTypeRow(IconData icon, String text) {
 
 const String _buildDate = String.fromEnvironment('BUILD_DATE', defaultValue: 'dev');
 
+Future<PackageInfo>? _packageInfoFuture;
+
 void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspaceCount = 0, int boardCount = 0, int itemCount = 0}) async {
-  final info = await PackageInfo.fromPlatform();
+  final info = await (_packageInfoFuture ??= PackageInfo.fromPlatform());
 
   if (!context.mounted) return;
 
@@ -45,18 +49,18 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
           SizedBox(height: 12),
           Text('Board types:'),
           SizedBox(height: 4),
-          _boardTypeRow(Icons.cloud, 'Thoughts — tap to expand'),
-          _boardTypeRow(Icons.check_circle_outline, 'To-do — tap to catch in the net'),
-          _boardTypeRow(Icons.style, 'Flashcards — tap to flip, again to retry, double-tap for correct'),
-          _boardTypeRow(Icons.format_list_numbered, 'Steps — tap to complete in order'),
-          _boardTypeRow(Icons.timer, 'Timer — steps with elapsed time tracking'),
-          _boardTypeRow(Icons.hourglass_bottom, 'Countdown — steps auto-advance when time runs out'),
+          _boardTypeRow(BoardType.thoughts.icon, 'Thoughts — tap to expand'),
+          _boardTypeRow(BoardType.todo.icon, 'To-do — tap to catch in the net'),
+          _boardTypeRow(BoardType.flashcards.icon, 'Flashcards — tap to flip, again to retry, double-tap for correct'),
+          _boardTypeRow(BoardType.checklist.icon, 'Steps — tap to complete in order'),
+          _boardTypeRow(BoardType.timer.icon, 'Timer — steps with elapsed time tracking'),
+          _boardTypeRow(BoardType.countdown.icon, 'Countdown — steps auto-advance when time runs out'),
           if (boardCount > 0) ...[
             SizedBox(height: 12),
             Text(
-              '$workspaceCount workspace${workspaceCount == 1 ? '' : 's'}, '
-              '$boardCount board${boardCount == 1 ? '' : 's'}, '
-              '$itemCount marble${itemCount == 1 ? '' : 's'}',
+              '${pluralize(workspaceCount, 'workspace')}, '
+              '${pluralize(boardCount, 'board')}, '
+              '${pluralize(itemCount, 'marble')}',
               style: TextStyle(fontSize: 13, color: PensineColors.muted(context)),
             ),
           ],

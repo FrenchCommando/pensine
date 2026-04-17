@@ -13,16 +13,23 @@ class ImportResult {
   ImportResult({this.workspace, required this.boards});
 }
 
+String _safeFileName(String name) => name
+    .replaceAll(RegExp(r'[^\w\s-]'), '')
+    .replaceAll(RegExp(r'\s+'), '_');
+
+String _envelope(int version, Map<String, dynamic> payload) => jsonEncode({
+      'pensine_version': version,
+      'exported_at': DateTime.now().toIso8601String(),
+      ...payload,
+    });
+
 class BoardIO {
   static Future<void> exportBoard(Board board, BuildContext context) async {
     try {
-      final envelope = jsonEncode({
-        'pensine_version': 1,
-        'exported_at': DateTime.now().toIso8601String(),
-        'board': board.toJson(),
-      });
-      final safeName = board.name.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
-      await platform.exportFile('$safeName.pensine', envelope);
+      await platform.exportFile(
+        '${_safeFileName(board.name)}.pensine',
+        _envelope(1, {'board': board.toJson()}),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -34,16 +41,15 @@ class BoardIO {
 
   static Future<void> exportWorkspace(Workspace workspace, List<Board> boards, BuildContext context) async {
     try {
-      final envelope = jsonEncode({
-        'pensine_version': 2,
-        'exported_at': DateTime.now().toIso8601String(),
-        'workspace': {
-          ...workspace.toJson(),
-          'boards': boards.map((b) => b.toJson()).toList(),
-        },
-      });
-      final safeName = workspace.name.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
-      await platform.exportFile('$safeName.pensine', envelope);
+      await platform.exportFile(
+        '${_safeFileName(workspace.name)}.pensine',
+        _envelope(2, {
+          'workspace': {
+            ...workspace.toJson(),
+            'boards': boards.map((b) => b.toJson()).toList(),
+          },
+        }),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

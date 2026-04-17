@@ -16,11 +16,17 @@ class Marble {
   double radius;
   double x, y;
   double vx, vy;
-  bool flipped; // for flashcards
-  bool expanded = false; // for thoughts
-  double scale = 1.0; // for shrinking into net
-  double expandScale = 1.0; // animated expand factor
-  bool dying = false; // exit animation in progress
+  bool flipped;
+  bool expanded = false;
+  double scale = 1.0;
+  double expandScale = 1.0;
+  bool dying = false;
+
+  // Cached font-fit result so the paint loop doesn't re-lay 10 TextPainters
+  // per marble per frame. Invalidated when radius or display text change.
+  double? _fitRadius;
+  String? _fitText;
+  double? _fitFontSize;
 
   Marble({
     required this.item,
@@ -36,6 +42,17 @@ class Marble {
   });
 
   double get drawRadius => radius * scale * expandScale;
+
+  double fitFontSize(String text, double forRadius, double Function() recompute) {
+    if (_fitFontSize == null ||
+        _fitText != text ||
+        _fitRadius != forRadius) {
+      _fitFontSize = recompute();
+      _fitRadius = forRadius;
+      _fitText = text;
+    }
+    return _fitFontSize!;
+  }
 }
 
 class MarbleBoard extends StatefulWidget {
@@ -97,18 +114,16 @@ class MarbleBoardState extends State<MarbleBoard>
     });
   }
   Size _size = Size.zero;
+  int _tickCount = 0;
 
-  // Physics constants
   static const double damping = 0.95;
   static const double friction = 0.999;
+  static const double caughtScale = 0.45;
   double get minRadius => _size.shortestSide * 0.1;
   double get maxRadius => _size.shortestSide * 0.14;
-  static const double caughtScale = 0.45;
 
-  // Dragging
   int? _dragIndex;
 
-  // Net position (bottom-right)
   double get _netSize => _size.shortestSide * 0.28;
   double get _netX => _netSize * 0.8;
   double get _netY => _size.height - _netSize * 0.8;
@@ -176,6 +191,12 @@ class MarbleBoardState extends State<MarbleBoard>
     const dt = 1.0 / 60.0;
     final w = _size.width;
     final h = _size.height;
+    final isSequential = widget.boardType.isSequential;
+    final hasNet = widget.boardType.hasNet;
+    final activeSequentialId = isSequential
+        ? widget.items.firstWhere((i) => !i.done, orElse: () => widget.items.first).id
+        : null;
+    final hasActiveSequential = isSequential && widget.items.any((i) => !i.done);
 
     for (var i = 0; i < _marbles.length; i++) {
       final m = _marbles[i];
@@ -186,21 +207,17 @@ class MarbleBoardState extends State<MarbleBoard>
         if (m.scale < 0.01) continue;
       }
 
-      final isCaught = (widget.boardType == BoardType.todo || widget.boardType == BoardType.flashcards || widget.boardType == BoardType.checklist || widget.boardType == BoardType.timer || widget.boardType == BoardType.countdown) && m.item.done;
+      final isCaught = hasNet && m.item.done;
 
-      // Animate scale (skip if dying — dying has its own animation)
       if (!m.dying) {
         final targetScale = isCaught ? caughtScale : 1.0;
         m.scale += (targetScale - m.scale) * 0.08;
       }
 
-      // Determine if this is the active checklist item
-      final isActiveChecklist = (widget.boardType == BoardType.checklist || widget.boardType == BoardType.timer || widget.boardType == BoardType.countdown) &&
+      final isActiveChecklist = hasActiveSequential &&
           !m.item.done &&
-          widget.items.indexWhere((i) => !i.done) ==
-              widget.items.indexWhere((i) => i.id == m.item.id);
+          m.item.id == activeSequentialId;
 
-      // Animate expand (thoughts tap or active checklist item)
       final maxExpand = (_size.shortestSide * 0.45) / (m.radius * m.scale);
       final shouldExpand = m.expanded || isActiveChecklist;
       final targetExpand = shouldExpand ? maxExpand.clamp(1.0, 4.0) : 1.0;
@@ -243,7 +260,6 @@ class MarbleBoardState extends State<MarbleBoard>
         m.vy = m.vy.abs() * damping;
       }
 
-      // Gentle random drift for free marbles
       if (!isCaught) {
         final speed = sqrt(m.vx * m.vx + m.vy * m.vy);
         if (speed < 30) {
@@ -253,10 +269,10 @@ class MarbleBoardState extends State<MarbleBoard>
       }
     }
 
-    // Remove fully shrunk dying marbles
-    _marbles.removeWhere((m) => m.dying && m.scale < 0.01);
+    if (_marbles.any((m) => m.dying)) {
+      _marbles.removeWhere((m) => m.dying && m.scale < 0.01);
+    }
 
-    // Marble-to-marble collisions
     for (var i = 0; i < _marbles.length; i++) {
       for (var j = i + 1; j < _marbles.length; j++) {
         final a = _marbles[i];
@@ -300,6 +316,7 @@ class MarbleBoardState extends State<MarbleBoard>
       }
     }
 
+    _tickCount++;
     setState(() {});
   }
 
@@ -410,18 +427,20 @@ class MarbleBoardState extends State<MarbleBoard>
           child: Semantics(
             label: '${widget.boardType.name} board with ${widget.items.length} items',
             child: CustomPaint(
-            size: Size.infinite,
-            painter: _MarblePainter(
-              marbles: _marbles,
-              boardType: widget.boardType,
-              netX: _netX,
-              netY: _netY,
-              netSize: _netSize,
-              brightness: Theme.of(context).brightness,
-              itemOrder: widget.items.map((i) => i.id).toList(),
-              accentColor: widget.accentColor,
+              size: Size.infinite,
+              painter: _MarblePainter(
+                marbles: _marbles,
+                boardType: widget.boardType,
+                netX: _netX,
+                netY: _netY,
+                netSize: _netSize,
+                brightness: Theme.of(context).brightness,
+                itemOrder: widget.items.map((i) => i.id).toList(),
+                accentColor: widget.accentColor,
+                tick: _tickCount,
+              ),
             ),
-          )),
+          ),
         );
       },
     );
@@ -435,8 +454,9 @@ class _MarblePainter extends CustomPainter {
   final double netY;
   final double netSize;
   final Brightness brightness;
-  final List<String> itemOrder; // item IDs in board order
+  final List<String> itemOrder;
   final Color? accentColor;
+  final int tick;
 
   _MarblePainter({
     required this.marbles,
@@ -446,6 +466,7 @@ class _MarblePainter extends CustomPainter {
     required this.netSize,
     required this.brightness,
     required this.itemOrder,
+    required this.tick,
     this.accentColor,
   });
 
@@ -453,8 +474,20 @@ class _MarblePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw net for to-do and flashcard boards
-    if (boardType == BoardType.todo || boardType == BoardType.flashcards || boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) {
+    final isSequential = boardType.isSequential;
+    String? activeSequentialId;
+    if (isSequential) {
+      for (final m in marbles) {
+        if (!m.item.done) {
+          activeSequentialId = m.item.id;
+          break;
+        }
+      }
+    }
+    final alphaWhenDone =
+        (boardType == BoardType.todo || isSequential) ? 0.7 : 1.0;
+
+    if (boardType.hasNet) {
       _drawNet(canvas, size);
     }
 
@@ -463,20 +496,12 @@ class _MarblePainter extends CustomPainter {
       final isFlipped = boardType == BoardType.flashcards && m.flipped;
       final r = m.drawRadius;
 
-      // Flipped flashcards shift the hue and brighten
-      final drawColor = isFlipped
-          ? m.color
-          : m.color;
+      final drawColor = m.color;
+      final alpha = isDone ? alphaWhenDone : 1.0;
 
-      final alpha = ((boardType == BoardType.todo || boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) && isDone) ? 0.7 : 1.0;
+      final isActiveChecklist =
+          activeSequentialId != null && !isDone && m.item.id == activeSequentialId;
 
-      // Determine if this is the active checklist item
-      final isActiveChecklist = (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) &&
-          !isDone &&
-          itemOrder.indexWhere((id) => id == m.item.id) ==
-              itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
-
-      // Outer glow (stronger for active checklist item)
       final glowPaint = Paint()
         ..color = drawColor.withValues(alpha: isActiveChecklist ? 0.4 : 0.15 * alpha)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, isActiveChecklist ? 24 : (isFlipped ? 18 : 12));
@@ -524,11 +549,7 @@ class _MarblePainter extends CustomPainter {
         displayText = m.item.content;
       }
 
-      final isActiveChecklist2 = (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) &&
-          !isDone &&
-          itemOrder.indexOf(m.item.id) ==
-              itemOrder.indexWhere((id) => marbles.any((mm) => mm.item.id == id && !mm.item.done));
-      final isExpanded = (m.expanded || isActiveChecklist2) && m.expandScale > 1.5;
+      final isExpanded = (m.expanded || isActiveChecklist) && m.expandScale > 1.5;
 
       if (isExpanded && m.item.description != null) {
         // Expanded: show title + description
@@ -574,30 +595,45 @@ class _MarblePainter extends CustomPainter {
           Offset(m.x - descPainter.width / 2, startY + titlePainter.height + 8),
         );
       } else {
-        // Normal: show title only, shrink font to fit
         final maxWidth = r * 1.4;
         final maxHeight = r * 1.4;
-        var fontSize = r * 0.28;
-
-        late TextPainter textPainter;
         final isSingleWord = !displayText.contains(' ');
-        // Shrink font until text fits inside the marble
-        for (var i = 0; i < 10; i++) {
-          final style = TextStyle(
-            color: Colors.white,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w700,
-          );
-          textPainter = TextPainter(
-            text: TextSpan(text: displayText, style: style),
-            textAlign: TextAlign.center,
-            textDirection: TextDirection.ltr,
-            maxLines: isSingleWord ? 1 : 3,
-          );
-          textPainter.layout(maxWidth: maxWidth);
-          if (textPainter.height <= maxHeight && !textPainter.didExceedMaxLines) break;
-          fontSize *= 0.85;
-        }
+        final fontSize = m.fitFontSize(displayText, r, () {
+          var size = r * 0.28;
+          for (var i = 0; i < 10; i++) {
+            final painter = TextPainter(
+              text: TextSpan(
+                text: displayText,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.ltr,
+              maxLines: isSingleWord ? 1 : 3,
+            );
+            painter.layout(maxWidth: maxWidth);
+            if (painter.height <= maxHeight && !painter.didExceedMaxLines) return size;
+            size *= 0.85;
+          }
+          return size;
+        });
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: displayText,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textAlign: TextAlign.center,
+          textDirection: TextDirection.ltr,
+          maxLines: isSingleWord ? 1 : 3,
+        );
+        textPainter.layout(maxWidth: maxWidth);
         textPainter.paint(
           canvas,
           Offset(m.x - textPainter.width / 2, m.y - textPainter.height / 2),
@@ -625,8 +661,7 @@ class _MarblePainter extends CustomPainter {
         );
       }
 
-      // Step number for checklist
-      if (boardType == BoardType.checklist || boardType == BoardType.timer || boardType == BoardType.countdown) {
+      if (isSequential) {
         final stepIndex = itemOrder.indexOf(m.item.id);
         if (stepIndex >= 0) {
           final stepPainter = TextPainter(
@@ -712,5 +747,5 @@ class _MarblePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MarblePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MarblePainter oldDelegate) => oldDelegate.tick != tick;
 }

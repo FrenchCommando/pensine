@@ -72,10 +72,7 @@ void main() {
     await settle(tester);
 
     // 3 — Open "Essentials" flashcards board (French Vocab workspace)
-    await scrollTo(tester, find.text('Essentials'));
-    await tester.tap(find.text('Essentials'));
-    await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
+    await openBoard(tester, 'Essentials');
     await takeScreenshot('03_flashcards');
 
     // 4 — Flip all flashcards
@@ -84,26 +81,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await takeScreenshot('04_flashcards_flipped');
 
-    // Go back to home
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
     // 5 — Open "Pancakes" checklist board (Cooking Recipes workspace)
-    await scrollTo(tester, find.text('Pancakes'));
-    await tester.tap(find.text('Pancakes'));
-    await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
+    await openBoard(tester, 'Pancakes');
     await takeScreenshot('05_checklist');
 
-    // Go back to home
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
     // 6 — Open "Weekend" todo board (Welcome workspace)
-    await scrollTo(tester, find.text('Weekend'), delta: -200);
-    await tester.tap(find.text('Weekend'));
-    await settle(tester);
-    await tester.pump(const Duration(seconds: 2));
+    await openBoard(tester, 'Weekend', scrollDelta: -200);
     await takeScreenshot('06_todo');
   });
 }

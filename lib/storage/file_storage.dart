@@ -10,96 +10,79 @@ Future<Directory> get _boardsDir async {
   return boardsDir;
 }
 
-Future<List<String>> loadAllBoardFiles() async {
+Future<List<String>> _loadAllByExtension(String extension) async {
   final dir = await _boardsDir;
-  final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.pensine'));
-  final results = <String>[];
-  for (final file in files) {
-    results.add(await file.readAsString());
-  }
-  return results;
+  final files = await dir
+      .list()
+      .where((e) => e is File && e.path.endsWith(extension))
+      .cast<File>()
+      .toList();
+  return Future.wait(files.map((f) => f.readAsString()));
 }
+
+Future<void> _deleteIfExists(File file) async {
+  try {
+    await file.delete();
+  } on FileSystemException {
+    // Already gone or never existed.
+  }
+}
+
+Future<List<String>> loadAllBoardFiles() => _loadAllByExtension('.pensine');
 
 Future<void> saveBoardFile(String id, String data) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/$id.pensine');
-  await file.writeAsString(data);
+  await File('${dir.path}/$id.pensine').writeAsString(data);
 }
 
 Future<void> deleteBoardFile(String id) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/$id.pensine');
-  if (await file.exists()) {
-    await file.delete();
-  }
+  await _deleteIfExists(File('${dir.path}/$id.pensine'));
 }
 
 Future<void> saveBoardOrderFile(List<String> ids) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/_order.json');
-  await file.writeAsString(ids.join('\n'));
+  await File('${dir.path}/_order.json').writeAsString(ids.join('\n'));
 }
 
 Future<List<String>?> loadBoardOrderFile() async {
   final dir = await _boardsDir;
   final file = File('${dir.path}/_order.json');
-  if (await file.exists()) {
-    final data = await file.readAsString();
-    return data.split('\n').where((s) => s.isNotEmpty).toList();
-  }
-  return null;
+  if (!await file.exists()) return null;
+  final data = await file.readAsString();
+  return data.split('\n').where((s) => s.isNotEmpty).toList();
 }
 
-// --- Workspace files ---
-
-Future<List<String>> loadAllWorkspaceFiles() async {
-  final dir = await _boardsDir;
-  final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.workspace'));
-  final results = <String>[];
-  for (final file in files) {
-    results.add(await file.readAsString());
-  }
-  return results;
-}
+Future<List<String>> loadAllWorkspaceFiles() => _loadAllByExtension('.workspace');
 
 Future<void> saveWorkspaceFile(String id, String data) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/$id.workspace');
-  await file.writeAsString(data);
+  await File('${dir.path}/$id.workspace').writeAsString(data);
 }
 
 Future<void> deleteWorkspaceFile(String id) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/$id.workspace');
-  if (await file.exists()) {
-    await file.delete();
-  }
+  await _deleteIfExists(File('${dir.path}/$id.workspace'));
 }
 
 Future<void> saveWorkspaceOrderFile(List<String> ids) async {
   final dir = await _boardsDir;
-  final file = File('${dir.path}/_workspace_order.json');
-  await file.writeAsString(ids.join('\n'));
+  await File('${dir.path}/_workspace_order.json').writeAsString(ids.join('\n'));
 }
 
 Future<List<String>?> loadWorkspaceOrderFile() async {
   final dir = await _boardsDir;
   final file = File('${dir.path}/_workspace_order.json');
-  if (await file.exists()) {
-    final data = await file.readAsString();
-    return data.split('\n').where((s) => s.isNotEmpty).toList();
-  }
-  return null;
+  if (!await file.exists()) return null;
+  final data = await file.readAsString();
+  return data.split('\n').where((s) => s.isNotEmpty).toList();
 }
 
-// Legacy support — migrate old single-file storage
 Future<String?> loadLegacyFile() async {
   final dir = await getApplicationSupportDirectory();
   final file = File('${dir.path}/pensine_data.json');
-  if (await file.exists()) {
-    final data = await file.readAsString();
-    await file.delete();
-    return data;
-  }
-  return null;
+  if (!await file.exists()) return null;
+  final data = await file.readAsString();
+  await file.delete();
+  return data;
 }

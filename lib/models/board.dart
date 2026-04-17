@@ -1,8 +1,30 @@
+import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 const _uuid = Uuid();
 
 enum BoardType { thoughts, todo, flashcards, checklist, timer, countdown }
+
+extension BoardTypeX on BoardType {
+  bool get isSequential =>
+      this == BoardType.checklist ||
+      this == BoardType.timer ||
+      this == BoardType.countdown;
+
+  bool get hasNet =>
+      this == BoardType.todo || this == BoardType.flashcards || isSequential;
+
+  IconData get icon => switch (this) {
+        BoardType.thoughts => Icons.cloud,
+        BoardType.todo => Icons.check_circle_outline,
+        BoardType.flashcards => Icons.style,
+        BoardType.checklist => Icons.format_list_numbered,
+        BoardType.timer => Icons.timer,
+        BoardType.countdown => Icons.hourglass_bottom,
+      };
+
+  String get displayName => name[0].toUpperCase() + name.substring(1);
+}
 
 class Board {
   final String id;
@@ -51,17 +73,7 @@ class Board {
         type: type,
         colorIndex: colorIndex,
         workspaceId: workspaceId,
-        items: items
-            .map((i) => BoardItem(
-                  content: i.content,
-                  description: i.description,
-                  backContent: i.backContent,
-                  done: i.done,
-                  colorIndex: i.colorIndex,
-                  sizeMultiplier: i.sizeMultiplier,
-                  durationSeconds: i.durationSeconds,
-                ))
-            .toList(),
+        items: items.map((i) => i.cloneWithNewId()).toList(),
       );
 }
 
@@ -112,4 +124,7 @@ class BoardItem {
         durationSeconds: json['durationSeconds'],
         createdAt: DateTime.parse(json['createdAt']),
       );
+
+  BoardItem cloneWithNewId() =>
+      BoardItem.fromJson({...toJson(), 'id': _uuid.v4()});
 }

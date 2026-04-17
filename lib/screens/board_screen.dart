@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../models/board.dart';
 import '../theme.dart';
 import '../widgets/about_dialog.dart';
+import '../widgets/color_picker.dart';
 import '../widgets/marble_board.dart';
 
 class BoardScreen extends StatefulWidget {
@@ -21,13 +23,12 @@ class _BoardScreenState extends State<BoardScreen> {
   final _random = Random();
   final _marbleBoardKey = GlobalKey<MarbleBoardState>();
 
-  // Timer/countdown state
   DateTime? _timerStartTime;
   DateTime? _stepStartTime;
+  final _overlayTick = ValueNotifier<int>(0);
   Timer? _uiTicker;
   Timer? _countdownTimer;
-
-  bool get _isSequential => const [BoardType.checklist, BoardType.timer, BoardType.countdown].contains(widget.board.type);
+  bool _anyFlipped = false;
 
   @override
   void initState() {
@@ -39,24 +40,25 @@ class _BoardScreenState extends State<BoardScreen> {
   void dispose() {
     _uiTicker?.cancel();
     _countdownTimer?.cancel();
+    _overlayTick.dispose();
     super.dispose();
   }
 
   void _initTimerState() {
-    if (widget.board.type != BoardType.timer && widget.board.type != BoardType.countdown) return;
-    final doneCount = widget.board.items.where((i) => i.done).length;
-    if (doneCount > 0) {
+    final t = widget.board.type;
+    if (t != BoardType.timer && t != BoardType.countdown) return;
+    if (widget.board.items.any((i) => i.done)) {
       _timerStartTime = DateTime.now();
       _stepStartTime = DateTime.now();
       _startUiTicker();
-      if (widget.board.type == BoardType.countdown) _startCountdown();
+      if (t == BoardType.countdown) _startCountdown();
     }
   }
 
   void _startUiTicker() {
     _uiTicker?.cancel();
     _uiTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      _overlayTick.value++;
     });
   }
 
@@ -72,12 +74,11 @@ class _BoardScreenState extends State<BoardScreen> {
   void _startCountdown() {
     _countdownTimer?.cancel();
     final nextIndex = widget.board.items.indexWhere((i) => !i.done);
-    if (nextIndex < 0) return; // all done
+    if (nextIndex < 0) return;
     final duration = widget.board.items[nextIndex].durationSeconds;
     if (duration == null || duration <= 0) return;
     _countdownTimer = Timer(Duration(seconds: duration), () {
       if (!mounted) return;
-      // Auto-advance: complete current step
       setState(() => widget.board.items[nextIndex].done = true);
       widget.onChanged();
       _stepStartTime = DateTime.now();
@@ -89,32 +90,31 @@ class _BoardScreenState extends State<BoardScreen> {
     });
   }
 
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes % 60;
-    final s = d.inSeconds % 60;
-    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
-    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s';
-    return '${s}s';
-  }
+  void _itemDialog({BoardItem? existing}) {
+    final type = widget.board.type;
+    final isFlashcard = type == BoardType.flashcards;
+    final isThoughts = type == BoardType.thoughts;
+    final isCountdown = type == BoardType.countdown;
 
-  void _addItem() {
-    final controller = TextEditingController();
-    final descController = TextEditingController();
-    final backController = TextEditingController();
-    final isFlashcard = widget.board.type == BoardType.flashcards;
-    final isThoughts = widget.board.type == BoardType.thoughts;
-    final isCountdown = widget.board.type == BoardType.countdown;
-    var size = 1.0;
-    var colorIndex = _random.nextInt(PensineColors.bubbles.length);
-    final durationController = TextEditingController(text: '60');
+    final controller = TextEditingController(text: existing?.content ?? '');
+    final descController = TextEditingController(text: existing?.description ?? '');
+    final backController = TextEditingController(text: existing?.backContent ?? '');
+    final durationController = TextEditingController(
+        text: '${existing?.durationSeconds ?? 60}');
+    var size = existing?.sizeMultiplier ?? 1.0;
+    var colorIndex = existing?.colorIndex ?? _random.nextInt(PensineColors.bubbles.length);
+
+    final title = existing != null
+        ? 'Edit'
+        : (isFlashcard ? 'New Flashcard' : 'New Item');
+    final submitLabel = existing != null ? 'Save' : 'Add';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: PensineColors.surface(context),
-          title: Text(isFlashcard ? 'New Flashcard' : 'New Item'),
+          title: Text(title),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -158,13 +158,26 @@ class _BoardScreenState extends State<BoardScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
+                PensineColorPicker(
+                  selected: colorIndex,
+                  onChanged: (v) => setDialogState(() => colorIndex = v),
+                ),
                 const SizedBox(height: 12),
                 _sizeSlider(size, (v) => setDialogState(() => size = v)),
               ],
             ),
           ),
           actions: [
+            if (existing != null)
+              TextButton(
+                onPressed: () {
+                  setState(() => widget.board.items.remove(existing));
+                  widget.onChanged();
+                  Navigator.pop(ctx);
+                },
+                style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
+                child: const Text('Delete'),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
@@ -173,24 +186,32 @@ class _BoardScreenState extends State<BoardScreen> {
               onPressed: () {
                 final text = controller.text.trim();
                 if (text.isEmpty) return;
+                final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+                final back = backController.text.trim().isEmpty ? null : backController.text.trim();
+                final duration = isCountdown ? int.tryParse(durationController.text) : null;
                 setState(() {
-                  widget.board.items.add(BoardItem(
-                    content: text,
-                    description: descController.text.trim().isEmpty
-                        ? null
-                        : descController.text.trim(),
-                    backContent: backController.text.trim().isEmpty
-                        ? null
-                        : backController.text.trim(),
-                    colorIndex: colorIndex,
-                    sizeMultiplier: size,
-                    durationSeconds: isCountdown ? int.tryParse(durationController.text) : null,
-                  ));
+                  if (existing != null) {
+                    existing.content = text;
+                    existing.description = desc;
+                    existing.backContent = back;
+                    existing.sizeMultiplier = size;
+                    existing.colorIndex = colorIndex;
+                    if (isCountdown) existing.durationSeconds = duration;
+                  } else {
+                    widget.board.items.add(BoardItem(
+                      content: text,
+                      description: desc,
+                      backContent: back,
+                      colorIndex: colorIndex,
+                      sizeMultiplier: size,
+                      durationSeconds: duration,
+                    ));
+                  }
                 });
                 widget.onChanged();
                 Navigator.pop(ctx);
               },
-              child: const Text('Add'),
+              child: Text(submitLabel),
             ),
           ],
         ),
@@ -200,6 +221,11 @@ class _BoardScreenState extends State<BoardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final type = widget.board.type;
+    final hasTimerOverlay =
+        (type == BoardType.timer || type == BoardType.countdown) &&
+            _timerStartTime != null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -212,28 +238,24 @@ class _BoardScreenState extends State<BoardScreen> {
             tooltip: 'Shake',
             onPressed: () => _marbleBoardKey.currentState?.shake(),
           ),
-          if (widget.board.type == BoardType.flashcards)
+          if (type == BoardType.flashcards)
             IconButton(
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 transitionBuilder: (child, animation) =>
                     RotationTransition(turns: animation, child: child),
-                child: Icon(
-                  Icons.flip,
-                  key: ValueKey(_marbleBoardKey.currentState?.marbles.any((m) => m.flipped) ?? false),
-                ),
+                child: Icon(Icons.flip, key: ValueKey(_anyFlipped)),
               ),
               tooltip: 'Flip all',
               onPressed: () {
                 final state = _marbleBoardKey.currentState;
-                if (state != null) {
-                  final anyFlipped = state.marbles.any((m) => m.flipped);
-                  state.flipAll(!anyFlipped);
-                  setState(() {});
-                }
+                if (state == null) return;
+                final next = !_anyFlipped;
+                state.flipAll(next);
+                setState(() => _anyFlipped = next);
               },
             ),
-          if ((widget.board.type == BoardType.todo || widget.board.type == BoardType.flashcards || _isSequential) &&
+          if ((type == BoardType.todo || type == BoardType.flashcards || type.isSequential) &&
               widget.board.items.any((i) => i.done))
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -243,6 +265,7 @@ class _BoardScreenState extends State<BoardScreen> {
                   for (final item in widget.board.items) {
                     item.done = false;
                   }
+                  _anyFlipped = false;
                 });
                 _stopTimers();
                 _marbleBoardKey.currentState?.resetSizes();
@@ -270,7 +293,7 @@ class _BoardScreenState extends State<BoardScreen> {
           widget.board.items.isEmpty
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onLongPress: _addItem,
+                  onLongPress: () => _itemDialog(),
                   child: Center(
                     child: Text(
                       'Empty board.\nLong-press to add something.',
@@ -280,80 +303,19 @@ class _BoardScreenState extends State<BoardScreen> {
                   ),
                 )
               : _buildContent(),
-          if ((widget.board.type == BoardType.timer || widget.board.type == BoardType.countdown) && _timerStartTime != null)
+          if (hasTimerOverlay)
             Positioned(
               bottom: 16,
               left: 0,
               right: 0,
-              child: _buildTimerOverlay(),
+              child: _TimerOverlay(
+                board: widget.board,
+                startTime: _timerStartTime!,
+                stepStartTime: _stepStartTime,
+                tick: _overlayTick,
+              ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTimerOverlay() {
-    final now = DateTime.now();
-    final total = now.difference(_timerStartTime!);
-    final stepElapsed = _stepStartTime != null ? now.difference(_stepStartTime!) : Duration.zero;
-    final allDone = widget.board.items.every((i) => i.done);
-    final accentColor = widget.board.colorIndex >= 0
-        ? PensineColors.boardAccent(widget.board.colorIndex)
-        : Theme.of(context).colorScheme.primary;
-
-    // For countdown: show remaining time on current step
-    String? stepText;
-    if (!allDone) {
-      if (widget.board.type == BoardType.countdown) {
-        final nextIndex = widget.board.items.indexWhere((i) => !i.done);
-        final dur = widget.board.items[nextIndex].durationSeconds;
-        if (dur != null && dur > 0) {
-          final remaining = Duration(seconds: dur) - stepElapsed;
-          final clamped = remaining.isNegative ? Duration.zero : remaining;
-          stepText = _formatDuration(clamped);
-        }
-      } else {
-        stepText = 'step ${_formatDuration(stepElapsed)}';
-      }
-    }
-
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              widget.board.type == BoardType.countdown ? Icons.hourglass_bottom : Icons.timer_outlined,
-              size: 16,
-              color: accentColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              _formatDuration(total),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: accentColor,
-              ),
-            ),
-            if (stepText != null) ...[
-              Text(' · ', style: TextStyle(color: PensineColors.muted(context))),
-              Text(
-                stepText,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: PensineColors.muted(context),
-                ),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -367,17 +329,15 @@ class _BoardScreenState extends State<BoardScreen> {
         widget.board.items[i].done = i < targetDone;
       }
     });
-    // Timer/countdown management
-    if (widget.board.type == BoardType.timer || widget.board.type == BoardType.countdown) {
+    final t = widget.board.type;
+    if (t == BoardType.timer || t == BoardType.countdown) {
       if (targetDone == 0) {
         _stopTimers();
       } else {
         _timerStartTime ??= DateTime.now();
         _stepStartTime = DateTime.now();
         if (_uiTicker == null) _startUiTicker();
-        if (widget.board.type == BoardType.countdown) {
-          _startCountdown();
-        }
+        if (t == BoardType.countdown) _startCountdown();
       }
     }
     widget.onChanged();
@@ -400,153 +360,19 @@ class _BoardScreenState extends State<BoardScreen> {
       onTap: (item) {
         switch (widget.board.type) {
           case BoardType.thoughts:
-            // Expand is handled inside MarbleBoard
+          case BoardType.flashcards:
             break;
           case BoardType.todo:
             setState(() => item.done = !item.done);
             widget.onChanged();
-          case BoardType.flashcards:
-            // Flip is handled inside MarbleBoard
-            break;
           case BoardType.checklist:
           case BoardType.timer:
           case BoardType.countdown:
             _handleSequentialTap(item);
         }
       },
-      onLongPress: (item) => _editItem(item),
-      onLongPressEmpty: _addItem,
-    );
-  }
-
-  void _editItem(BoardItem item) {
-    final controller = TextEditingController(text: item.content);
-    final descController = TextEditingController(text: item.description ?? '');
-    final backController = TextEditingController(text: item.backContent ?? '');
-    final isFlashcard = widget.board.type == BoardType.flashcards;
-    final isThoughts = widget.board.type == BoardType.thoughts;
-    final isCountdown = widget.board.type == BoardType.countdown;
-    var size = item.sizeMultiplier;
-    var colorIndex = item.colorIndex;
-    final durationController = TextEditingController(text: '${item.durationSeconds ?? 60}');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: PensineColors.surface(context),
-          title: const Text('Edit'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: isFlashcard ? 'Front side' : 'Title',
-                  ),
-                  maxLines: 3,
-                  minLines: 1,
-                ),
-                if (isThoughts) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descController,
-                    decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
-                    maxLines: 5,
-                    minLines: 2,
-                  ),
-                ],
-                if (isFlashcard) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: backController,
-                    decoration: const InputDecoration(hintText: 'Back side (answer)'),
-                    maxLines: 3,
-                    minLines: 1,
-                  ),
-                ],
-                if (isCountdown) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: durationController,
-                    decoration: const InputDecoration(
-                      hintText: 'Duration (seconds)',
-                      labelText: 'Duration (seconds)',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                _colorPicker(colorIndex, (v) => setDialogState(() => colorIndex = v)),
-                const SizedBox(height: 12),
-                _sizeSlider(size, (v) => setDialogState(() => size = v)),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() => widget.board.items.remove(item));
-                widget.onChanged();
-                Navigator.pop(ctx);
-              },
-              style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
-              child: const Text('Delete'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final text = controller.text.trim();
-                if (text.isEmpty) return;
-                setState(() {
-                  item.content = text;
-                  item.description = descController.text.trim().isEmpty
-                      ? null
-                      : descController.text.trim();
-                  item.backContent = backController.text.trim().isEmpty
-                      ? null
-                      : backController.text.trim();
-                  item.sizeMultiplier = size;
-                  item.colorIndex = colorIndex;
-                  if (isCountdown) item.durationSeconds = int.tryParse(durationController.text);
-                });
-                widget.onChanged();
-                Navigator.pop(ctx);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _colorPicker(int selected, ValueChanged<int> onChanged) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: List.generate(PensineColors.bubbles.length, (i) {
-        final isSelected = i == selected;
-        return GestureDetector(
-          onTap: () => onChanged(i),
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: PensineColors.bubbles[i],
-              shape: BoxShape.circle,
-              border: isSelected
-                  ? Border.all(color: Colors.white, width: 2.5)
-                  : null,
-            ),
-          ),
-        );
-      }),
+      onLongPress: (item) => _itemDialog(existing: item),
+      onLongPressEmpty: () => _itemDialog(),
     );
   }
 
@@ -566,5 +392,99 @@ class _BoardScreenState extends State<BoardScreen> {
       ],
     );
   }
+}
 
+class _TimerOverlay extends StatelessWidget {
+  final Board board;
+  final DateTime startTime;
+  final DateTime? stepStartTime;
+  final ValueListenable<int> tick;
+
+  const _TimerOverlay({
+    required this.board,
+    required this.startTime,
+    required this.stepStartTime,
+    required this.tick,
+  });
+
+  String _format(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
+    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s';
+    return '${s}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = board.colorIndex >= 0
+        ? PensineColors.boardAccent(board.colorIndex)
+        : Theme.of(context).colorScheme.primary;
+
+    return ValueListenableBuilder<int>(
+      valueListenable: tick,
+      builder: (context, _, _) {
+        final now = DateTime.now();
+        final total = now.difference(startTime);
+        final stepElapsed = stepStartTime != null ? now.difference(stepStartTime!) : Duration.zero;
+        final allDone = board.items.every((i) => i.done);
+
+        String? stepText;
+        if (!allDone) {
+          if (board.type == BoardType.countdown) {
+            final nextIndex = board.items.indexWhere((i) => !i.done);
+            final dur = board.items[nextIndex].durationSeconds;
+            if (dur != null && dur > 0) {
+              final remaining = Duration(seconds: dur) - stepElapsed;
+              final clamped = remaining.isNegative ? Duration.zero : remaining;
+              stepText = _format(clamped);
+            }
+          } else {
+            stepText = 'step ${_format(stepElapsed)}';
+          }
+        }
+
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  board.type == BoardType.countdown ? Icons.hourglass_bottom : Icons.timer_outlined,
+                  size: 16,
+                  color: accentColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _format(total),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
+                ),
+                if (stepText != null) ...[
+                  Text(' · ', style: TextStyle(color: PensineColors.muted(context))),
+                  Text(
+                    stepText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: PensineColors.muted(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

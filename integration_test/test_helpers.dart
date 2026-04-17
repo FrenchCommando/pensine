@@ -22,6 +22,17 @@ Future<void> linger(WidgetTester tester,
   }
 }
 
+/// Opens a board by name: scroll to it, tap, settle, and hold a moment so
+/// marble physics can reach a visually-stable state.
+Future<void> openBoard(WidgetTester tester, String name,
+    {double scrollDelta = 200,
+    Duration hold = const Duration(seconds: 2)}) async {
+  await scrollTo(tester, find.text(name), delta: scrollDelta);
+  await tester.tap(find.text(name));
+  await settle(tester);
+  await tester.pump(hold);
+}
+
 /// Scrolls until [finder] is visible and tappable on screen, using drag
 /// gestures + pump() instead of scrollUntilVisible (which calls
 /// pumpAndSettle and hangs on continuous animations).
