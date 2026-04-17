@@ -11,7 +11,6 @@ jobs:
       matrix:
         device:
           - "iPhone 16 Pro Max"
-          - "iPhone 16 Pro"
           - "iPad Pro 13-inch (M4)"
     steps:
       - uses: actions/checkout@v5
@@ -24,11 +23,7 @@ jobs:
         run: bash tool/setup_ios_status_bar.sh
 
       - name: Run screenshot tests
-        run: |
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/screenshot_test.dart \
-            --device-id "$UDID"
+        run: bash tool/run_ios_screenshot_test.sh
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

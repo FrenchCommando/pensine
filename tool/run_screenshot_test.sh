@@ -2,8 +2,8 @@
 # Orchestrates the Android screenshot integration test:
 #   1. Mints a fresh self-signed cert/key for this run.
 #   2. Starts tool/screenshot_server.py over HTTPS on 8765.
-#   3. Runs flutter drive, passing the cert via --dart-define so the test
-#      pins trust at runtime (no checked-in cert, no manifest changes).
+#   3. Runs flutter drive, passing SCREENSHOT_HOST + cert via --dart-define
+#      so the test POSTs over 10.0.2.2 and pins trust at runtime.
 #   4. Tears the server down, preserving the test's exit code.
 #
 # Lives in a single script because the GitHub action that wraps this
@@ -31,6 +31,7 @@ openssl req -x509 -newkey rsa:2048 -nodes \
 CERT_B64=$(base64 -w0 "$CERT_DIR/cert.pem")
 
 python3 tool/screenshot_server.py \
+  --mode android \
   --port "$PORT" --out "$OUT_DIR" \
   --cert "$CERT_DIR/cert.pem" --key "$CERT_DIR/key.pem" &
 SERVER_PID=$!
@@ -47,5 +48,6 @@ TEST_EXIT=0
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/screenshot_test.dart \
+  --dart-define=SCREENSHOT_HOST="https://10.0.2.2:$PORT" \
   --dart-define=SCREENSHOT_CERT_B64="$CERT_B64" || TEST_EXIT=$?
 exit $TEST_EXIT

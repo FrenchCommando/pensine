@@ -1,4 +1,4 @@
-package com.pensine.pensine
+package com.frenchcommando.pensine
 
 import io.flutter.embedding.android.FlutterActivity
 

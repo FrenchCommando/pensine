@@ -4,6 +4,11 @@ import 'package:flutter/scheduler.dart';
 import '../models/board.dart';
 import '../theme.dart';
 
+/// When true, the marble physics ticker early-returns. Screenshot tests
+/// toggle this so the captured frame is stable and `binding.takeScreenshot`
+/// isn't blocked waiting for idle (the ticker calls setState every frame).
+bool debugPauseMarblePhysics = false;
+
 class Marble {
   final BoardItem item;
   Color color;
@@ -165,6 +170,7 @@ class MarbleBoardState extends State<MarbleBoard>
   }
 
   void _tick(Duration elapsed) {
+    if (debugPauseMarblePhysics) return;
     if (_size == Size.zero) return;
 
     const dt = 1.0 / 60.0;

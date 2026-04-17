@@ -1,7 +1,7 @@
 for_platform :ios do
-  app_identifier "com.pensine.pensine"
+  app_identifier "com.frenchcommando.pensine"
 end
 
 for_platform :android do
-  package_name "com.pensine.pensine"
+  package_name "com.frenchcommando.pensine"
 end

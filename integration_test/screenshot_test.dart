@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pensine/main.dart';
+import 'package:pensine/widgets/marble_board.dart';
 
 import 'test_helpers.dart';
 
@@ -24,25 +25,32 @@ void main() {
     return HttpClient(context: ctx);
   }();
 
+  // Both platforms now capture via a host-side server:
+  //   Android — HTTPS + cert pinning over 10.0.2.2 (emulator → host).
+  //   iOS     — plain HTTP over 127.0.0.1 (sim shares host loopback).
+  // iOS started hanging in `binding.takeScreenshot` because the marble ticker
+  // calls setState every frame, so Flutter's screenshot path never sees idle.
+  // Host-driven capture bypasses that entirely.
+  const host = String.fromEnvironment('SCREENSHOT_HOST');
+
   Future<void> takeScreenshot(String name) async {
-    if (Platform.isAndroid) {
-      // convertFlutterSurfaceToImage deadlocks on Android emulators. The host
-      // workflow runs an HTTPS server that grabs frames via `adb screencap`;
-      // we POST over the emulator's host alias 10.0.2.2 and wait for 200,
-      // which means the PNG is written.
-      const port = String.fromEnvironment('SCREENSHOT_PORT',
-          defaultValue: '8765');
-      final req = await httpClient
-          .postUrl(Uri.parse('https://10.0.2.2:$port/screenshot/$name'));
-      final res = await req.close();
-      await res.drain();
-      if (res.statusCode != 200) {
-        throw StateError(
-            'Screenshot capture failed for "$name": HTTP ${res.statusCode}');
+    debugPauseMarblePhysics = true;
+    try {
+      if (host.isNotEmpty) {
+        final req =
+            await httpClient.postUrl(Uri.parse('$host/screenshot/$name'));
+        final res = await req.close();
+        await res.drain();
+        if (res.statusCode != 200) {
+          throw StateError(
+              'Screenshot capture failed for "$name": HTTP ${res.statusCode}');
+        }
+        return;
       }
-      return;
+      await binding.takeScreenshot(name);
+    } finally {
+      debugPauseMarblePhysics = false;
     }
-    await binding.takeScreenshot(name);
   }
 
   testWidgets('Store screenshots', (tester) async {

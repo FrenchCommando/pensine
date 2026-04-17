@@ -1,7 +1,7 @@
 # App Store Deployment
 
 ## Current state
-- App ID: `com.pensine.pensine` (both platforms)
+- App ID: `com.frenchcommando.pensine` (both platforms)
 - App icons: configured for all sizes via `flutter_launcher_icons`
 - Version: defined in `pubspec.yaml`, currently `1.1.0+2`
 - iOS deployment target: 13.0
@@ -33,7 +33,7 @@
 **App Store Connect listing (partially done):**
 - App name: Pensine
 - Subtitle: "Visual notes with marbles"
-- Bundle ID: `com.pensine.pensine`
+- Bundle ID: `com.frenchcommando.pensine`
 - SKU: `pensine`
 - Description, promotional text, keywords: filled in
 - Marketing URL: `https://frenchcommando.github.io/pensine/site/`
@@ -64,12 +64,17 @@ Test helpers (`settle`, `linger`, `scrollTo`) are shared between screenshot and 
 ### Screenshots
 - Test: `integration_test/screenshot_test.dart`. Driver: `test_driver/integration_test.dart` (uses `integration_test_driver_extended` with `onScreenshot`).
 - Status-bar polish (9:41 clock, full battery, full signal) applied via `tool/setup_ios_status_bar.sh` / `tool/setup_android_status_bar.sh`.
-- **iOS matrix** (iPhone 16 Pro Max, iPhone 16 Pro, iPad Pro 13-inch M4): `binding.takeScreenshot` works directly; PNGs land in `build/screenshots/`. Boot via `tool/boot_ios_simulator.sh "<device>"` (writes `UDID` to `$GITHUB_ENV`).
-- **Android matrix** (Pixel 7, Pixel Tablet, api-level 35 x86_64): `binding.convertFlutterSurfaceToImage` deadlocks on the emulator, so capture is host-driven via `tool/run_screenshot_test.sh`:
+- Both platforms use **host-driven capture** via `tool/screenshot_server.py`. `binding.takeScreenshot` and `convertFlutterSurfaceToImage` both wait for Flutter to go idle, which never happens because `MarbleBoard`'s physics ticker calls `setState` every frame. The test POSTs `/screenshot/<name>` to the server; the server shells out to the platform's native capture and writes `build/screenshots/<name>.png` synchronously, so a 200 response is the test's signal to advance. The test also flips `debugPauseMarblePhysics` around each capture so marbles don't drift mid-frame.
+- **iOS matrix** (iPhone 16 Pro Max for the required 6.9" slot, iPad Pro 13-inch M4 for the required iPad slot) — `tool/run_ios_screenshot_test.sh`:
+  - Starts the server in `--mode ios` on plain HTTP `127.0.0.1:8765` (sim shares host loopback, so no cert needed).
+  - Server runs `xcrun simctl io <udid> screenshot --type=png <out>`.
+  - Boot via `tool/boot_ios_simulator.sh "<device>"` (writes `UDID` to `$GITHUB_ENV`).
+  - App Store Connect's 6.5" slot is a fallback for 6.9" and not needed when 6.9" is filled; 6.1" (iPhone 16 Pro native) is optional.
+- **Android matrix** (Pixel 7, Pixel Tablet, api-level 35 x86_64) — `tool/run_screenshot_test.sh`:
   - Mints a fresh self-signed cert+key per run with `openssl` (no checked-in secrets).
-  - Starts `tool/screenshot_server.py` as an HTTPS server on `0.0.0.0:8765`, serving the cert. Allowlist of names matches the test's six screenshots.
-  - Passes the cert to the test as base64 via `--dart-define=SCREENSHOT_CERT_B64`. Test pins trust at runtime via `dart:io SecurityContext` (`withTrustedRoots: false` + `setTrustedCertificatesBytes`) — scoped to that one HttpClient instance.
-  - Test POSTs `https://10.0.2.2:8765/screenshot/<name>` per screenshot; server shells out to `adb exec-out screencap -p > build/screenshots/<name>.png` and returns 200, unblocking the test.
+  - Server runs in `--mode android` over HTTPS on `0.0.0.0:8765` because the test reaches the host via `10.0.2.2`, which requires TLS.
+  - Cert passed to the test as base64 via `--dart-define=SCREENSHOT_CERT_B64`; test pins trust at runtime via `dart:io SecurityContext` (`withTrustedRoots: false` + `setTrustedCertificatesBytes`) — scoped to that one HttpClient instance.
+  - Server shells out to `adb exec-out screencap -p`.
   - SAN covers both `10.0.2.2` (emulator → host) and `127.0.0.1` (host health check). No cleartext traffic, no Android manifest changes, no `res/raw` resource, nothing in release builds.
 - Screenshots uploaded as artifacts per matrix entry.
 
@@ -130,7 +135,7 @@ openssl pkcs12 -export -inkey ios_dist.key -in distribution.pem -out ios_dist.p1
 base64 -w 0 ios_dist.p12 > ios_dist.p12.b64
 ```
 
-Provisioning profile: create in the Apple Developer portal tied to bundle ID `com.pensine.pensine` + the distribution cert; download, base64-encode.
+Provisioning profile: create in the Apple Developer portal tied to bundle ID `com.frenchcommando.pensine` + the distribution cert; download, base64-encode.
 
 App Store Connect API key: App Store Connect → Users and Access → Keys. Create a key with "App Manager" role minimum. Record Key ID + Issuer ID, download the `.p8`, base64-encode it.
 
