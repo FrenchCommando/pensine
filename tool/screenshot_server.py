@@ -7,26 +7,33 @@ https://10.0.2.2:<port>/screenshot/<name>; we shell out to
 return 200. The synchronous response is the test's signal that the frame is
 captured and it can advance.
 
-The matching cert is bundled into the debug APK via res/raw and trusted via
-network_security_config.xml (scoped to 10.0.2.2). Release builds don't
-include either resource.
+The matching cert is passed to the test as base64 via --dart-define and
+trusted at runtime via dart:io SecurityContext (scoped to that one HttpClient).
+Nothing about TLS trust touches the source tree or release builds.
 
 Why this exists: binding.convertFlutterSurfaceToImage() deadlocks on the
 Android emulator, so capture has to be host-driven. See screenshots.yml.
 """
 
 import argparse
-import os
-import re
 import ssl
 import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
-NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+# Mirrors the names produced by integration_test/screenshot_test.dart.
+ALLOWED_NAMES = frozenset({
+    "01_home",
+    "02_thoughts",
+    "03_flashcards",
+    "04_flashcards_flipped",
+    "05_checklist",
+    "06_todo",
+})
 
 
-def make_handler(out_dir):
+def make_handler(out_dir: Path):
     class Handler(BaseHTTPRequestHandler):
         def _reply(self, status, body=b""):
             self.send_response(status)
@@ -42,17 +49,15 @@ def make_handler(out_dir):
                 self._reply(404)
 
         def do_POST(self):
-            prefix = "/screenshot/"
-            if not self.path.startswith(prefix):
+            if not self.path.startswith("/screenshot/"):
                 self._reply(404)
                 return
-            name = self.path[len(prefix):]
-            if not NAME_RE.match(name):
-                self._reply(400, b"invalid name")
+            name = self.path.removeprefix("/screenshot/")
+            if name not in ALLOWED_NAMES:
+                self._reply(400, b"unknown name")
                 return
-            path = os.path.join(out_dir, f"{name}.png")
             try:
-                with open(path, "wb") as f:
+                with (out_dir / f"{name}.png").open("wb") as f:
                     subprocess.run(
                         ["adb", "exec-out", "screencap", "-p"],
                         stdout=f, check=True,
@@ -71,11 +76,11 @@ def make_handler(out_dir):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
-    ap.add_argument("--out", required=True)
-    ap.add_argument("--cert", required=True, help="PEM cert path")
-    ap.add_argument("--key", required=True, help="PEM private key path")
+    ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--cert", required=True, type=Path, help="PEM cert path")
+    ap.add_argument("--key", required=True, type=Path, help="PEM private key path")
     args = ap.parse_args()
-    os.makedirs(args.out, exist_ok=True)
+    args.out.mkdir(parents=True, exist_ok=True)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(certfile=args.cert, keyfile=args.key)
     server = ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(args.out))

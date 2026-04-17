@@ -16,7 +16,13 @@ PORT=8765
 mkdir -p "$OUT_DIR"
 
 CERT_DIR=$(mktemp -d)
-trap 'rm -rf "$CERT_DIR"' EXIT
+SERVER_PID=
+
+cleanup() {
+  [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true
+  rm -rf "$CERT_DIR"
+}
+trap cleanup EXIT
 
 openssl req -x509 -newkey rsa:2048 -nodes \
   -keyout "$CERT_DIR/key.pem" -out "$CERT_DIR/cert.pem" \
@@ -29,7 +35,6 @@ python3 tool/screenshot_server.py \
   --port "$PORT" --out "$OUT_DIR" \
   --cert "$CERT_DIR/cert.pem" --key "$CERT_DIR/key.pem" &
 SERVER_PID=$!
-trap 'kill $SERVER_PID 2>/dev/null || true; rm -rf "$CERT_DIR"' EXIT
 
 # Wait for the server to bind before starting the test.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
