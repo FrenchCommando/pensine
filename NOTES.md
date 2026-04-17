@@ -121,7 +121,9 @@
 - `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
 - `.github/workflows/screenshots.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md)
 - `.github/workflows/release.yml` — tag-push (`v*.*.*`) or manual; uploads to Play internal + TestFlight (see DEPLOYMENT.md)
-- All workflows enable `cache: true` on `subosito/flutter-action` to restore Flutter SDK + pub cache across runs
+- Local composite actions in `.github/actions/`: `setup-flutter` (Flutter SDK + pub get) and `setup-android-emulator-host` (KVM + JDK 17). Caller must run `actions/checkout@v5` immediately before `- uses: ./.github/actions/<name>` — local composite actions are loaded from disk, so the checkout has to happen first.
+- Orchestration scripts in `tool/` (`run_screenshot_test.sh`, `run_ios_preview.sh`, `run_android_preview.sh`, `boot_ios_simulator.sh`, `setup_ios_status_bar.sh`, `setup_android_status_bar.sh`, `screenshot_server.py`). Multi-line bash with shared variables must live in a script file because `reactivecircus/android-emulator-runner` runs each YAML `script:` line as a separate `sh -c`.
+- All workflows enable `cache: true` on `subosito/flutter-action` (via the composite) to restore Flutter SDK + pub cache across runs
 - GitHub Actions use v5 (`actions/checkout@v5`, etc.) for Node.js 24 compatibility
 - Free for public repos using standard GitHub-hosted runners (`ubuntu-latest`, `macos-latest`)
 

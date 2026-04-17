@@ -57,27 +57,34 @@
 
 ## Screenshots & Preview Video
 
-Automated via `.github/workflows/screenshots.yml` (manual trigger).
+Automated via `.github/workflows/screenshots.yml` (manual trigger). All multi-step orchestration lives in shell scripts under `tool/` because the `reactivecircus/android-emulator-runner` action runs each YAML `script:` line as a separate `sh -c`, fragmenting variables.
+
+Test helpers (`settle`, `linger`, `scrollTo`) are shared between screenshot and preview tests in `integration_test/test_helpers.dart`.
 
 ### Screenshots
-- Flutter integration test (`integration_test/screenshot_test.dart`) drives the app; `binding.takeScreenshot` captures PNGs.
-- Driver `test_driver/integration_test.dart` uses `integration_test_driver_extended` with `onScreenshot`, writing PNGs to `build/screenshots/`.
-- **iOS matrix:** iPhone 16 Pro Max, iPhone 16 Pro, iPad Pro 13-inch (M4) — macOS runner.
-- **Android matrix:** Pixel 7, Pixel Tablet — Linux runner, api-level 35 x86_64 emulator, KVM enabled.
-- Status bar overridden for store-quality frames: time 9:41, full battery, full cellular/wifi (iOS `simctl status_bar override`; Android SystemUI demo mode broadcasts).
+- Test: `integration_test/screenshot_test.dart`. Driver: `test_driver/integration_test.dart` (uses `integration_test_driver_extended` with `onScreenshot`).
+- Status-bar polish (9:41 clock, full battery, full signal) applied via `tool/setup_ios_status_bar.sh` / `tool/setup_android_status_bar.sh`.
+- **iOS matrix** (iPhone 16 Pro Max, iPhone 16 Pro, iPad Pro 13-inch M4): `binding.takeScreenshot` works directly; PNGs land in `build/screenshots/`. Boot via `tool/boot_ios_simulator.sh "<device>"` (writes `UDID` to `$GITHUB_ENV`).
+- **Android matrix** (Pixel 7, Pixel Tablet, api-level 35 x86_64): `binding.convertFlutterSurfaceToImage` deadlocks on the emulator, so capture is host-driven via `tool/run_screenshot_test.sh`:
+  - Mints a fresh self-signed cert+key per run with `openssl` (no checked-in secrets).
+  - Starts `tool/screenshot_server.py` as an HTTPS server on `0.0.0.0:8765`, serving the cert. Allowlist of names matches the test's six screenshots.
+  - Passes the cert to the test as base64 via `--dart-define=SCREENSHOT_CERT_B64`. Test pins trust at runtime via `dart:io SecurityContext` (`withTrustedRoots: false` + `setTrustedCertificatesBytes`) — scoped to that one HttpClient instance.
+  - Test POSTs `https://10.0.2.2:8765/screenshot/<name>` per screenshot; server shells out to `adb exec-out screencap -p > build/screenshots/<name>.png` and returns 200, unblocking the test.
+  - SAN covers both `10.0.2.2` (emulator → host) and `127.0.0.1` (host health check). No cleartext traffic, no Android manifest changes, no `res/raw` resource, nothing in release builds.
 - Screenshots uploaded as artifacts per matrix entry.
 
 ### Preview video
 - Recorded **natively** — not by stitching frames.
-- **iOS:** `xcrun simctl io "$UDID" recordVideo --codec=h264 build/preview-ios.mp4` runs in background while the test drives the UI; receives SIGINT on test end to finalize the mp4.
-- **Android:** `adb shell screenrecord --time-limit=180 /sdcard/preview.mp4` in the emulator-runner script, pulled via `adb pull` after the test completes.
-- `integration_test/preview_test.dart` is pure navigation — no `takeScreenshot` calls, no `reportData` accumulation. Timing via `linger()` pumps.
+- Both preview scripts (`tool/run_ios_preview.sh`, `tool/run_android_preview.sh`) start `flutter drive` in the background, then wait for the driver to log `Connected to Flutter application` before starting the recorder — so the recording isn't padded with build/install/launch time.
+- **iOS:** `timeout -s INT 40s xcrun simctl io "$UDID" recordVideo --codec=h264`. `timeout -s INT` is the documented clean-shutdown signal for `simctl recordVideo`; it finalizes the MP4 `moov` atom and produces a playable file. (The earlier `kill -INT $REC_PID` pattern produced files that froze on the first frame in VLC because the writer was killed mid-flush.)
+- **Android:** `adb shell screenrecord --time-limit=40 /sdcard/preview.mp4` then `adb pull`. The clean `--time-limit` exit flushes the MP4 muxer; the previous `pkill -SIGINT screenrecord` pattern hit a long-standing Android bug where SIGINT didn't always finalize the file.
+- `integration_test/preview_test.dart` is pure navigation; timing via `linger()` from `test_helpers.dart`.
 
 Both screenshot and preview artifacts must be downloaded and uploaded to App Store Connect / Play Console manually until the metadata lanes (see Release Automation) ship.
 
 ## Release Automation (fastlane)
 
-**Not yet implemented.** Below is the planned shape.
+Binary lanes are **implemented** — both `ios beta` and `android beta` ship binaries to TestFlight / Play internal on tag push (`v*.*.*`) or manual `workflow_dispatch`. Metadata + screenshot upload is **not yet wired**; store listings and screenshots are still uploaded by hand.
 
 ### Why fastlane
 - Covers build + sign + binary upload + metadata + screenshots in one DSL.
@@ -94,16 +101,16 @@ fastlane/
   release.yml                  # fires on tag push v*.*.*
 ```
 
-### Planned lanes
-- `ios beta` — build signed ipa, upload to TestFlight via `upload_to_testflight`.
-- `ios metadata` — upload App Store listing + screenshots via `deliver`.
-- `android beta` — build AAB, upload to Play internal track via `upload_to_play_store(track: 'internal')`.
-- `android metadata` — upload Play listing + screenshots via `upload_to_play_store(skip_upload_aab: true, ...)`.
+### Lanes
+- `ios beta` *(implemented)* — `flutter build ipa` (in workflow), then `upload_to_testflight` with the App Store Connect API key. `skip_waiting_for_build_processing: true` so CI doesn't block on Apple's processing queue.
+- `android beta` *(implemented)* — `flutter build appbundle --build-number=$GITHUB_RUN_NUMBER`, then `upload_to_play_store(track: 'internal', release_status: 'draft')`. All metadata/image uploads are explicitly skipped.
+- `ios metadata` *(not yet)* — would upload App Store listing + screenshots via `deliver`.
+- `android metadata` *(not yet)* — would upload Play listing + screenshots via `upload_to_play_store(skip_upload_aab: true, ...)`.
 
 ### Phase rollout
-1. Android → Play internal track (fastest feedback, no review delay).
-2. iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
-3. Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes are green.
+1. ✅ Android → Play internal track (fastest feedback, no review delay).
+2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
+3. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
