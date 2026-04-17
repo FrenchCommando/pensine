@@ -49,10 +49,7 @@ void main() {
       }
       await binding.takeScreenshot(name);
     } finally {
-      // Physics stays paused after the shot — resumed only during openBoard's
-      // hold so marbles settle for the next screenshot. This keeps the emulator
-      // load near zero between screenshots and prevents emulator crashes from
-      // sustained swiftshader rendering.
+      debugPauseMarblePhysics = false;
     }
   }
 
@@ -70,7 +67,7 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    await openBoard(tester, 'Essentials', resumePhysics: true);
+    await openBoard(tester, 'Essentials');
     await takeScreenshot(tester, '03_flashcards');
 
     await tester.tap(find.byTooltip('Flip all'));
@@ -81,13 +78,13 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    await openBoard(tester, 'Pancakes', resumePhysics: true);
+    await openBoard(tester, 'Pancakes');
     await takeScreenshot(tester, '05_checklist');
 
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
 
-    await openBoard(tester, 'Weekend', scrollDelta: -200, resumePhysics: true);
+    await openBoard(tester, 'Weekend', scrollDelta: -200);
     await takeScreenshot(tester, '06_todo');
   });
 }
