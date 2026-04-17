@@ -106,8 +106,6 @@ jobs:
 
       - name: Record preview walkthrough
         run: bash tool/run_ios_preview.sh
-        env:
-          UDID: ${{ env.UDID }}
 
       - name: Upload preview
         uses: actions/upload-artifact@v4
