@@ -23,14 +23,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Build web
         run: flutter build web "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"

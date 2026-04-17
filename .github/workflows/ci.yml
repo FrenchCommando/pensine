@@ -10,14 +10,7 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Analyze
         run: flutter analyze

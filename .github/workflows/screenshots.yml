@@ -14,14 +14,7 @@ jobs:
           - "iPhone 16 Pro"
           - "iPad Pro 13-inch (M4)"
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Boot simulator
         run: bash tool/boot_ios_simulator.sh "${{ matrix.device }}"
@@ -47,14 +40,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Boot simulator
         run: bash tool/boot_ios_simulator.sh "iPhone 16 Pro Max"
@@ -81,26 +67,8 @@ jobs:
           - pixel_7
           - pixel_tablet
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+      - uses: ./.github/actions/setup-flutter
+      - uses: ./.github/actions/setup-android-emulator-host
 
       - name: Run Android screenshot tests
         uses: reactivecircus/android-emulator-runner@v2
@@ -124,26 +92,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - run: flutter pub get
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+      - uses: ./.github/actions/setup-flutter
+      - uses: ./.github/actions/setup-android-emulator-host
 
       - name: Record Android preview walkthrough
         uses: reactivecircus/android-emulator-runner@v2

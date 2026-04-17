@@ -1,0 +1,15 @@
+name: Setup Flutter
+description: Check out the repo, install the Flutter SDK with cache, and fetch packages.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v5
+
+    - uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+
+    - run: flutter pub get
+      shell: bash
