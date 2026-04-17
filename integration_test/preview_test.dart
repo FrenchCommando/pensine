@@ -22,6 +22,9 @@ void main() {
     await settle(tester);
     await linger(tester, duration: const Duration(seconds: 4));
 
+    await tester.tap(find.byTooltip('Shake'));
+    await linger(tester, duration: const Duration(seconds: 3));
+
     await tester.tap(find.byTooltip('Back'));
     await settle(tester);
     await linger(tester, duration: const Duration(seconds: 2));
