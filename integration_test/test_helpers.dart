@@ -28,27 +28,28 @@ Future<void> linger(WidgetTester tester,
 Future<void> scrollTo(WidgetTester tester, Finder finder,
     {double delta = 200}) async {
   final scrollable = find.byType(Scrollable).first;
-  final screenSize = tester.view.physicalSize / tester.view.devicePixelRatio;
-  final midY = screenSize.height / 2;
+  final scrollState = tester.state<ScrollableState>(scrollable);
   for (var i = 0; i < 50; i++) {
     await settle(tester, timeout: const Duration(seconds: 1));
     if (finder.evaluate().isNotEmpty) {
-      final box = finder.evaluate().first.renderObject as RenderBox;
-      final center = box
-          .localToGlobal(Offset(box.size.width / 2, box.size.height / 2));
-      // Widget center is in the tappable area (between AppBar and bottom)
-      if (center.dy > 120 && center.dy < screenSize.height - 50) {
-        return;
-      }
-      // Widget is in the tree but not in the right zone — use smaller drags
-      // to nudge it into view instead of overshooting.
-      final nudge = (center.dy - midY).clamp(-80, 80).toDouble();
-      await tester.drag(scrollable, Offset(0, -nudge));
-      await tester.pump(const Duration(milliseconds: 200));
-      continue;
+      // Hand off to the framework — handles centering, partial clipping,
+      // and edge-of-list cases without manual viewport math.
+      await Scrollable.ensureVisible(
+        finder.evaluate().first,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 200),
+      );
+      await settle(tester, timeout: const Duration(seconds: 1));
+      return;
     }
+    final before = scrollState.position.pixels;
     await tester.drag(scrollable, Offset(0, -delta));
     await tester.pump(const Duration(milliseconds: 300));
+    if ((scrollState.position.pixels - before).abs() < 1) {
+      // Drag had no effect — at the list edge, target is not in this list.
+      throw StateError(
+          'Reached scroll edge without finding widget (wrong direction?)');
+    }
   }
   throw StateError('Could not scroll to find widget');
 }
