@@ -49,17 +49,23 @@ iPad and pixel_tablet show the same patterns (not reviewed line-by-line but stat
 
 Build a local iteration loop in WSL2 that runs the same scripts CI runs, for both Android and iOS. One codepath, no env-specific forks.
 
-### Android (WSL2, native via KVM)
+### Android (WSL2, native via KVM) ✅ DONE
 
-Install in WSL2 Ubuntu:
-- JDK 17 (Temurin, matches CI's `setup-android-emulator-host` composite action)
-- Android cmdline-tools, platform-tools, emulator, system image `system-images;android-35;google_apis;x86_64` (matches `api-level: 35, arch: x86_64` in `screenshots.yml`)
-- Linux Flutter SDK (stable, matches the `subosito/flutter-action` pin used by `setup-flutter`)
-- Build deps: `ninja-build`, `cmake`, `libgtk-3-dev`, `clang`
+Scripts created:
+- `tool/setup_wsl_android.sh` — one-shot installer (JDK 17, Android SDK, Flutter Linux SDK, AVDs)
+- `tool/boot_android_emulator.sh` — boots AVD, waits for boot, runs `setup_android_status_bar.sh`
+- `.bat` wrappers for Windows invocation: `setup_wsl_android_wrapper.bat`, `boot_android_emulator_wrapper.bat`, `run_screenshot_test_wrapper.bat`
 
-Create AVDs named `pixel_7` and `pixel_tablet` (matching the CI matrix exactly — `reactivecircus/android-emulator-runner` accepts `profile:` and spins up an AVD named after it; we mirror that naming).
+Prerequisites (user):
+- Install WSL2 (`wsl --install`, reboot)
+- `nestedVirtualization=true` already added to `C:\Users\Martial\.wslconfig`
 
-Add `tool/boot_android_emulator.sh` (mirrors existing `tool/boot_ios_simulator.sh`) that boots the named AVD, waits for boot-completed, and runs `setup_android_status_bar.sh`. That script **does not** exist in CI — CI uses `reactivecircus/android-emulator-runner` instead. Locally, we invoke `boot_android_emulator.sh` manually before `run_screenshot_test.sh`. `run_screenshot_test.sh` itself stays identical to what CI runs.
+Workflow from Windows:
+```
+tool\setup_wsl_android_wrapper.bat          (once — installs everything in WSL2)
+tool\boot_android_emulator_wrapper.bat pixel_7
+tool\run_screenshot_test_wrapper.bat
+```
 
 ### iOS (WSL2 via OSX-KVM)
 

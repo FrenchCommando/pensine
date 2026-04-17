@@ -135,6 +135,15 @@
 - Android: browser prompts install natively; PWA storage is tied to the installing browser (clear site data in browser settings to reset)
 - iOS: manual "Add to Home Screen" (install banner guides users)
 
+### Local Testing (WSL2)
+- Scripts in `tool/`: `setup_wsl_android.sh` (one-shot installer), `boot_android_emulator.sh` (boots AVD + status bar)
+- `.bat` wrappers call `wsl bash` so they work from Windows: `setup_wsl_android_wrapper.bat`, `boot_android_emulator_wrapper.bat`, `run_screenshot_test_wrapper.bat`
+- Requires WSL2 with nested virtualization (`C:\Users\Martial\.wslconfig` → `nestedVirtualization=true`)
+- Installs Linux-native JDK 17, Android SDK (API 35, x86_64), Flutter SDK, and creates `pixel_7` / `pixel_tablet` AVDs matching CI
+- Workflow: `tool\setup_wsl_android_wrapper.bat` (once) → `tool\boot_android_emulator_wrapper.bat pixel_7` → `tool\run_screenshot_test_wrapper.bat`
+- Same scripts CI runs — no env-specific forks
+- See `LOCAL_TESTING_PLAN.md` for full context and iOS (OSX-KVM) plan
+
 ### Not yet set up
 - `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly (Android intent filters, iOS UTI/document types, Windows file type registry, macOS UTI). Do this when native apps are deployed.
 
