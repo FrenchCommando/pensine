@@ -10,7 +10,7 @@ RAM_MB=8192
 CPUS=4
 
 if [ ! -f "$DISK_IMG" ]; then
-  echo "ERROR: $DISK_IMG not found. Run local/setup_osx_kvm.sh first."
+  echo "ERROR: $DISK_IMG not found. Run local/IOS/setup_osx_kvm.sh first."
   exit 1
 fi
 

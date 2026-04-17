@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets up OSX-KVM in WSL2 for local iOS testing.
 # Run once from the repo root in WSL2.
-# After this completes, boot the VM with local/boot_macos.sh and connect via
+# After this completes, boot the VM with local/IOS/boot_macos.sh and connect via
 # VNC (localhost:5901) to complete the macOS installation manually.
 set -euo pipefail
 
@@ -68,8 +68,8 @@ echo ""
 echo "=== Setup complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Run:  local/boot_macos.sh"
+echo "  1. Run:  local/IOS/boot_macos.sh"
 echo "  2. Connect via VNC to localhost:5901"
 echo "  3. Install macOS (select disk, follow installer)"
-echo "  4. After install: run local/setup_macos_dev.sh inside the VM via SSH"
+echo "  4. After install: run local/IOS/setup_macos_dev.sh inside the VM via SSH"
 echo "     SSH: ssh -p 2222 \$USER@localhost"

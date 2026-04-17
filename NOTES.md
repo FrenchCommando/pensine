@@ -140,11 +140,14 @@
   - `setup_wsl_android.sh` — idempotent installer (JDK 17, Android SDK API 35 x86_64, Flutter SDK, AVDs)
   - `boot_android_emulator.sh` — boots the AVD and configures the status bar
   - `wsl_env.sh` — canonical env (JAVA_HOME, ANDROID_HOME, FLUTTER_HOME, PATH); sourced by setup, the `.bat`, and `~/.bashrc`
-  - `screenshot_test.bat` — single Windows entry point: setup + boot + `tool/run_screenshot_test.sh`, in one WSL session
+  - `screenshot_test.bat` — setup + boot + screenshot test for `pixel_7` (default) 
+  - `screenshot_tablet.bat` — same for `pixel_tablet`
+  - `preview_test.bat` — setup + boot + preview walkthrough recording for `pixel_7`
+  - `local/IOS/` — macOS VM setup via OSX-KVM (QEMU) for iOS testing; see scripts inside
 - Requires WSL2 with nested virtualization (toggle in the WSL Settings app → System tab)
-- Workflow from cmd in repo root: `local\screenshot_test.bat` (defaults to `pixel_7`; pass `pixel_tablet` for the larger AVD)
-- The screenshot test itself (`tool/run_screenshot_test.sh`) is the same script CI runs — no env-specific forks
-- See `LOCAL_TESTING_PLAN.md` for full context and iOS (OSX-KVM) plan
+- Workflow from cmd in repo root: `local\screenshot_test.bat`
+- The screenshot and preview test scripts (`tool/run_screenshot_test.sh`, `tool/run_android_preview.sh`) are the same scripts CI runs — no env-specific forks
+- Local emulator uses swiftshader (software renderer) — adequate for debugging test logic but too slow for sustained physics rendering; full suite runs reliably on CI with KVM hardware acceleration
 
 ### Not yet set up
 - `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly (Android intent filters, iOS UTI/document types, Windows file type registry, macOS UTI). Do this when native apps are deployed.
