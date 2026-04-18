@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 import 'theme.dart';
+import 'widgets/marble_board.dart';
+
+const bool _kDisablePhysics =
+    bool.fromEnvironment('DISABLE_PHYSICS', defaultValue: false);
 
 void main() {
+  if (_kDisablePhysics) debugPauseMarblePhysics = true;
   runApp(const PensineApp());
 }
 

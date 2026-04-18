@@ -30,6 +30,7 @@ mkdir -p build
 flutter drive \
   --driver=test_driver/integration_test.dart \
   --target=integration_test/preview_test.dart \
+  --dart-define=DISABLE_PHYSICS=true \
   >"$LOG" 2>&1 &
 DRIVE_PID=$!
 
