@@ -65,7 +65,8 @@ class BoardIO {
   static Future<ImportResult?> importFile(BuildContext context, List<Workspace> workspaces) async {
     try {
       final result = await FilePicker.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: ['pensine'],
         withData: true,
       );
       if (result == null || result.files.isEmpty) return null;
