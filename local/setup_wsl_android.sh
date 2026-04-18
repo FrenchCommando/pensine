@@ -75,16 +75,19 @@ if [ ! -d "$FLUTTER_HOME" ]; then
 fi
 
 echo "=== Creating AVDs ==="
-for PROFILE in pixel_7 pixel_tablet; do
-  if ! avdmanager list avd -c 2>/dev/null | grep -q "^${PROFILE}$"; then
-    echo "Creating AVD: $PROFILE"
+# Entries are "avd_name:device_profile" (device profile may contain spaces).
+for ENTRY in "pixel_7:pixel_7" "nexus_7:Nexus 7" "pixel_tablet:pixel_tablet"; do
+  AVD_NAME="${ENTRY%%:*}"
+  DEVICE="${ENTRY#*:}"
+  if ! avdmanager list avd -c 2>/dev/null | grep -q "^${AVD_NAME}$"; then
+    echo "Creating AVD: $AVD_NAME ($DEVICE)"
     echo no | avdmanager create avd \
-      --name "$PROFILE" \
+      --name "$AVD_NAME" \
       --package "$SYSTEM_IMAGE" \
-      --device "$PROFILE" \
+      --device "$DEVICE" \
       --force
   else
-    echo "AVD $PROFILE already exists, skipping"
+    echo "AVD $AVD_NAME already exists, skipping"
   fi
 done
 

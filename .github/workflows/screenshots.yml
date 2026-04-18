@@ -62,6 +62,7 @@ jobs:
       matrix:
         profile:
           - pixel_7
+          - "Nexus 7"
           - pixel_tablet
     steps:
       - uses: actions/checkout@v5

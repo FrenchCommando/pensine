@@ -114,6 +114,7 @@
 - Play Console uploads authenticated via Google Cloud service account `pensine-play-ci` — JSON key stored in GitHub Secret `PLAY_STORE_CONFIG_JSON`.
 - Play Console → Users & permissions → service account email granted these granular app-level permissions only: "View app information (read-only)", "Release apps to testing tracks", "Release to production, exclude devices, and use Play App Signing". No Admin, no financial, no account-level.
 - `bundle exec fastlane android beta` uploads the AAB to the Internal track using the service account JSON.
+- Fastfile lives at `fastlane/Fastfile` (repo root), not `android/fastlane/Fastfile`. Fastlane's working directory is the repo root, so artifact paths in the Fastfile are `build/app/outputs/bundle/release/app-release.aab` — **no `../` prefix** (standard Flutter snippets assume the `android/fastlane/` layout and prepend `../`; that's wrong here).
 
 ### Dev
 - `flutter run -d windows` (or `-d chrome`, `-d macos`, etc.)
@@ -156,8 +157,7 @@
   - `setup_wsl_android.sh` — idempotent installer (Temurin JDK 25 via Adoptium apt, Android SDK API 35 x86_64, Flutter SDK, AVDs)
   - `boot_android_emulator.sh` — boots the AVD and configures the status bar
   - `wsl_env.sh` — canonical env (JAVA_HOME, ANDROID_HOME, FLUTTER_HOME, PATH); sourced by setup, the `.bat`, and `~/.bashrc`
-  - `screenshot_test.bat` — setup + boot + screenshot test for `pixel_7` (default) 
-  - `screenshot_tablet.bat` — same for `pixel_tablet`
+  - `screenshot_test.bat` — pixel_7 (phone), `screenshot_tablet7.bat` — nexus_7 (7" tablet), `screenshot_tablet.bat` — pixel_tablet (10" tablet). One .bat per device by design — swiftshader can't reliably finish the full suite back-to-back, so capturing all three store tiers in one go is the `screenshots.yml` workflow's job (KVM matrix run on CI)
   - `preview_test.bat` — setup + boot + preview walkthrough recording for `pixel_7`
   - `local/IOS/` — macOS VM setup via OSX-KVM (QEMU) for iOS testing; see scripts inside
 - Requires WSL2 with nested virtualization (toggle in the WSL Settings app → System tab)
