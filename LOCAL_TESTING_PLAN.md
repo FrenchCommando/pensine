@@ -24,7 +24,7 @@ All Android and iOS screenshot + preview jobs are passing. The fixes were diagno
 ### Android (WSL2, native via KVM) ✅
 
 Scripts in `local/`:
-- `setup_wsl_android.sh` — idempotent installer (JDK 17, Android SDK API 35, Flutter SDK, AVDs)
+- `setup_wsl_android.sh` — idempotent installer (Temurin JDK 25 via Adoptium apt, Android SDK API 35, Flutter SDK, AVDs)
 - `boot_android_emulator.sh` — boots AVD, waits for boot, sets up status bar
 - `wsl_env.sh` — canonical env (JAVA_HOME / ANDROID_HOME / FLUTTER_HOME / PATH)
 - `screenshot_test.bat` — setup + boot + screenshot test (`pixel_7`)

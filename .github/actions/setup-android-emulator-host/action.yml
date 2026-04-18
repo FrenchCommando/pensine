@@ -1,5 +1,5 @@
 name: Setup Android emulator host
-description: Enable KVM on the runner and install JDK 17 — prerequisites for reactivecircus/android-emulator-runner.
+description: Enable KVM on the runner and install JDK 25 — prerequisites for reactivecircus/android-emulator-runner.
 
 runs:
   using: composite
@@ -14,4 +14,4 @@ runs:
     - uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: 17
+        java-version: 25

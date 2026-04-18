@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-shot installer for Android development in WSL2.
-# Installs JDK 17, Android SDK (cmdline-tools, platform-tools, emulator,
+# Installs Temurin JDK 25, Android SDK (cmdline-tools, platform-tools, emulator,
 # system image), Linux Flutter SDK, and build dependencies.
 # Idempotent — safe to re-run.
 set -euo pipefail
@@ -27,10 +27,22 @@ if ! id -nG | grep -qw kvm; then
   exit 1
 fi
 
+echo "=== Adding Adoptium apt repo (Temurin JDK) ==="
+if [ ! -f /etc/apt/keyrings/adoptium.gpg ]; then
+  sudo mkdir -p /etc/apt/keyrings
+  wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
+    | sudo gpg --dearmor -o /etc/apt/keyrings/adoptium.gpg
+fi
+if [ ! -f /etc/apt/sources.list.d/adoptium.list ]; then
+  CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+  echo "deb [signed-by=/etc/apt/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $CODENAME main" \
+    | sudo tee /etc/apt/sources.list.d/adoptium.list
+fi
+
 echo "=== Installing system packages ==="
 sudo apt-get update
 sudo apt-get install -y \
-  openjdk-17-jdk-headless \
+  temurin-25-jdk \
   unzip wget curl git \
   ninja-build cmake clang pkg-config \
   libgtk-3-dev liblzma-dev libstdc++-12-dev \
