@@ -107,6 +107,14 @@
 - **Kotlin 2.2.20** (pinned in `settings.gradle.kts` via `org.jetbrains.kotlin.android`) — required because AGP 8.x doesn't bundle Kotlin (AGP 9 does).
 - Version number mismatch is intentional: Gradle 9 / AGP 8 are independent release streams. Don't "unify" them by downgrading Gradle.
 
+### Android release signing & Play upload
+- Upload keystore lives at `C:\Users\Martial\.android\pensine-release.jks` (outside the repo — never commit `.jks` or `key.properties`)
+- 4 GitHub Secrets feed `release.yml`'s signing step: `ANDROID_KEYSTORE_BASE64` (base64 of the `.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (=`pensine`), `ANDROID_KEY_PASSWORD`. Workflow decodes to `android/app/pensine-release.jks` and writes `android/key.properties` at build time.
+- Play App Signing re-signs with Google's key on upload — our upload key is identity only, not the distribution key. Losing it means resetting the upload key via Play Console, not losing the app.
+- Play Console uploads authenticated via Google Cloud service account `pensine-play-ci` — JSON key stored in GitHub Secret `PLAY_STORE_CONFIG_JSON`.
+- Play Console → Users & permissions → service account email granted these granular app-level permissions only: "View app information (read-only)", "Release apps to testing tracks", "Release to production, exclude devices, and use Play App Signing". No Admin, no financial, no account-level.
+- `bundle exec fastlane android beta` uploads the AAB to the Internal track using the service account JSON.
+
 ### Dev
 - `flutter run -d windows` (or `-d chrome`, `-d macos`, etc.)
 
