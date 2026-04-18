@@ -122,7 +122,8 @@ fastlane/
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
 3. ✅ iOS CI signing secrets configured (2026-04-18).
 4. ✅ iOS release workflow unblocked (2026-04-18) — p12 re-exported with `-legacy` using the **mingw64** openssl (not msys2's `usr/bin` one) so it pairs with `mingw64/lib/ossl-modules/legacy.dll`. See bootstrap steps below.
-5. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
+5. ✅ Manual signing configured for archive step (2026-04-18) — `flutter build ipa` was failing with "No valid code signing certificates" because the Xcode project defaults to automatic signing with `iPhone Developer`. The workflow now appends `CODE_SIGN_STYLE = Manual` + `CODE_SIGN_IDENTITY = Apple Distribution` (plus the scoped `[sdk=iphoneos*]` variant to override the project.pbxproj override) + `DEVELOPMENT_TEAM` + `PROVISIONING_PROFILE_SPECIFIER` to `ios/Flutter/Release.xcconfig` before the archive step. Values come from secrets, nothing signing-related is baked into the repo.
+6. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
@@ -204,6 +205,8 @@ This is the **upload key**. On first Play Console release, opt into Play App Sig
 - TestFlight first-build review is ~24h even for internal testers.
 - Distribution cert + provisioning profile expire yearly — `fastlane cert`/`sigh` renew in ~5 min.
 - Privacy manifest (`ios/Runner/PrivacyInfo.xcprivacy`) required for new App Store submissions (post-May 2024). Flutter 3.19+ ships a default; verify or customize.
+- Flutter's default iOS project uses automatic signing with `iPhone Developer` identity — fine locally, fatal on CI runners that have no Apple ID logged in. The release workflow overrides this via xcconfig append (see phase rollout step 5). If you ever regenerate the iOS project, re-verify the override still bites.
+- PKCS12 re-export on Windows: use the **mingw64** openssl (`C:\Program Files\Git\mingw64\bin\openssl.exe`) with `-legacy` and `OPENSSL_MODULES=C:\Program Files\Git\mingw64\lib\ossl-modules`. The msys2 openssl at `C:\Program Files\Git\usr\bin\openssl.exe` doesn't ship a legacy provider and will fail even with `OPENSSL_MODULES` pointed at the mingw dir.
 - Google Play closed-testing requirement for personal accounts created after Nov 2023: 12+ testers running for 14+ days before first production release. Internal track is unaffected. Does not apply to organization accounts.
 
 ## Shared requirements (all stores)
