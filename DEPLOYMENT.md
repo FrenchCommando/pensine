@@ -44,7 +44,7 @@
 - ✅ Age Rating: questionnaire answered
 - ✅ Price: Free (tier 0)
 - ⚠️ Screenshots: manually uploaded using partial CI results (6.9" iPhone + iPad); screenshot workflow still not fully working
-- ⬜ Build: not yet uploaded (CI signing secrets not configured)
+- ⬜ Build: not yet uploaded (trigger release workflow)
 - ⬜ Privacy Policy URL: `https://frenchcommando.github.io/pensine/privacy.html` (add in App Privacy section)
 
 **No local Mac — fully CI-based:**
@@ -120,30 +120,39 @@ fastlane/
 ### Phase rollout
 1. ✅ Android → Play internal track (fastest feedback, no review delay).
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
-3. ⏳ iOS CI signing secrets not yet configured — binary upload to TestFlight blocked.
+3. ✅ iOS CI signing secrets configured (2026-04-18) — release workflow ready to trigger.
 4. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
 
-```bash
+Run in CMD (add Git's OpenSSL to PATH first: `set PATH=%PATH%;C:\Program Files\Git\usr\bin`):
+
+```cmd
 openssl genrsa -out ios_dist.key 2048
-openssl req -new -key ios_dist.key -out ios_dist.csr \
-  -subj "/emailAddress=martialren@gmail.com/CN=Martial Ren/C=US"
+openssl req -new -key ios_dist.key -out ios_dist.csr -subj "/emailAddress=YOUR_EMAIL/CN=YOUR_NAME/C=US"
 ```
 
-Upload `ios_dist.csr` to [developer.apple.com](https://developer.apple.com) → Certificates → iOS Distribution. Download the `.cer`, then:
+Upload `ios_dist.csr` to [developer.apple.com](https://developer.apple.com) → Certificates → **App Store Connect** (under Distribution). Download the `.cer`, then in CMD:
 
-```bash
+```cmd
 openssl x509 -inform DER -in distribution.cer -out distribution.pem
 openssl pkcs12 -export -inkey ios_dist.key -in distribution.pem -out ios_dist.p12
-# Set an export password; this becomes IOS_DIST_CERT_PASSWORD.
-base64 -w 0 ios_dist.p12 > ios_dist.p12.b64
 ```
 
-Provisioning profile: create in the Apple Developer portal tied to bundle ID `com.frenchcommando.pensine` + the distribution cert; download, base64-encode.
+Set an export password when prompted — this becomes `IOS_DIST_CERT_PASSWORD`.
 
-App Store Connect API key: App Store Connect → Users and Access → Keys. Create a key with "App Manager" role minimum. Record Key ID + Issuer ID, download the `.p8`, base64-encode it.
+Base64-encode with **PowerShell** (not certutil — certutil adds headers and Windows line endings that break `base64 -d` on Linux):
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\Martial\.ios\ios_dist.p12"))
+```
+
+Files to keep: `ios_dist.key`, `distribution.pem`, `ios_dist.p12` (all in `C:\Users\Martial\.ios\`). Delete `ios_dist.csr` and `distribution.cer`.
+
+Provisioning profile: create in Apple Developer portal → Profiles → **App Store Connect** (Distribution), tied to bundle ID `com.frenchcommando.pensine` + the distribution cert. Name it (e.g. `pensineaction`). Download, base64-encode with PowerShell, add as `IOS_PROVISIONING_PROFILE_BASE64`. Profile name string goes in `IOS_PROVISIONING_PROFILE_NAME`.
+
+App Store Connect API key: App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys. Create with "App Manager" role. Record Key ID → `APPSTORE_CONNECT_API_KEY_ID`, Issuer ID → `APPSTORE_CONNECT_API_ISSUER_ID`. Download `.p8`, base64-encode with PowerShell → `APPSTORE_CONNECT_API_KEY_P8_BASE64`. Store `.p8` in `C:\Users\Martial\.ios\key.p8`.
 
 ### Android keystore bootstrap (one-time, Windows)
 ```bash
