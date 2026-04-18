@@ -100,6 +100,13 @@
 
 ## Build Process
 
+### Android toolchain pinning
+- **JDK 25** (Temurin, local + CI via `actions/setup-java@v4`)
+- **Gradle 9.4.1** (pinned in `android/gradle/wrapper/gradle-wrapper.properties`) — needed for JDK 25 runtime; JDK 25 support landed in Gradle 9.0
+- **AGP 8.13.2** (pinned in `android/settings.gradle.kts`) — last release of the 8.x line. AGP 9.x (9.1.1 latest) exists but Flutter stable (3.41.7 as of 2026-04) doesn't yet support AGP 9's new DSL — Flutter's Gradle plugin NPEs when applied under AGP 9. AGP 8.13 is the bridge: old DSL, compatible with Gradle 9.x. Revisit when Flutter ships AGP 9 support (watch https://docs.flutter.dev/release/breaking-changes).
+- **Kotlin 2.2.20** (pinned in `settings.gradle.kts` via `org.jetbrains.kotlin.android`) — required because AGP 8.x doesn't bundle Kotlin (AGP 9 does).
+- Version number mismatch is intentional: Gradle 9 / AGP 8 are independent release streams. Don't "unify" them by downgrading Gradle.
+
 ### Dev
 - `flutter run -d windows` (or `-d chrome`, `-d macos`, etc.)
 
