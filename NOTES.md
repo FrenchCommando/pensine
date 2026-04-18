@@ -91,6 +91,7 @@
 - V2 import creates a new workspace with all boards; V1 import prompts which workspace to add the board to
 - Export: save file dialog on desktop, file download on web, share sheet on mobile
 - Import: file picker on all platforms, generates new IDs to avoid collisions
+- Import picker uses `FileType.custom` with `allowedExtensions: ['pensine']` — prevents iOS from surfacing Photos as a source. Requires the `UTExportedTypeDeclarations` entry in `ios/Runner/Info.plist` (UTI `com.frenchcommando.pensine.workspace`); without it, iOS silently falls back to `FileType.any`.
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
 - Implementation in `lib/services/board_io.dart` with conditional imports for web vs native
 
@@ -150,7 +151,7 @@
 - Local emulator uses swiftshader (software renderer) — adequate for debugging test logic but too slow for sustained physics rendering; full suite runs reliably on CI with KVM hardware acceleration
 
 ### Not yet set up
-- `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly (Android intent filters, iOS UTI/document types, Windows file type registry, macOS UTI). Do this when native apps are deployed.
+- `.pensine` file association — register the app as handler so tapping a `.pensine` file opens it directly. iOS: UTI is declared via `UTExportedTypeDeclarations` (for the picker filter) but `CFBundleDocumentTypes` is not, so "open with Pensine" from Files doesn't work yet. Android intent filters, Windows file type registry, macOS UTI: all still pending. Do this when native apps are fully deployed.
 
 ## Feature Graphic
 - Play Store banner (1024x500) in `assets/feature_graphic.svg`

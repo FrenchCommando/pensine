@@ -44,8 +44,11 @@
 - ✅ Age Rating: questionnaire answered
 - ✅ Price: Free (tier 0)
 - ⚠️ Screenshots: manually uploaded using partial CI results (6.9" iPhone + iPad); screenshot workflow still not fully working
-- ⬜ Build: not yet uploaded (trigger release workflow)
-- ⬜ Privacy Policy URL: `https://frenchcommando.github.io/pensine/privacy.html` (add in App Privacy section)
+- ✅ Build: first TestFlight build uploaded and submitted for review (2026-04-18, build #7)
+- ✅ Privacy Policy URL: `https://frenchcommando.github.io/pensine/privacy.html` (set in App Privacy section)
+- ✅ App Privacy nutrition label: "No, we do not collect data from this app" (Pensine is local-only; no plugin collects data)
+- ✅ Export compliance: declared via `ITSAppUsesNonExemptEncryption = false` in Info.plist — skips the per-upload questionnaire
+- ⬜ App Clip: not applicable (no single-task flow suited to App Clip)
 
 **No local Mac — fully CI-based:**
 - GitHub Actions macOS runners (free for public repos)
@@ -123,7 +126,8 @@ fastlane/
 3. ✅ iOS CI signing secrets configured (2026-04-18).
 4. ✅ iOS release workflow unblocked (2026-04-18) — p12 re-exported with `-legacy` using the **mingw64** openssl (not msys2's `usr/bin` one) so it pairs with `mingw64/lib/ossl-modules/legacy.dll`. See bootstrap steps below.
 5. ✅ Manual signing configured for archive step (2026-04-18) — `flutter build ipa` was failing with "No valid code signing certificates" because the Xcode project defaults to automatic signing with `iPhone Developer`. The workflow now appends `CODE_SIGN_STYLE = Manual` + `CODE_SIGN_IDENTITY = Apple Distribution` (plus the scoped `[sdk=iphoneos*]` variant to override the project.pbxproj override) + `DEVELOPMENT_TEAM` + `PROVISIONING_PROFILE_SPECIFIER` to `ios/Flutter/Release.xcconfig` before the archive step. Values come from secrets, nothing signing-related is baked into the repo.
-6. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
+6. ✅ First TestFlight build uploaded (2026-04-18, build #7). Fixes required along the way: added `NSPhotoLibraryUsageDescription` to Info.plist (ITMS-90683 — `share_plus` links photo library symbols even when unused); bumped runners to `macos-15` and pinned Xcode 26 via `maxim-lobanov/setup-xcode@v1` to meet the iOS 26 SDK deadline (2026-04-28); filled out App Privacy nutrition label ("No data collected"); declared `ITSAppUsesNonExemptEncryption = false`.
+7. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
