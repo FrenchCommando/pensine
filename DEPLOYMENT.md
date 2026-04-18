@@ -30,17 +30,22 @@
 
 **Account:** Apple Developer — $99/year at developer.apple.com (enrolled 2026-04-15)
 
-**App Store Connect listing (partially done):**
-- App name: Pensine
-- Subtitle: "Visual notes with marbles"
-- Bundle ID: `com.frenchcommando.pensine`
-- SKU: `pensine`
-- Description, promotional text, keywords: filled in
-- Marketing URL: `https://frenchcommando.github.io/pensine/site/`
-- Support URL: `https://github.com/FrenchCommando/pensine/issues`
-- Copyright: © 2025-2026 Martial Ren
-- No sign-in required, no Game Center, no routing coverage file
-- **Still needed:** screenshots/preview, build upload
+**App Store Connect listing:**
+- ✅ App name: Pensine
+- ✅ Subtitle: "Visual notes with marbles"
+- ✅ Bundle ID: `com.frenchcommando.pensine`
+- ✅ SKU: `pensine`
+- ✅ Description, promotional text, keywords
+- ✅ Marketing URL: `https://frenchcommando.github.io/pensine/site/`
+- ✅ Support URL: `https://github.com/FrenchCommando/pensine/issues`
+- ✅ Copyright: © 2025-2026 Martial Ren
+- ✅ No sign-in required, no Game Center, no routing coverage file
+- ✅ Content Rights: filled in
+- ✅ Age Rating: questionnaire answered
+- ✅ Price: Free (tier 0)
+- ⚠️ Screenshots: manually uploaded using partial CI results (6.9" iPhone + iPad); screenshot workflow still not fully working
+- ⬜ Build: not yet uploaded (CI signing secrets not configured)
+- ⬜ Privacy Policy URL: `https://frenchcommando.github.io/pensine/privacy.html` (add in App Privacy section)
 
 **No local Mac — fully CI-based:**
 - GitHub Actions macOS runners (free for public repos)
@@ -115,7 +120,8 @@ fastlane/
 ### Phase rollout
 1. ✅ Android → Play internal track (fastest feedback, no review delay).
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
-3. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
+3. ⏳ iOS CI signing secrets not yet configured — binary upload to TestFlight blocked.
+4. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
