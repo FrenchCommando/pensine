@@ -6,7 +6,7 @@
 - Version: defined in `pubspec.yaml`, currently `1.1.0+2`
 - iOS deployment target: 13.0
 - Android: uses Flutter default min/target SDK versions
-- Android release signing: **not configured** (TODO in `build.gradle.kts`)
+- Android release signing: `build.gradle.kts` reads from `android/key.properties` (written by CI from secrets); keystore + secrets pending first setup pass (2026-04-18)
 - iOS development team: **not configured**
 - Screenshots + preview video: **automated** (see Screenshots & Preview Video)
 - Binary upload + metadata upload: **not automated yet** (see Release Automation)
@@ -121,7 +121,7 @@ fastlane/
 - `android metadata` *(not yet)* — would upload Play listing + screenshots via `upload_to_play_store(skip_upload_aab: true, ...)`.
 
 ### Phase rollout
-1. ✅ Android → Play internal track (fastest feedback, no review delay).
+1. ⏳ Android → Play internal track — scaffolding (workflow, Fastfile, `build.gradle.kts`) was in place before any real Play Console app existed, so early `workflow_dispatch` runs all failed at `signReleaseBundle` ("Failed to read key from store: Tag number over 30 is not supported") against empty/placeholder secrets. Actual setup started 2026-04-18: Play Console app being created, Temurin JDK 17 installing locally so `keytool` exists, keystore to live at `C:\Users\Martial\.android\pensine-release.jks`.
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
 3. ✅ iOS CI signing secrets configured (2026-04-18).
 4. ✅ iOS release workflow unblocked (2026-04-18) — p12 re-exported with `-legacy` using the **mingw64** openssl (not msys2's `usr/bin` one) so it pairs with `mingw64/lib/ossl-modules/legacy.dll`. See bootstrap steps below.
@@ -166,10 +166,22 @@ Provisioning profile: create in Apple Developer portal → Profiles → **App St
 App Store Connect API key: App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys. Create with "App Manager" role. Record Key ID → `APPSTORE_CONNECT_API_KEY_ID`, Issuer ID → `APPSTORE_CONNECT_API_ISSUER_ID`. Download `.p8`, base64-encode with PowerShell → `APPSTORE_CONNECT_API_KEY_P8_BASE64`. Store `.p8` in `C:\Users\Martial\.ios\key.p8`.
 
 ### Android keystore bootstrap (one-time, Windows)
-```bash
-keytool -genkey -v -keystore pensine-release.jks -keyalg RSA -keysize 2048 \
-  -validity 10000 -alias pensine
-base64 -w 0 pensine-release.jks > pensine-release.jks.b64
+
+**Prereq — JDK 17.** `keytool` ships with the JDK, not with Git, Flutter, or Android. Install **Temurin 17** (Eclipse Adoptium, free OpenJDK build) from [adoptium.net](https://adoptium.net/) — tick "add to PATH" + "set JAVA_HOME" in the MSI installer. Matches CI's `actions/setup-java@v4` `distribution: temurin` + `java-version: 17`, so local and CI behave identically. Restart the shell after install so `PATH` picks up `keytool`.
+
+Files live under `C:\Users\Martial\.android\` (mirrors the `.ios` convention). In CMD:
+
+```cmd
+cd C:\Users\Martial\.android
+keytool -genkey -v -keystore pensine-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias pensine
+```
+
+`keytool` prompts for store password, key password (use the same — Gradle's signing config supplies them separately but they can match), and a DN. Remember the values for `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_PASSWORD`.
+
+Base64-encode with **PowerShell** (same reason as iOS — certutil adds headers/CRLF that break `base64 -d` on Linux; Git-Bash `base64 -w 0` works too but PowerShell keeps Windows and Linux behaviors aligned):
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\Martial\.android\pensine-release.jks"))
 ```
 
 This is the **upload key**. On first Play Console release, opt into Play App Signing so Google manages the final signing key — a compromised upload key can then be reset by Google without breaking users' upgrade paths.
@@ -211,6 +223,8 @@ This is the **upload key**. On first Play Console release, opt into Play App Sig
 - Privacy manifest (`ios/Runner/PrivacyInfo.xcprivacy`) required for new App Store submissions (post-May 2024). Flutter 3.19+ ships a default; verify or customize.
 - Flutter's default iOS project uses automatic signing with `iPhone Developer` identity — fine locally, fatal on CI runners that have no Apple ID logged in. The release workflow overrides this via xcconfig append (see phase rollout step 5). If you ever regenerate the iOS project, re-verify the override still bites.
 - PKCS12 re-export on Windows: use the **mingw64** openssl (`C:\Program Files\Git\mingw64\bin\openssl.exe`) with `-legacy` and `OPENSSL_MODULES=C:\Program Files\Git\mingw64\lib\ossl-modules`. The msys2 openssl at `C:\Program Files\Git\usr\bin\openssl.exe` doesn't ship a legacy provider and will fail even with `OPENSSL_MODULES` pointed at the mingw dir.
+- `keytool` is a JDK tool, not an Android one — Flutter's Android toolchain doesn't pull it in. Install Temurin 17 locally so `keytool` is on PATH; match the `temurin` / `17` combo used by `actions/setup-java@v4` in `release.yml`.
+- Play Console internal testing track requires at least one tester email before the track accepts a release. Add yourself (`martialren@gmail.com`) as a one-person "Me" tester list — satisfies the validation and lets you install the build. Not to be confused with the 12-tester / 14-day requirement, which is closed-testing-to-production only.
 - Google Play closed-testing requirement for personal accounts created after Nov 2023: 12+ testers running for 14+ days before first production release. Internal track is unaffected. Does not apply to organization accounts.
 
 ## Shared requirements (all stores)
