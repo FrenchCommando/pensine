@@ -116,6 +116,13 @@
 - `bundle exec fastlane android beta` uploads the AAB to the Internal track using the service account JSON.
 - Fastfile lives at `fastlane/Fastfile` (repo root), not `android/fastlane/Fastfile`. Fastlane's working directory is the repo root, so artifact paths in the Fastfile are `build/app/outputs/bundle/release/app-release.aab` — **no `../` prefix** (standard Flutter snippets assume the `android/fastlane/` layout and prepend `../`; that's wrong here).
 
+### Play Console listing reference
+- Privacy policy URL: `https://frenchcommando.github.io/pensine/privacy.html` (served from `web/privacy.html` via the Pages deploy)
+- Marketing / website URL: `https://frenchcommando.github.io/pensine/site/` (landing page in `web/site/index.html`; the Pages root `/` is the live web app itself)
+- Target audience: declared **13+** to skip Designed for Families / COPPA flow. The app collects nothing, so no kids-specific disclosures apply, but marketing to under-13s would force the extra review.
+- Data safety: declared **no data collected, no data shared** — matches the privacy policy and the actual app (no network calls).
+- Screenshot AVD → Play tier: `pixel_7` = phone, `nexus_7` = 7" tablet, `pixel_tablet` = 10" tablet. The `screenshots.yml` matrix produces one artifact per tier.
+
 ### Dev
 - `flutter run -d windows` (or `-d chrome`, `-d macos`, etc.)
 
