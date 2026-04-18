@@ -121,15 +121,18 @@ fastlane/
 1. ✅ Android → Play internal track (fastest feedback, no review delay).
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
 3. ✅ iOS CI signing secrets configured (2026-04-18).
-4. ⏳ iOS release workflow blocked on macOS `security import` MAC verification error — OpenSSL 3.x (Git for Windows) creates PKCS12 with modern algorithms (HMAC-SHA256) that macOS `security` can't parse. Need `-legacy` flag on `openssl pkcs12 -export`, but Git for Windows doesn't have the legacy provider DLL at the default path. Next step: locate `legacy.dll` in Git for Windows install (`Get-ChildItem -Path "C:\Program Files\Git" -Filter "legacy.dll" -Recurse`) and point OpenSSL to it, or find another way to produce a legacy-format .p12.
+4. ✅ iOS release workflow unblocked (2026-04-18) — p12 re-exported with `-legacy` using the **mingw64** openssl (not msys2's `usr/bin` one) so it pairs with `mingw64/lib/ossl-modules/legacy.dll`. See bootstrap steps below.
 5. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
 
-Run in CMD (add Git's OpenSSL to PATH first: `set PATH=%PATH%;C:\Program Files\Git\usr\bin`):
+Use Git for Windows' **mingw64** openssl (not the msys2 one in `usr/bin` — only the mingw64 build ships `legacy.dll`). In CMD:
 
 ```cmd
+set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
+set OPENSSL_MODULES=C:\Program Files\Git\mingw64\lib\ossl-modules
+
 openssl genrsa -out ios_dist.key 2048
 openssl req -new -key ios_dist.key -out ios_dist.csr -subj "/emailAddress=YOUR_EMAIL/CN=YOUR_NAME/C=US"
 ```
@@ -138,10 +141,12 @@ Upload `ios_dist.csr` to [developer.apple.com](https://developer.apple.com) → 
 
 ```cmd
 openssl x509 -inform DER -in distribution.cer -out distribution.pem
-openssl pkcs12 -export -inkey ios_dist.key -in distribution.pem -out ios_dist.p12
+openssl pkcs12 -export -legacy -inkey ios_dist.key -in distribution.pem -out ios_dist.p12
 ```
 
 Set an export password when prompted — this becomes `IOS_DIST_CERT_PASSWORD`.
+
+The `-legacy` flag is required: OpenSSL 3.x defaults to HMAC-SHA256 for the PKCS12 MAC, which macOS `security import` rejects with "MAC verification failed". `-legacy` forces the older SHA1-based algorithms that `security` can parse. `OPENSSL_MODULES` must point at the mingw64 provider dir or openssl will fail to load the legacy provider.
 
 Base64-encode with **PowerShell** (not certutil — certutil adds headers and Windows line endings that break `base64 -d` on Linux):
 
