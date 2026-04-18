@@ -120,8 +120,9 @@ fastlane/
 ### Phase rollout
 1. ✅ Android → Play internal track (fastest feedback, no review delay).
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
-3. ✅ iOS CI signing secrets configured (2026-04-18) — release workflow ready to trigger.
-4. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
+3. ✅ iOS CI signing secrets configured (2026-04-18).
+4. ⏳ iOS release workflow blocked on macOS `security import` MAC verification error — OpenSSL 3.x (Git for Windows) creates PKCS12 with modern algorithms (HMAC-SHA256) that macOS `security` can't parse. Need `-legacy` flag on `openssl pkcs12 -export`, but Git for Windows doesn't have the legacy provider DLL at the default path. Next step: locate `legacy.dll` in Git for Windows install (`Get-ChildItem -Path "C:\Program Files\Git" -Filter "legacy.dll" -Recurse`) and point OpenSSL to it, or find another way to produce a legacy-format .p12.
+5. ⏳ Metadata + screenshot upload (`deliver` + `supply`) once both binary lanes have shipped a real build.
 
 ### iOS certificate bootstrap (one-time, Windows)
 Certificates are normally generated on a Mac via Keychain Access. From Windows, use OpenSSL:
