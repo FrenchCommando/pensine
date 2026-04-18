@@ -12,7 +12,7 @@ platform :ios do
 
     upload_to_testflight(
       api_key: api_key,
-      ipa: ENV["IPA_PATH"] || "../build/ios/ipa/pensine.ipa",
+      ipa: ENV["IPA_PATH"] || "build/ios/ipa/pensine.ipa",
       skip_waiting_for_build_processing: true,
     )
   end
@@ -27,7 +27,7 @@ platform :android do
 
     upload_to_play_store(
       track: "internal",
-      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      aab: "build/app/outputs/bundle/release/app-release.aab",
       json_key: ENV["PLAY_JSON_KEY_FILE"],
       skip_upload_metadata: true,
       skip_upload_images: true,
