@@ -225,15 +225,18 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardItem(content: 'Secure engine', description: 'If no restart: mixture CUTOFF, fuel selector OFF, mags OFF, master OFF (flaps last).', colorIndex: 7),
       ]),
       Board(name: 'Flight Log', type: BoardType.timer, workspaceId: pilot.id, items: [
+        BoardItem(content: 'Engine start', description: 'Pre-start checks complete. Engine running, radios tuned, ready to taxi. Tap to start the clock.', colorIndex: 3),
         BoardItem(content: 'Taxi', description: 'Ground movement to runway holding point.', colorIndex: 4),
-        BoardItem(content: 'Takeoff & Climb', description: 'Departure and climb to cruise altitude.', colorIndex: 0),
+        BoardItem(content: 'Takeoff & Climb', description: 'Departure and climb to cruise altitude.', colorIndex: 2),
         BoardItem(content: 'Cruise', description: 'En-route level flight.', colorIndex: 1),
-        BoardItem(content: 'Descent & Approach', description: 'Arrival procedures and approach.', colorIndex: 3),
-        BoardItem(content: 'Landing & Taxi', description: 'Touchdown to parking and shutdown.', colorIndex: 7),
+        BoardItem(content: 'Descent & Approach', description: 'Arrival procedures and approach.', colorIndex: 5),
+        BoardItem(content: 'Landing', description: 'Touchdown and roll-out to taxi speed.', colorIndex: 7),
+        BoardItem(content: 'Shutdown', description: 'Taxi to parking, mixture CUTOFF, mags OFF, master OFF. Tap to stop the clock.', colorIndex: 0),
       ]),
 
       // --- Workout countdown ---
       Board(name: 'Tabata', type: BoardType.countdown, workspaceId: workout.id, items: [
+        BoardItem(content: 'Warm-up', description: 'Easy movement — light cardio, joint mobility.', durationSeconds: 60, colorIndex: 3),
         BoardItem(content: 'Jumping Jacks', durationSeconds: 20, colorIndex: 0),
         BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
         BoardItem(content: 'Squats', durationSeconds: 20, colorIndex: 1),
@@ -242,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
         BoardItem(content: 'Burpees', durationSeconds: 20, colorIndex: 5),
         BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
+        BoardItem(content: 'Cool-down', description: 'Stretch, lower heart rate, hydrate.', durationSeconds: 60, colorIndex: 4),
       ]),
     ];
 

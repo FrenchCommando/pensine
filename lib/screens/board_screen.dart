@@ -298,6 +298,7 @@ class _BoardScreenState extends State<BoardScreen> {
                   for (final item in widget.board.items) {
                     item.done = false;
                   }
+                  widget.board.laps.clear();
                   _anyFlipped = false;
                 });
                 _stopTimers();
