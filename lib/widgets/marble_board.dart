@@ -203,7 +203,7 @@ class MarbleBoardState extends State<MarbleBoard>
       if (i == _dragIndex) continue;
 
       if (m.dying) {
-        m.scale *= 0.85;
+        m.scale *= 0.94;
         if (m.scale < 0.01) continue;
       }
 

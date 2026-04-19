@@ -34,6 +34,13 @@ class PensineColors {
       Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF0F3460)
           : const Color(0xFFE8E0D8);
+
+  /// Card background tinted with the board's accent color.
+  /// Falls back to the default card color when no color is set.
+  static Color boardCard(BuildContext context, int colorIndex) {
+    if (colorIndex < 0) return card(context);
+    return Color.alphaBlend(boardAccent(colorIndex).withAlpha(40), card(context));
+  }
 }
 
 ThemeData pensineTheme({Brightness brightness = Brightness.dark}) {

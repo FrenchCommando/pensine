@@ -527,7 +527,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               selected: isSelected,
               onTap: () {
-                setState(() => board.workspaceId = ws.id);
+                setState(() {
+                  board.workspaceId = ws.id;
+                  _rebuildIndex();
+                });
                 _saveBoard(board);
                 Navigator.pop(ctx);
               },
@@ -619,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBoardTile(Board board) {
     return Card(
-      color: PensineColors.card(context),
+      color: PensineColors.boardCard(context, board.colorIndex),
       margin: const EdgeInsets.only(bottom: 8, left: 16, right: 0),
       child: ListTile(
         leading: Icon(board.type.icon, color: PensineColors.boardAccent(board.colorIndex)),
