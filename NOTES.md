@@ -66,7 +66,8 @@
 
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
-- Board view toggle in app bar: marble physics view (default) ↔ table view (`ItemsTable`) — columns adapt to board type (details, back, duration, done, size). Transient per session.
+- Board view toggle in app bar: marble physics view (default) ↔ table view (`ItemsTable`) — columns adapt to board type (details, back, duration, done, size). Preference persisted per board via `SharedPreferences` key `pensine_table_mode_boards` (list of board IDs currently in table mode).
+- Table mode: drag handle on each row reorders items (`ReorderableListView`, custom handle via `ReorderableDragStartListener` so long-press stays free for "edit item"). FAB appears for adding items when the board is non-empty.
 - About dialog accessible from all screens, includes "Reset data" to restore default example boards
 - Default example boards are hardcoded in `home_screen.dart` (`_defaults()`), used on first launch and reset
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)

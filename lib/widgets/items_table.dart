@@ -3,12 +3,14 @@ import '../models/board.dart';
 import '../theme.dart';
 
 /// Tabular view of a board's items. Alternative to MarbleBoard — shows the
-/// same content as rows with columns relevant to the board type.
+/// same content as rows with columns relevant to the board type. Rows can be
+/// dragged by the trailing handle to reorder.
 class ItemsTable extends StatelessWidget {
   final Board board;
   final void Function(BoardItem) onTap;
   final void Function(BoardItem) onLongPress;
   final VoidCallback onLongPressEmpty;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   const ItemsTable({
     super.key,
@@ -16,6 +18,7 @@ class ItemsTable extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onLongPressEmpty,
+    required this.onReorder,
   });
 
   String _formatDuration(int seconds) {
@@ -80,12 +83,14 @@ class ItemsTable extends StatelessWidget {
               width: 48,
               child: Text('SIZE', style: headerStyle, textAlign: TextAlign.right),
             ),
+            const SizedBox(width: 8),
+            const SizedBox(width: 32),
           ],
         ),
       );
     }
 
-    Widget row(BoardItem item) {
+    Widget row(BoardItem item, int index) {
       final color = PensineColors.bubbles[
           item.colorIndex.abs() % PensineColors.bubbles.length];
       final contentStyle = TextStyle(
@@ -95,90 +100,111 @@ class ItemsTable extends StatelessWidget {
       );
       final mutedStyle = TextStyle(fontSize: 13, color: muted);
 
-      return InkWell(
-        onTap: () => onTap(item),
-        onLongPress: () => onLongPress(item),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withAlpha(40), width: 1),
-                ),
+      return Material(
+        key: ValueKey(item.id),
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onTap(item),
+          onLongPress: () => onLongPress(item),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: muted.withAlpha(30)),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 3,
-                child: Text(
-                  item.content,
-                  style: contentStyle,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withAlpha(40), width: 1),
+                  ),
                 ),
-              ),
-              if (hasBack) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 16),
                 Expanded(
                   flex: 3,
                   child: Text(
-                    item.backContent ?? '—',
-                    style: item.backContent == null ? mutedStyle : contentStyle,
+                    item.content,
+                    style: contentStyle,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ],
-              if (hasDetails) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    item.description ?? '—',
-                    style: item.description == null ? mutedStyle : contentStyle,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                if (hasBack) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      item.backContent ?? '—',
+                      style: item.backContent == null ? mutedStyle : contentStyle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
-              if (hasDuration) ...[
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    item.durationSeconds != null
-                        ? _formatDuration(item.durationSeconds!)
-                        : '—',
-                    style: item.durationSeconds == null ? mutedStyle : contentStyle,
+                ],
+                if (hasDetails) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      item.description ?? '—',
+                      style: item.description == null ? mutedStyle : contentStyle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
-              if (hasDone) ...[
+                ],
+                if (hasDuration) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      item.durationSeconds != null
+                          ? _formatDuration(item.durationSeconds!)
+                          : '—',
+                      style: item.durationSeconds == null ? mutedStyle : contentStyle,
+                    ),
+                  ),
+                ],
+                if (hasDone) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 48,
+                    child: Icon(
+                      item.done ? Icons.check_circle : Icons.circle_outlined,
+                      size: 20,
+                      color: item.done ? color : muted,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
                 SizedBox(
                   width: 48,
-                  child: Icon(
-                    item.done ? Icons.check_circle : Icons.circle_outlined,
-                    size: 20,
-                    color: item.done ? color : muted,
+                  child: Text(
+                    '×${item.sizeMultiplier.toStringAsFixed(1)}',
+                    style: mutedStyle,
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: Icon(Icons.drag_handle, color: muted, size: 20),
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 48,
-                child: Text(
-                  '×${item.sizeMultiplier.toStringAsFixed(1)}',
-                  style: mutedStyle,
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -202,11 +228,11 @@ class ItemsTable extends StatelessWidget {
       children: [
         header(),
         Expanded(
-          child: ListView.separated(
+          child: ReorderableListView.builder(
             itemCount: board.items.length,
-            separatorBuilder: (_, _) =>
-                Divider(height: 1, color: muted.withAlpha(30)),
-            itemBuilder: (_, i) => row(board.items[i]),
+            onReorder: onReorder,
+            buildDefaultDragHandles: false,
+            itemBuilder: (_, i) => row(board.items[i], i),
           ),
         ),
       ],

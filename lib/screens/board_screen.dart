@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../main.dart';
 import '../models/board.dart';
+import '../storage/local_storage.dart';
 import '../theme.dart';
 import '../widgets/about_dialog.dart';
 import '../widgets/color_picker.dart';
@@ -39,6 +41,29 @@ class _BoardScreenState extends State<BoardScreen> {
     super.initState();
     WakelockPlus.enable();
     _initTimerState();
+    _loadTableMode();
+  }
+
+  Future<void> _loadTableMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(PrefKeys.tableModeBoards) ?? [];
+    if (!mounted) return;
+    if (ids.contains(widget.board.id)) {
+      setState(() => _tableMode = true);
+    }
+  }
+
+  Future<void> _setTableMode(bool value) async {
+    setState(() => _tableMode = value);
+    final prefs = await SharedPreferences.getInstance();
+    final ids = (prefs.getStringList(PrefKeys.tableModeBoards) ?? []).toList();
+    final id = widget.board.id;
+    if (value) {
+      if (!ids.contains(id)) ids.add(id);
+    } else {
+      ids.remove(id);
+    }
+    await prefs.setStringList(PrefKeys.tableModeBoards, ids);
   }
 
   @override
@@ -259,7 +284,7 @@ class _BoardScreenState extends State<BoardScreen> {
           IconButton(
             icon: Icon(_tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
             tooltip: _tableMode ? 'Marble view' : 'Table view',
-            onPressed: () => setState(() => _tableMode = !_tableMode),
+            onPressed: () => _setTableMode(!_tableMode),
           ),
           if (!_tableMode)
             IconButton(
@@ -353,6 +378,13 @@ class _BoardScreenState extends State<BoardScreen> {
             ),
         ],
       ),
+      floatingActionButton: _tableMode && widget.board.items.isNotEmpty
+          ? FloatingActionButton(
+              tooltip: 'Add item',
+              onPressed: () => _itemDialog(),
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
@@ -413,6 +445,14 @@ class _BoardScreenState extends State<BoardScreen> {
         onTap: _handleItemTap,
         onLongPress: (item) => _itemDialog(existing: item),
         onLongPressEmpty: () => _itemDialog(),
+        onReorder: (oldIndex, newIndex) {
+          setState(() {
+            if (newIndex > oldIndex) newIndex--;
+            final item = widget.board.items.removeAt(oldIndex);
+            widget.board.items.insert(newIndex, item);
+          });
+          widget.onChanged();
+        },
       );
     }
     return MarbleBoard(
