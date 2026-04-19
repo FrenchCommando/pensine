@@ -513,11 +513,13 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: PensineColors.surface(context),
         title: const Text('Change Type'),
-        content: _boardTypeList(board.type, (type) {
-          setState(() => board.type = type);
-          _saveBoard(board);
-          Navigator.pop(ctx);
-        }),
+        content: SingleChildScrollView(
+          child: _boardTypeList(board.type, (type) {
+            setState(() => board.type = type);
+            _saveBoard(board);
+            Navigator.pop(ctx);
+          }),
+        ),
       ),
     );
   }
@@ -540,34 +542,36 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: PensineColors.surface(context),
         title: const Text('Move to Workspace'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _workspaces.map((ws) {
-            final isSelected = ws.id == board.workspaceId;
-            return ListTile(
-              dense: true,
-              leading: Icon(
-                Icons.folder,
-                color: isSelected ? PensineColors.accent : PensineColors.boardAccent(ws.colorIndex),
-              ),
-              title: Text(
-                ws.name,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? PensineColors.accent : null,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _workspaces.map((ws) {
+              final isSelected = ws.id == board.workspaceId;
+              return ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.folder,
+                  color: isSelected ? PensineColors.accent : PensineColors.boardAccent(ws.colorIndex),
                 ),
-              ),
-              selected: isSelected,
-              onTap: () {
-                setState(() {
-                  board.workspaceId = ws.id;
-                  _rebuildIndex();
-                });
-                _saveBoard(board);
-                Navigator.pop(ctx);
-              },
-            );
-          }).toList(),
+                title: Text(
+                  ws.name,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? PensineColors.accent : null,
+                  ),
+                ),
+                selected: isSelected,
+                onTap: () {
+                  setState(() {
+                    board.workspaceId = ws.id;
+                    _rebuildIndex();
+                  });
+                  _saveBoard(board);
+                  Navigator.pop(ctx);
+                },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

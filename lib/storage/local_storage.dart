@@ -120,6 +120,7 @@ class LocalStorage {
           (json['boards'] as List).map((b) => Board.fromJson(b)).toList();
       await Future.wait(boards.map(
           (b) => saveBoardFile(b.id, jsonEncode(b.toJson()))));
+      await saveBoardOrderFile(boards.map((b) => b.id).toList());
       return boards;
     }
 
@@ -139,7 +140,9 @@ class LocalStorage {
       final json = jsonDecode(legacy);
       final boards =
           (json['boards'] as List).map((b) => Board.fromJson(b)).toList();
-      await Future.wait(boards.map(_saveBoardPref));
+      // saveAllBoards writes the order list last, so the parallel per-board
+      // writes can't leave PrefKeys.boardIds in a torn state.
+      await saveAllBoards(boards);
       await prefs.remove(PrefKeys.legacyBoards);
       return boards;
     }

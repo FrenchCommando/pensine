@@ -197,16 +197,18 @@ class BoardIO {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Import to which workspace?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: workspaces.map((ws) {
-            return ListTile(
-              dense: true,
-              leading: const Icon(Icons.folder),
-              title: Text(ws.name),
-              onTap: () => Navigator.pop(ctx, ws.id),
-            );
-          }).toList(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: workspaces.map((ws) {
+              return ListTile(
+                dense: true,
+                leading: const Icon(Icons.folder),
+                title: Text(ws.name),
+                onTap: () => Navigator.pop(ctx, ws.id),
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

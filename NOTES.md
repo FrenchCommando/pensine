@@ -24,6 +24,8 @@
 - Saves are per-board (only the changed board is written)
 - Board order persisted: web/mobile via the index key, desktop via `boards/_order.json`
 - Order updated on reorder, delete, and bulk save
+- **Gotcha — shared_preferences index writes race.** `_saveBoardPref` does `getStringList → add → setStringList` on `pensine_board_ids`; parallel calls (e.g. `Future.wait(boards.map(saveBoard))`) can drop ids because the last writer wins. Always end any bulk save with an explicit `saveBoardOrder(ids)` — it overwrites the index authoritatively and hides the race. Same pattern for workspaces. Desktop is file-per-board so it isn't affected.
+- **Legacy migration must persist order.** Desktop `_loadDesktop` migrates the legacy blob → per-file `.pensine` writes; without a matching `saveBoardOrderFile`, the next launch gets filesystem-listing order and the user's arrangement is lost. Prefs `_loadPrefs` delegates to `saveAllBoards` for the same reason (and to dodge the race above).
 
 ## App Icon
 - Custom pensieve (memory basin) icon in `assets/app_icon.svg`

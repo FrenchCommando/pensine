@@ -596,10 +596,15 @@ class _MarblePainter extends CustomPainter {
         );
       } else {
         final maxWidth = r * 1.4;
-        final maxHeight = r * 1.4;
         final isSingleWord = !displayText.contains(' ');
-        final fontSize = m.fitFontSize(displayText, r, () {
-          var size = r * 0.28;
+        // Fit at the static radius (baseRadius * sizeMultiplier) so scale and
+        // expand animations don't invalidate the cache every frame. The fit
+        // problem is homogeneous in r, so we rescale the result to drawRadius.
+        final baseR = m.radius;
+        final baseFontSize = m.fitFontSize(displayText, baseR, () {
+          final baseMaxW = baseR * 1.4;
+          final baseMaxH = baseR * 1.4;
+          var size = baseR * 0.28;
           for (var i = 0; i < 10; i++) {
             final painter = TextPainter(
               text: TextSpan(
@@ -614,12 +619,13 @@ class _MarblePainter extends CustomPainter {
               textDirection: TextDirection.ltr,
               maxLines: isSingleWord ? 1 : 3,
             );
-            painter.layout(maxWidth: maxWidth);
-            if (painter.height <= maxHeight && !painter.didExceedMaxLines) return size;
+            painter.layout(maxWidth: baseMaxW);
+            if (painter.height <= baseMaxH && !painter.didExceedMaxLines) return size;
             size *= 0.85;
           }
           return size;
         });
+        final fontSize = baseR > 0 ? baseFontSize * (r / baseR) : baseFontSize;
         final textPainter = TextPainter(
           text: TextSpan(
             text: displayText,
