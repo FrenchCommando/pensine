@@ -77,10 +77,11 @@ When stored locally (one file per board), only the board object is saved — no 
 |---|---|---|
 | `id` | string | UUID v4. Unique identifier. Regenerated on import. |
 | `name` | string | Display name. No length limit, can contain any characters. |
-| `type` | string | One of: `thoughts`, `todo`, `flashcards`, `checklist`. |
+| `type` | string | One of: `thoughts`, `todo`, `flashcards`, `checklist`, `timer`, `countdown`. |
 | `colorIndex` | integer | Board accent color. `-1` = default red accent, `0-7` = palette color (see color table below). |
 | `createdAt` | string | ISO 8601 timestamp. |
-| `items` | array | Ordered list of board items. Order matters for `checklist`. |
+| `items` | array | Ordered list of board items. Order matters for `checklist`, `timer`, `countdown`. |
+| `laps` | array | Recorded lap entries for `timer` / `countdown` boards. Optional, defaults to `[]`. Dropped on import. |
 
 ## Board item object
 
@@ -93,6 +94,7 @@ When stored locally (one file per board), only the board object is saved — no 
   "done": false,
   "colorIndex": 0,
   "sizeMultiplier": 1.0,
+  "durationSeconds": null,
   "createdAt": "2026-04-14T12:00:00.000Z"
 }
 ```
@@ -103,10 +105,31 @@ When stored locally (one file per board), only the board object is saved — no 
 | `content` | string | required | Main text shown on the marble. |
 | `description` | string \| null | null | Expanded detail text. Used by `thoughts` and `checklist` (shown when expanded/active). |
 | `backContent` | string \| null | null | Back side text. Used by `flashcards` only. |
-| `done` | boolean | false | Completion state. Used by `todo`, `flashcards` (correct), and `checklist`. |
+| `done` | boolean | false | Completion state. Used by `todo`, `flashcards` (correct), `checklist`, `timer`, `countdown`. |
 | `colorIndex` | integer | 0 | Index into the color palette (0-7). |
 | `sizeMultiplier` | number | 1.0 | Marble size multiplier. Range: 0.1 to 5.0. |
+| `durationSeconds` | integer \| null | null | Step duration in seconds. Used by `countdown` only. |
 | `createdAt` | string | generated | ISO 8601 timestamp. |
+
+## Lap object
+
+```json
+{
+  "id": "i9j0k1l2-...",
+  "itemId": "e5f6g7h8-...",
+  "elapsedSeconds": 42,
+  "recordedAt": "2026-04-14T12:01:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | UUID v4. |
+| `itemId` | string | ID of the board item this lap was recorded for. |
+| `elapsedSeconds` | integer | Time elapsed on the step, in seconds. |
+| `recordedAt` | string | ISO 8601 timestamp of when the lap was recorded. |
+
+Laps are appended each time a `timer` step is advanced or a `countdown` step auto-completes. They accumulate across runs (Reset clears `done` flags but leaves laps for history). Dropped on import since they reference item IDs that get regenerated.
 
 ## Board types and how fields are used
 
@@ -128,6 +151,12 @@ When stored locally (one file per board), only the board object is saved — no 
 - `description`: shown when step is active (next to complete)
 - `done`: true when step is completed
 - Item order in the `items` array defines the sequence
+
+### timer
+- Same as `checklist` plus an elapsed-time overlay. Each advance appends a `Lap` entry to the board.
+
+### countdown
+- Same as `timer` plus per-step duration. Each item's `durationSeconds` triggers an auto-advance when it expires; that also appends a `Lap` entry.
 
 ## Color palette
 

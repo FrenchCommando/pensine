@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../main.dart';
 import '../models/board.dart';
 import '../theme.dart';
@@ -33,6 +35,7 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     _initTimerState();
   }
 
@@ -41,6 +44,7 @@ class _BoardScreenState extends State<BoardScreen> {
     _uiTicker?.cancel();
     _countdownTimer?.cancel();
     _overlayTick.dispose();
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -79,11 +83,23 @@ class _BoardScreenState extends State<BoardScreen> {
     if (duration == null || duration <= 0) return;
     _countdownTimer = Timer(Duration(seconds: duration), () {
       if (!mounted) return;
-      setState(() => widget.board.items[nextIndex].done = true);
+      final completedItem = widget.board.items[nextIndex];
+      setState(() {
+        if (_stepStartTime != null) {
+          widget.board.laps.add(Lap(
+            itemId: completedItem.id,
+            elapsedSeconds: DateTime.now().difference(_stepStartTime!).inSeconds,
+          ));
+        }
+        completedItem.done = true;
+      });
       widget.onChanged();
       _stepStartTime = DateTime.now();
-      if (widget.board.items.every((i) => i.done)) {
+      final allDone = widget.board.items.every((i) => i.done);
+      HapticFeedback.lightImpact();
+      if (allDone) {
         _countdownTimer = null;
+        HapticFeedback.mediumImpact();
       } else {
         _startCountdown();
       }
@@ -173,6 +189,7 @@ class _BoardScreenState extends State<BoardScreen> {
                 onPressed: () {
                   setState(() => widget.board.items.remove(existing));
                   widget.onChanged();
+                  HapticFeedback.lightImpact();
                   Navigator.pop(ctx);
                 },
                 style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
@@ -315,6 +332,13 @@ class _BoardScreenState extends State<BoardScreen> {
                 tick: _overlayTick,
               ),
             ),
+          if ((type == BoardType.timer || type == BoardType.countdown) &&
+              widget.board.laps.isNotEmpty)
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: _LapSummary(board: widget.board),
+            ),
         ],
       ),
     );
@@ -325,10 +349,22 @@ class _BoardScreenState extends State<BoardScreen> {
     final nextIndex = widget.board.items.indexWhere((i) => !i.done);
     final targetDone = (tappedIndex == nextIndex) ? tappedIndex + 1 : tappedIndex;
     setState(() {
+      // Only the active step had a real elapsed time — leapfrogged steps don't.
+      if (targetDone > nextIndex && nextIndex >= 0 && _stepStartTime != null) {
+        final activeItem = widget.board.items[nextIndex];
+        widget.board.laps.add(Lap(
+          itemId: activeItem.id,
+          elapsedSeconds: DateTime.now().difference(_stepStartTime!).inSeconds,
+        ));
+      }
       for (var i = 0; i < widget.board.items.length; i++) {
         widget.board.items[i].done = i < targetDone;
       }
     });
+    HapticFeedback.selectionClick();
+    if (targetDone == widget.board.items.length && targetDone > nextIndex) {
+      HapticFeedback.mediumImpact();
+    }
     final t = widget.board.type;
     if (t == BoardType.timer || t == BoardType.countdown) {
       if (targetDone == 0) {
@@ -485,6 +521,74 @@ class _TimerOverlay extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _LapSummary extends StatelessWidget {
+  final Board board;
+
+  const _LapSummary({required this.board});
+
+  String _format(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    if (h > 0) return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
+    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s';
+    return '${s}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = board.colorIndex >= 0
+        ? PensineColors.boardAccent(board.colorIndex)
+        : Theme.of(context).colorScheme.primary;
+    final itemsById = {for (final i in board.items) i.id: i};
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 200, maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+      ),
+      child: SingleChildScrollView(
+        reverse: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: board.laps.map((lap) {
+            final item = itemsById[lap.itemId];
+            final label = item?.content ?? '(removed)';
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: PensineColors.muted(context)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _format(lap.elapsedSeconds),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 }

@@ -34,6 +34,7 @@ class Board {
   String workspaceId;
   final DateTime createdAt;
   List<BoardItem> items;
+  List<Lap> laps;
 
   Board({
     String? id,
@@ -43,9 +44,11 @@ class Board {
     this.workspaceId = '',
     DateTime? createdAt,
     List<BoardItem>? items,
+    List<Lap>? laps,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now(),
-        items = items ?? [];
+        items = items ?? [],
+        laps = laps ?? [];
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -55,6 +58,7 @@ class Board {
         'workspaceId': workspaceId,
         'createdAt': createdAt.toIso8601String(),
         'items': items.map((i) => i.toJson()).toList(),
+        'laps': laps.map((l) => l.toJson()).toList(),
       };
 
   factory Board.fromJson(Map<String, dynamic> json) => Board(
@@ -65,15 +69,46 @@ class Board {
         workspaceId: json['workspaceId'] ?? '',
         createdAt: DateTime.parse(json['createdAt']),
         items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
+        laps: (json['laps'] as List?)?.map((l) => Lap.fromJson(l)).toList() ?? [],
       );
 
-  /// Creates a copy with fresh IDs (for import).
+  /// Creates a copy with fresh IDs (for import). Laps are dropped because
+  /// they reference item IDs that get regenerated.
   Board copyWithNewIds() => Board(
         name: name,
         type: type,
         colorIndex: colorIndex,
         workspaceId: workspaceId,
         items: items.map((i) => i.cloneWithNewId()).toList(),
+      );
+}
+
+class Lap {
+  final String id;
+  final String itemId;
+  final int elapsedSeconds;
+  final DateTime recordedAt;
+
+  Lap({
+    String? id,
+    required this.itemId,
+    required this.elapsedSeconds,
+    DateTime? recordedAt,
+  })  : id = id ?? _uuid.v4(),
+        recordedAt = recordedAt ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'itemId': itemId,
+        'elapsedSeconds': elapsedSeconds,
+        'recordedAt': recordedAt.toIso8601String(),
+      };
+
+  factory Lap.fromJson(Map<String, dynamic> json) => Lap(
+        id: json['id'],
+        itemId: json['itemId'],
+        elapsedSeconds: json['elapsedSeconds'],
+        recordedAt: DateTime.parse(json['recordedAt']),
       );
 }
 

@@ -52,9 +52,17 @@
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
 - **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
 - **Steps (checklist)**: sequential order — active step inflates and shows description, numbered marbles, tap active step to complete, tap any other marble to jump there (sets everything before it as done), reset button
-- **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Reset clears timer.
-- **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Reset clears countdown.
+- **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Each advance appends a `Lap` (itemId + elapsedSeconds + recordedAt) to `Board.laps`. Bottom-right shows the lap log. Reset clears timer state but **leaves laps as history** (laps accumulate across runs).
+- **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Auto-advance also appends a `Lap`. Reset clears countdown state, leaves laps.
 - **All boards**: drag to fling, long-press empty space to add, shake button scatters marbles
+
+## Mobile UX
+- **Screen wake lock**: any open board keeps the screen on via `wakelock_plus` (enabled in `BoardScreen.initState`, released in `dispose`). Released on returning to the home screen. No-op on platforms that don't support it.
+- **Haptics**: `HapticFeedback` (no extra package, mobile-only by nature) fires on:
+  - Sequential step advance (`selectionClick`)
+  - Countdown auto-advance (`lightImpact`)
+  - All-steps-done celebration (`mediumImpact`)
+  - Marble deletion from edit dialog (`lightImpact`)
 
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
