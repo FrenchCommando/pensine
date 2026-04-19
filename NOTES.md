@@ -175,7 +175,7 @@
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
 - `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
-- `.github/workflows/screenshots.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md)
+- `.github/workflows/screenshots.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md). iOS jobs wrap the test/preview step in `nick-fields/retry@v3` (per-attempt timeout + 1 retry) — `macos-latest` simulators intermittently hang after Xcode build with no output until the job timeout. Different device hangs each run, so it's environmental flake, not a real bug. Android jobs run KVM-accelerated, no flake observed.
 - `.github/workflows/release.yml` — manual trigger only (`workflow_dispatch`); uploads to Play internal + TestFlight + publishes signed APK as a GitHub Release tagged `build-<run_number>` (see DEPLOYMENT.md)
 - Local composite actions in `.github/actions/`: `setup-flutter` (Flutter SDK + pub get) and `setup-android-emulator-host` (KVM + JDK 25). Caller must run `actions/checkout@v5` immediately before `- uses: ./.github/actions/<name>` — local composite actions are loaded from disk, so the checkout has to happen first.
 - Orchestration scripts in `tool/` (`run_screenshot_test.sh`, `run_ios_preview.sh`, `run_android_preview.sh`, `boot_ios_simulator.sh`, `setup_ios_status_bar.sh`, `setup_android_status_bar.sh`, `screenshot_server.py`). Multi-line bash with shared variables must live in a script file because `reactivecircus/android-emulator-runner` runs each YAML `script:` line as a separate `sh -c`.

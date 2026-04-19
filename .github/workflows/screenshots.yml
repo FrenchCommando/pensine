@@ -6,7 +6,7 @@ on:
 jobs:
   ios-screenshots:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     strategy:
       matrix:
         device:
@@ -22,8 +22,15 @@ jobs:
       - name: Override status bar
         run: bash tool/setup_ios_status_bar.sh
 
+      # macOS sim flake: flutter test sometimes hangs after Xcode build with no
+      # output until the job timeout. Per-attempt timeout fails fast; one retry
+      # absorbs the typical one-shot flake.
       - name: Run screenshot tests
-        run: bash tool/run_ios_screenshot_test.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 12
+          max_attempts: 2
+          command: bash tool/run_ios_screenshot_test.sh
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
@@ -34,7 +41,7 @@ jobs:
 
   ios-preview:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
@@ -46,7 +53,11 @@ jobs:
         run: bash tool/setup_ios_status_bar.sh
 
       - name: Record preview walkthrough
-        run: bash tool/run_ios_preview.sh
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 18
+          max_attempts: 2
+          command: bash tool/run_ios_preview.sh
 
       - name: Upload preview
         uses: actions/upload-artifact@v4

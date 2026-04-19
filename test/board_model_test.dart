@@ -7,6 +7,7 @@ void main() {
       final board = Board(
         name: 'Test Board',
         type: BoardType.thoughts,
+        tableMode: true,
         items: [
           BoardItem(
             content: 'Hello',
@@ -43,6 +44,7 @@ void main() {
       expect(restored.items[1].backContent, 'Flashcard back');
       expect(restored.items[1].done, true);
       expect(restored.items[1].colorIndex, 7);
+      expect(restored.tableMode, true);
     });
 
     test('fromJson handles missing optional fields with defaults', () {
@@ -68,6 +70,7 @@ void main() {
       expect(item.done, false);
       expect(item.colorIndex, 0);
       expect(item.sizeMultiplier, 1.0);
+      expect(board.tableMode, false);
     });
 
     test('all board types serialize correctly', () {
