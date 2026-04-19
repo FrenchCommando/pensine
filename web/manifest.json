@@ -8,6 +8,15 @@
     "description": "A fun, visual notes app with thoughts, to-dos, and flashcards.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "file_handlers": [
+        {
+            "action": "./",
+            "accept": {
+                "application/octet-stream": [".pensine"],
+                "application/json": [".pensine"]
+            }
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

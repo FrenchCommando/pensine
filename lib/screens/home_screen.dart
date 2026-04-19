@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/board.dart';
 import '../models/workspace.dart';
 import '../services/board_io.dart';
+import '../services/pending_import.dart';
 import '../storage/local_storage.dart';
 import '../theme.dart';
 import '../utils/pluralize.dart';
@@ -78,6 +79,33 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = false;
       _rebuildIndex();
     });
+
+    listenForPendingImports(_handlePendingImport);
+  }
+
+  Future<void> _handlePendingImport(String content) async {
+    if (!mounted) return;
+    final result = await BoardIO.importContent(content, context, _workspaces);
+    await _applyImportResult(result);
+  }
+
+  Future<void> _applyImportResult(ImportResult? result) async {
+    if (result == null || !mounted) return;
+    setState(() {
+      if (result.workspace != null) {
+        _workspaces.add(result.workspace!);
+      }
+      _boards.addAll(result.boards);
+      _rebuildIndex();
+    });
+    await Future.wait([
+      if (result.workspace != null) ...[
+        LocalStorage.saveWorkspace(result.workspace!),
+        LocalStorage.saveWorkspaceOrder(_workspaceIds()),
+      ],
+      ...result.boards.map(LocalStorage.saveBoard),
+      LocalStorage.saveBoardOrder(_boardIds()),
+    ]);
   }
 
   ({List<Workspace> workspaces, List<Board> boards}) _defaults() {
@@ -767,22 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Import',
             onPressed: () async {
               final result = await BoardIO.importFile(context, _workspaces);
-              if (result == null) return;
-              setState(() {
-                if (result.workspace != null) {
-                  _workspaces.add(result.workspace!);
-                }
-                _boards.addAll(result.boards);
-                _rebuildIndex();
-              });
-              await Future.wait([
-                if (result.workspace != null) ...[
-                  LocalStorage.saveWorkspace(result.workspace!),
-                  LocalStorage.saveWorkspaceOrder(_workspaceIds()),
-                ],
-                ...result.boards.map(LocalStorage.saveBoard),
-                LocalStorage.saveBoardOrder(_boardIds()),
-              ]);
+              await _applyImportResult(result);
             },
           ),
           IconButton(

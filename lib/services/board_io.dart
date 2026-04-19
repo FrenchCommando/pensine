@@ -59,7 +59,7 @@ class BoardIO {
     }
   }
 
-  /// Import a .pensine file. Returns an ImportResult with either:
+  /// Import a .pensine file via picker. Returns an ImportResult with either:
   /// - A workspace + boards (v2 format)
   /// - Just boards (v1 format, assigned to chosen workspace)
   static Future<ImportResult?> importFile(BuildContext context, List<Workspace> workspaces) async {
@@ -82,7 +82,26 @@ class BoardIO {
         return null;
       }
 
-      final content = utf8.decode(bytes);
+      if (!context.mounted) return null;
+      return await importContent(utf8.decode(bytes), context, workspaces);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Import failed: $e')),
+        );
+      }
+      return null;
+    }
+  }
+
+  /// Import from raw .pensine file contents (no picker). Used by PWA file handler
+  /// and deep-link flows that deliver bytes directly to the app.
+  static Future<ImportResult?> importContent(
+    String content,
+    BuildContext context,
+    List<Workspace> workspaces,
+  ) async {
+    try {
       final json = jsonDecode(content) as Map<String, dynamic>;
       final version = json['pensine_version'];
 

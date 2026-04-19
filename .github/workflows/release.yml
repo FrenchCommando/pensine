@@ -1,15 +1,14 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
 
 jobs:
   android-release:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
@@ -52,6 +51,24 @@ jobs:
         env:
           PLAY_JSON_KEY_FILE: ${{ runner.temp }}/play_service_account.json
         run: bundle exec fastlane android beta
+
+      - name: Extract version from pubspec.yaml
+        run: |
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "PENSINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Rename APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk "pensine-v${PENSINE_VERSION}-build${{ github.run_number }}.apk"
+
+      - name: Publish GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: v${{ env.PENSINE_VERSION }} · build ${{ github.run_number }}
+          files: pensine-v${{ env.PENSINE_VERSION }}-build${{ github.run_number }}.apk
 
   ios-release:
     runs-on: macos-15

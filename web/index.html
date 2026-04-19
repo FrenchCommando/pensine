@@ -33,6 +33,40 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // PWA file handler: catch .pensine files opened via OS/messenger and hand them
+    // to the Flutter app once it registers a listener.
+    (function () {
+      var queued = null;
+      var listener = null;
+      window.pensineRegisterImportListener = function (cb) {
+        listener = cb;
+        if (queued !== null) {
+          var pending = queued;
+          queued = null;
+          listener(pending);
+        }
+      };
+      if ('launchQueue' in window) {
+        window.launchQueue.setConsumer(async function (launchParams) {
+          if (!launchParams.files || launchParams.files.length === 0) return;
+          try {
+            var fileHandle = launchParams.files[0];
+            var file = await fileHandle.getFile();
+            var text = await file.text();
+            if (listener) {
+              listener(text);
+            } else {
+              queued = text;
+            }
+          } catch (e) {
+            console.error('pensine file handler failed', e);
+          }
+        });
+      }
+    })();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 
   <!-- iOS PWA install hint -->

@@ -97,7 +97,7 @@ Both screenshot and preview artifacts must be downloaded and uploaded to App Sto
 
 ## Release Automation (fastlane)
 
-Binary lanes are **implemented** — both `ios beta` and `android beta` ship binaries to TestFlight / Play internal on tag push (`v*.*.*`) or manual `workflow_dispatch`. Metadata + screenshot upload is **not yet wired**; store listings and screenshots are still uploaded by hand.
+Binary lanes are **implemented** — both `ios beta` and `android beta` ship binaries to TestFlight / Play internal on manual `workflow_dispatch`. The Android job additionally publishes a signed APK as a GitHub Release tagged `build-<github.run_number>` (unique per run; pubspec version shown in the release title + APK filename as flavor, but identity is the run number). Metadata + screenshot upload is **not yet wired**; store listings and screenshots are still uploaded by hand.
 
 ### Why fastlane
 - Covers build + sign + binary upload + metadata + screenshots in one DSL.
@@ -111,7 +111,7 @@ fastlane/
   Fastfile                     # platform :ios + :android blocks
   Appfile                      # bundle id / package name
 .github/workflows/
-  release.yml                  # fires on tag push v*.*.*
+  release.yml                  # manual trigger (workflow_dispatch)
 ```
 
 ### Lanes
