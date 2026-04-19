@@ -91,7 +91,9 @@ class _BoardScreenState extends State<BoardScreen> {
       if (!mounted) return;
       final completedItem = widget.board.items[nextIndex];
       setState(() {
-        if (_stepStartTime != null) {
+        // Index 0 is the start marble — tapping it arms the clock but never
+        // produces a lap. Keeps countdown symmetric with timer boards.
+        if (_stepStartTime != null && nextIndex > 0) {
           widget.board.laps.add(Lap(
             itemId: completedItem.id,
             elapsedSeconds: DateTime.now().difference(_stepStartTime!).inSeconds,
@@ -260,11 +262,6 @@ class _BoardScreenState extends State<BoardScreen> {
           style: TextStyle(color: PensineColors.boardAccent(widget.board.colorIndex)),
         ),
         actions: [
-          IconButton(
-            icon: Icon(widget.board.tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
-            tooltip: widget.board.tableMode ? 'Marble view' : 'Table view',
-            onPressed: () => _setTableMode(!widget.board.tableMode),
-          ),
           if (!widget.board.tableMode)
             IconButton(
               icon: const Icon(Icons.vibration),
@@ -289,7 +286,9 @@ class _BoardScreenState extends State<BoardScreen> {
               },
             ),
           if ((type == BoardType.todo || type == BoardType.flashcards || type.isSequential) &&
-              widget.board.items.any((i) => i.done))
+              (type == BoardType.timer ||
+                  type == BoardType.countdown ||
+                  widget.board.items.any((i) => i.done)))
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Reset',
@@ -306,6 +305,11 @@ class _BoardScreenState extends State<BoardScreen> {
                 widget.onChanged();
               },
             ),
+          IconButton(
+            icon: Icon(widget.board.tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
+            tooltip: widget.board.tableMode ? 'Marble view' : 'Table view',
+            onPressed: () => _setTableMode(!widget.board.tableMode),
+          ),
           IconButton(
             icon: Icon(
               PensineApp.of(context)?.brightness == Brightness.dark
@@ -375,7 +379,8 @@ class _BoardScreenState extends State<BoardScreen> {
     final targetDone = (tappedIndex == nextIndex) ? tappedIndex + 1 : tappedIndex;
     setState(() {
       // Only the active step had a real elapsed time — leapfrogged steps don't.
-      if (targetDone > nextIndex && nextIndex >= 0 && _stepStartTime != null) {
+      // Index 0 is the start marble: tapping it arms the clock, never logs.
+      if (targetDone > nextIndex && nextIndex > 0 && _stepStartTime != null) {
         final activeItem = widget.board.items[nextIndex];
         widget.board.laps.add(Lap(
           itemId: activeItem.id,
