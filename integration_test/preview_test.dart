@@ -15,7 +15,7 @@ void main() {
 
   testWidgets('Preview walkthrough', (tester) async {
     await tester.pumpWidget(const PensineApp());
-    await settle(tester);
+    await tester.pumpAndSettle();
     await linger(tester);
 
     await tester.tap(find.text('Getting Started'));
@@ -26,7 +26,7 @@ void main() {
     await linger(tester, duration: const Duration(seconds: 3));
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
     await linger(tester, duration: const Duration(seconds: 2));
 
     await openBoard(tester, 'Essentials', hold: const Duration(seconds: 3));
@@ -36,13 +36,13 @@ void main() {
     await linger(tester);
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
     await linger(tester, duration: const Duration(seconds: 2));
 
     await openBoard(tester, 'Pancakes', hold: const Duration(seconds: 3));
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
     await linger(tester, duration: const Duration(seconds: 2));
 
     await openBoard(tester, 'Weekend',

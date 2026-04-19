@@ -329,14 +329,16 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: PensineColors.surface(context),
         title: Text(title),
-        content: PensineColorPicker(
-          selected: current,
-          allowDefault: true,
-          size: 36,
-          onChanged: (i) {
-            onPicked(i);
-            Navigator.pop(ctx);
-          },
+        content: SingleChildScrollView(
+          child: PensineColorPicker(
+            selected: current,
+            allowDefault: true,
+            size: 36,
+            onChanged: (i) {
+              onPicked(i);
+              Navigator.pop(ctx);
+            },
+          ),
         ),
       ),
     );

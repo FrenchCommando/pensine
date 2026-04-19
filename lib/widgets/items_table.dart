@@ -51,7 +51,7 @@ class ItemsTable extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: muted.withAlpha(60)),
+            bottom: BorderSide(color: muted.withValues(alpha: 0.235)),
           ),
         ),
         child: Row(
@@ -110,7 +110,7 @@ class ItemsTable extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: muted.withAlpha(30)),
+                bottom: BorderSide(color: muted.withValues(alpha: 0.118)),
               ),
             ),
             child: Row(
@@ -122,7 +122,7 @@ class ItemsTable extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withAlpha(40), width: 1),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.157), width: 1),
                   ),
                 ),
                 const SizedBox(width: 16),

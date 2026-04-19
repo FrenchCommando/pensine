@@ -55,7 +55,7 @@ void main() {
 
   testWidgets('Store screenshots', (tester) async {
     await tester.pumpWidget(const PensineApp());
-    await settle(tester);
+    await tester.pumpAndSettle();
 
     await takeScreenshot(tester, '01_home');
 
@@ -65,7 +65,7 @@ void main() {
     await takeScreenshot(tester, '02_thoughts');
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
 
     await openBoard(tester, 'Essentials');
     await takeScreenshot(tester, '03_flashcards');
@@ -76,13 +76,13 @@ void main() {
     await takeScreenshot(tester, '04_flashcards_flipped');
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
 
     await openBoard(tester, 'Pancakes');
     await takeScreenshot(tester, '05_checklist');
 
     await tester.tap(find.byTooltip('Back'));
-    await settle(tester);
+    await tester.pumpAndSettle();
 
     await openBoard(tester, 'Weekend', scrollDelta: -200);
     await takeScreenshot(tester, '06_todo');

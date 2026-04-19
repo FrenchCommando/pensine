@@ -39,7 +39,7 @@ class PensineColors {
   /// Falls back to the default card color when no color is set.
   static Color boardCard(BuildContext context, int colorIndex) {
     if (colorIndex < 0) return card(context);
-    return Color.alphaBlend(boardAccent(colorIndex).withAlpha(40), card(context));
+    return Color.alphaBlend(boardAccent(colorIndex).withValues(alpha: 0.157), card(context));
   }
 }
 
@@ -74,11 +74,11 @@ ThemeData pensineTheme({Brightness brightness = Brightness.dark}) {
       fillColor: bg,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: mt.withAlpha(80)),
+        borderSide: BorderSide(color: mt.withValues(alpha: 0.314)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: mt.withAlpha(80)),
+        borderSide: BorderSide(color: mt.withValues(alpha: 0.314)),
       ),
       hintStyle: TextStyle(color: mt),
     ),
