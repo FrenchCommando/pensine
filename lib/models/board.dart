@@ -35,6 +35,7 @@ class Board {
   final DateTime createdAt;
   List<BoardItem> items;
   List<Lap> laps;
+  bool tableMode;
 
   Board({
     String? id,
@@ -45,6 +46,7 @@ class Board {
     DateTime? createdAt,
     List<BoardItem>? items,
     List<Lap>? laps,
+    this.tableMode = false,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now(),
         items = items ?? [],
@@ -59,6 +61,7 @@ class Board {
         'createdAt': createdAt.toIso8601String(),
         'items': items.map((i) => i.toJson()).toList(),
         'laps': laps.map((l) => l.toJson()).toList(),
+        'tableMode': tableMode,
       };
 
   factory Board.fromJson(Map<String, dynamic> json) => Board(
@@ -70,6 +73,7 @@ class Board {
         createdAt: DateTime.parse(json['createdAt']),
         items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
         laps: (json['laps'] as List?)?.map((l) => Lap.fromJson(l)).toList() ?? [],
+        tableMode: json['tableMode'] ?? false,
       );
 
   /// Creates a copy with fresh IDs (for import). Laps are dropped because
@@ -80,6 +84,7 @@ class Board {
         colorIndex: colorIndex,
         workspaceId: workspaceId,
         items: items.map((i) => i.cloneWithNewId()).toList(),
+        tableMode: tableMode,
       );
 }
 

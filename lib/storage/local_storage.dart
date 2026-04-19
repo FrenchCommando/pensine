@@ -16,7 +16,6 @@ class PrefKeys {
   static const boardIds = 'pensine_board_ids';
   static const workspaceIds = 'pensine_workspace_ids';
   static const collapsedWorkspaces = 'pensine_collapsed_workspaces';
-  static const tableModeBoards = 'pensine_table_mode_boards';
   static const darkMode = 'dark_mode';
   static const legacyBoards = 'pensine_boards';
   static String boardData(String id) => 'pensine_board_$id';

@@ -3,11 +3,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../main.dart';
 import '../models/board.dart';
-import '../storage/local_storage.dart';
 import '../theme.dart';
 import '../widgets/about_dialog.dart';
 import '../widgets/color_picker.dart';
@@ -34,36 +32,17 @@ class _BoardScreenState extends State<BoardScreen> {
   Timer? _uiTicker;
   Timer? _countdownTimer;
   bool _anyFlipped = false;
-  bool _tableMode = false;
 
   @override
   void initState() {
     super.initState();
     WakelockPlus.enable();
     _initTimerState();
-    _loadTableMode();
   }
 
-  Future<void> _loadTableMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList(PrefKeys.tableModeBoards) ?? [];
-    if (!mounted) return;
-    if (ids.contains(widget.board.id)) {
-      setState(() => _tableMode = true);
-    }
-  }
-
-  Future<void> _setTableMode(bool value) async {
-    setState(() => _tableMode = value);
-    final prefs = await SharedPreferences.getInstance();
-    final ids = (prefs.getStringList(PrefKeys.tableModeBoards) ?? []).toList();
-    final id = widget.board.id;
-    if (value) {
-      if (!ids.contains(id)) ids.add(id);
-    } else {
-      ids.remove(id);
-    }
-    await prefs.setStringList(PrefKeys.tableModeBoards, ids);
+  void _setTableMode(bool value) {
+    setState(() => widget.board.tableMode = value);
+    widget.onChanged();
   }
 
   @override
@@ -282,17 +261,17 @@ class _BoardScreenState extends State<BoardScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(_tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
-            tooltip: _tableMode ? 'Marble view' : 'Table view',
-            onPressed: () => _setTableMode(!_tableMode),
+            icon: Icon(widget.board.tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
+            tooltip: widget.board.tableMode ? 'Marble view' : 'Table view',
+            onPressed: () => _setTableMode(!widget.board.tableMode),
           ),
-          if (!_tableMode)
+          if (!widget.board.tableMode)
             IconButton(
               icon: const Icon(Icons.vibration),
               tooltip: 'Shake',
               onPressed: () => _marbleBoardKey.currentState?.shake(),
             ),
-          if (!_tableMode && type == BoardType.flashcards)
+          if (!widget.board.tableMode && type == BoardType.flashcards)
             IconButton(
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
@@ -378,7 +357,7 @@ class _BoardScreenState extends State<BoardScreen> {
             ),
         ],
       ),
-      floatingActionButton: _tableMode && widget.board.items.isNotEmpty
+      floatingActionButton: widget.board.tableMode && widget.board.items.isNotEmpty
           ? FloatingActionButton(
               tooltip: 'Add item',
               onPressed: () => _itemDialog(),
@@ -439,7 +418,7 @@ class _BoardScreenState extends State<BoardScreen> {
   }
 
   Widget _buildContent() {
-    if (_tableMode) {
+    if (widget.board.tableMode) {
       return ItemsTable(
         board: widget.board,
         onTap: _handleItemTap,
