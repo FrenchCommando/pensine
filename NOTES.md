@@ -53,8 +53,9 @@
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
 - **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
 - **Steps (checklist)**: sequential order — active step inflates and shows description, numbered marbles, tap active step to complete, tap any other marble to jump there (sets everything before it as done), reset button
-- **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Each advance appends a `Lap` (itemId + elapsedSeconds + recordedAt) to `Board.laps`. Bottom-right shows the lap log. Reset clears timer state but **leaves laps as history** (laps accumulate across runs).
-- **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Auto-advance also appends a `Lap`. Reset clears countdown state, leaves laps.
+- **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Each advance appends a `Lap` (itemId + elapsedSeconds + recordedAt) to `Board.laps`. Bottom-right shows the lap log. Reset clears timer state **and laps** (tap-back to an earlier marble preserves laps — Reset is the clean-slate action). Overlay freezes on the final total when all steps complete (ticker cancelled, start time kept).
+- **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Auto-advance also appends a `Lap`. Reset clears countdown state + laps; overlay freezes on the final total on completion (same freeze-not-stop behaviour as timer).
+- **Start marble convention (timer/countdown)**: item at index 0 arms the clock but is never logged as a lap — for both the manual-tap (timer) and auto-fire (countdown) paths. Treat it as a dedicated "Start" sentinel. Examples `Flight Log` and `Tabata` in `_defaults()` use this (Engine start / Shutdown; Warm-up / Cool-down).
 - **All boards**: drag to fling, long-press empty space to add, shake button scatters marbles
 
 ## Mobile UX
@@ -68,7 +69,8 @@
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
 - Board view toggle in app bar: marble physics view (default) ↔ table view (`ItemsTable`) — columns adapt to board type (details, back, duration, done, size). Persisted as `Board.tableMode` (rides along with the board's data, including in `.pensine` exports).
-- Table mode: drag handle on each row reorders items (`ReorderableListView`, custom handle via `ReorderableDragStartListener` so long-press stays free for "edit item"). FAB appears for adding items when the board is non-empty.
+- Table mode: drag handle on each row reorders items (`ReorderableListView`, custom handle via `ReorderableDragStartListener` so long-press stays free for "edit item"). FAB appears for adding items when the board is non-empty; positioned `FloatingActionButtonLocation.startFloat` (bottom-left) so it doesn't cover the timer/lap overlay (bottom-right).
+- Board app bar action order: shake / flip-all / reset on the left (conditional, appear/disappear), then the anchored trio marble-table · dark-mode · about on the right. Keeps the right-side layout stable as conditional actions come and go. Reset stays visible on timer/countdown boards even with nothing done, so lingering laps (post reverse-to-zero) can still be cleared.
 - About dialog accessible from all screens, includes "Reset data" to restore default example boards
 - Default example boards are hardcoded in `home_screen.dart` (`_defaults()`), used on first launch and reset
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
@@ -107,8 +109,8 @@
 - **V1 (board)**: `pensine_version: 1`, wraps a single `Board.toJson()` — still supported for single-board export
 - Import auto-detects v1 vs v2 by checking for `workspace` vs `board` key
 - V2 import creates a new workspace with all boards; V1 import prompts which workspace to add the board to
-- Export: save file dialog on desktop native, OS share sheet on mobile native (via `share_plus` — WhatsApp/Messenger/Mail/etc. appear as targets). On web/PWA, `board_io_web.dart` tries `navigator.share({ files: [...] })` first (mobile browsers + installed PWAs on Android/iOS get a share sheet — including "Save to Files" as an explicit target); falls back to an anchor-download link when `canShare` returns false (most desktop browsers).
-- Import: file picker on all platforms, generates new IDs to avoid collisions
+- Export: save file dialog on desktop native, OS share sheet on mobile native (via `share_plus` — WhatsApp/Messenger/Mail/etc. appear as targets). On web/PWA, `board_io_web.dart` gates `navigator.share({files:...})` behind `matchMedia('(pointer: coarse)')` — touch-primary devices (phones, iPadOS Safari which lies about its UA) get the share sheet; pointer-fine devices (desktop/laptop, including touchscreen laptops) always take the anchor-download path. File MIME is `text/plain` (Chrome rejects `application/octet-stream` from the Web Share file allow-list — the `.pensine` extension drives open-with behaviour regardless). On share throw, `AbortError` (user cancel) is respected; any other error falls through to anchor download so the user still gets their file.
+- Import: file picker on all platforms, generates new IDs to avoid collisions. Strict validation in `Board/BoardItem/Lap/Workspace.fromJson` — missing/wrong-typed fields throw `FormatException` surfaced in the snackbar ("Import failed: Board: unknown type ..."); `sizeMultiplier` clamped to [0.1, 5.0]; 10 MB cap applied to both `importFile` bytes and `importContent` string length before any `jsonDecode`.
 - Import picker uses `FileType.custom` with `allowedExtensions: ['pensine']` — prevents iOS from surfacing Photos as a source. Requires the `UTExportedTypeDeclarations` entry in `ios/Runner/Info.plist` (UTI `com.frenchcommando.pensine.workspace`); without it, iOS silently falls back to `FileType.any`.
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
 - Implementation in `lib/services/board_io.dart` with conditional imports for web vs native

@@ -19,6 +19,9 @@ String _safeFileName(String name) => name
     .replaceAll(RegExp(r'[^\w\s-]'), '')
     .replaceAll(RegExp(r'\s+'), '_');
 
+String _reason(Object e) =>
+    e is FormatException ? e.message : e.toString();
+
 String _envelope(int version, Map<String, dynamic> payload) => jsonEncode({
       'pensine_version': version,
       'exported_at': DateTime.now().toIso8601String(),
@@ -97,7 +100,7 @@ class BoardIO {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
+          SnackBar(content: Text('Import failed: ${_reason(e)}')),
         );
       }
       return null;
@@ -148,7 +151,7 @@ class BoardIO {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
+          SnackBar(content: Text('Import failed: ${_reason(e)}')),
         );
       }
       return null;

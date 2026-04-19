@@ -81,6 +81,15 @@ class _BoardScreenState extends State<BoardScreen> {
     _stepStartTime = null;
   }
 
+  /// Cancel tickers but keep [_timerStartTime] so the overlay keeps showing
+  /// the final total after the last step completes.
+  void _freezeTimers() {
+    _uiTicker?.cancel();
+    _uiTicker = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+  }
+
   void _startCountdown() {
     _countdownTimer?.cancel();
     final nextIndex = widget.board.items.indexWhere((i) => !i.done);
@@ -102,13 +111,13 @@ class _BoardScreenState extends State<BoardScreen> {
         completedItem.done = true;
       });
       widget.onChanged();
-      _stepStartTime = DateTime.now();
       final allDone = widget.board.items.every((i) => i.done);
       HapticFeedback.lightImpact();
       if (allDone) {
-        _countdownTimer = null;
+        _freezeTimers();
         HapticFeedback.mediumImpact();
       } else {
+        _stepStartTime = DateTime.now();
         _startCountdown();
       }
     });
@@ -399,6 +408,8 @@ class _BoardScreenState extends State<BoardScreen> {
     if (t == BoardType.timer || t == BoardType.countdown) {
       if (targetDone == 0) {
         _stopTimers();
+      } else if (targetDone == widget.board.items.length) {
+        _freezeTimers();
       } else {
         _timerStartTime ??= DateTime.now();
         _stepStartTime = DateTime.now();
