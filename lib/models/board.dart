@@ -64,17 +64,46 @@ class Board {
         'tableMode': tableMode,
       };
 
-  factory Board.fromJson(Map<String, dynamic> json) => Board(
-        id: json['id'],
-        name: json['name'],
-        type: BoardType.values.byName(json['type']),
-        colorIndex: json['colorIndex'] ?? -1,
-        workspaceId: json['workspaceId'] ?? '',
-        createdAt: DateTime.parse(json['createdAt']),
-        items: (json['items'] as List).map((i) => BoardItem.fromJson(i)).toList(),
-        laps: (json['laps'] as List?)?.map((l) => Lap.fromJson(l)).toList() ?? [],
-        tableMode: json['tableMode'] ?? false,
-      );
+  factory Board.fromJson(Map<String, dynamic> json) {
+    final name = json['name'];
+    if (name is! String) {
+      throw const FormatException('Board: name missing or not a string');
+    }
+    final typeName = json['type'];
+    final type = BoardType.values.firstWhere(
+      (t) => t.name == typeName,
+      orElse: () => throw FormatException('Board: unknown type "$typeName"'),
+    );
+    final itemsJson = json['items'];
+    if (itemsJson is! List) {
+      throw const FormatException('Board: items must be a list');
+    }
+    final lapsJson = json['laps'];
+    if (lapsJson != null && lapsJson is! List) {
+      throw const FormatException('Board: laps must be a list');
+    }
+    return Board(
+      id: json['id'] is String ? json['id'] as String : null,
+      name: name,
+      type: type,
+      colorIndex: json['colorIndex'] is int ? json['colorIndex'] as int : -1,
+      workspaceId:
+          json['workspaceId'] is String ? json['workspaceId'] as String : '',
+      createdAt: _parseDate(json['createdAt'], 'Board.createdAt'),
+      items: itemsJson.map((i) {
+        if (i is! Map<String, dynamic>) {
+          throw const FormatException('Board: item must be an object');
+        }
+        return BoardItem.fromJson(i);
+      }).toList(),
+      laps: (lapsJson as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(Lap.fromJson)
+              .toList() ??
+          [],
+      tableMode: json['tableMode'] is bool ? json['tableMode'] as bool : false,
+    );
+  }
 
   /// Creates a copy with fresh IDs (for import). Laps are dropped because
   /// they reference item IDs that get regenerated.
@@ -109,12 +138,33 @@ class Lap {
         'recordedAt': recordedAt.toIso8601String(),
       };
 
-  factory Lap.fromJson(Map<String, dynamic> json) => Lap(
-        id: json['id'],
-        itemId: json['itemId'],
-        elapsedSeconds: json['elapsedSeconds'],
-        recordedAt: DateTime.parse(json['recordedAt']),
-      );
+  factory Lap.fromJson(Map<String, dynamic> json) {
+    final itemId = json['itemId'];
+    if (itemId is! String) {
+      throw const FormatException('Lap: itemId missing or not a string');
+    }
+    final elapsed = json['elapsedSeconds'];
+    if (elapsed is! int) {
+      throw const FormatException('Lap: elapsedSeconds must be an int');
+    }
+    return Lap(
+      id: json['id'] is String ? json['id'] as String : null,
+      itemId: itemId,
+      elapsedSeconds: elapsed,
+      recordedAt: _parseDate(json['recordedAt'], 'Lap.recordedAt'),
+    );
+  }
+}
+
+DateTime _parseDate(Object? raw, String field) {
+  if (raw is! String) {
+    throw FormatException('$field: missing or not a string');
+  }
+  final dt = DateTime.tryParse(raw);
+  if (dt == null) {
+    throw FormatException('$field: invalid ISO-8601 "$raw"');
+  }
+  return dt;
 }
 
 class BoardItem {
@@ -153,17 +203,29 @@ class BoardItem {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  factory BoardItem.fromJson(Map<String, dynamic> json) => BoardItem(
-        id: json['id'],
-        content: json['content'],
-        description: json['description'],
-        backContent: json['backContent'],
-        done: json['done'] ?? false,
-        colorIndex: json['colorIndex'] ?? 0,
-        sizeMultiplier: (json['sizeMultiplier'] ?? 1.0).toDouble(),
-        durationSeconds: json['durationSeconds'],
-        createdAt: DateTime.parse(json['createdAt']),
-      );
+  factory BoardItem.fromJson(Map<String, dynamic> json) {
+    final content = json['content'];
+    if (content is! String) {
+      throw const FormatException('BoardItem: content missing or not a string');
+    }
+    final rawSize = json['sizeMultiplier'];
+    final size = (rawSize is num) ? rawSize.toDouble().clamp(0.1, 5.0) : 1.0;
+    final rawDur = json['durationSeconds'];
+    final duration = (rawDur is int && rawDur > 0) ? rawDur : null;
+    return BoardItem(
+      id: json['id'] is String ? json['id'] as String : null,
+      content: content,
+      description:
+          json['description'] is String ? json['description'] as String : null,
+      backContent:
+          json['backContent'] is String ? json['backContent'] as String : null,
+      done: json['done'] is bool ? json['done'] as bool : false,
+      colorIndex: json['colorIndex'] is int ? json['colorIndex'] as int : 0,
+      sizeMultiplier: size,
+      durationSeconds: duration,
+      createdAt: _parseDate(json['createdAt'], 'BoardItem.createdAt'),
+    );
+  }
 
   BoardItem cloneWithNewId() =>
       BoardItem.fromJson({...toJson(), 'id': _uuid.v4()});

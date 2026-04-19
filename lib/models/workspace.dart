@@ -23,12 +23,26 @@ class Workspace {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  factory Workspace.fromJson(Map<String, dynamic> json) => Workspace(
-        id: json['id'],
-        name: json['name'],
-        colorIndex: json['colorIndex'] ?? -1,
-        createdAt: DateTime.parse(json['createdAt']),
-      );
+  factory Workspace.fromJson(Map<String, dynamic> json) {
+    final name = json['name'];
+    if (name is! String) {
+      throw const FormatException('Workspace: name missing or not a string');
+    }
+    final createdAtStr = json['createdAt'];
+    if (createdAtStr is! String) {
+      throw const FormatException('Workspace: createdAt missing');
+    }
+    final createdAt = DateTime.tryParse(createdAtStr);
+    if (createdAt == null) {
+      throw FormatException('Workspace: invalid createdAt "$createdAtStr"');
+    }
+    return Workspace(
+      id: json['id'] is String ? json['id'] as String : null,
+      name: name,
+      colorIndex: json['colorIndex'] is int ? json['colorIndex'] as int : -1,
+      createdAt: createdAt,
+    );
+  }
 
   Workspace copyWithNewId() => Workspace(
         name: name,

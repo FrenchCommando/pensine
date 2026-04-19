@@ -364,6 +364,7 @@ class _BoardScreenState extends State<BoardScreen> {
               child: const Icon(Icons.add),
             )
           : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 

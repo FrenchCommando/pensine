@@ -13,6 +13,8 @@ class ImportResult {
   ImportResult({this.workspace, required this.boards});
 }
 
+const int _maxImportBytes = 10 * 1024 * 1024; // 10 MB
+
 String _safeFileName(String name) => name
     .replaceAll(RegExp(r'[^\w\s-]'), '')
     .replaceAll(RegExp(r'\s+'), '_');
@@ -81,6 +83,14 @@ class BoardIO {
         }
         return null;
       }
+      if (bytes.length > _maxImportBytes) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File too large to import')),
+          );
+        }
+        return null;
+      }
 
       if (!context.mounted) return null;
       return await importContent(utf8.decode(bytes), context, workspaces);
@@ -102,12 +112,29 @@ class BoardIO {
     List<Workspace> workspaces,
   ) async {
     try {
-      final json = jsonDecode(content) as Map<String, dynamic>;
+      if (content.length > _maxImportBytes) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File too large to import')),
+          );
+        }
+        return null;
+      }
+      final decoded = jsonDecode(content);
+      if (decoded is! Map<String, dynamic>) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Not a valid .pensine file')),
+          );
+        }
+        return null;
+      }
+      final json = decoded;
       final version = json['pensine_version'];
 
-      if (version == 2 && json['workspace'] != null) {
+      if (version == 2 && json['workspace'] is Map<String, dynamic>) {
         return _importV2(json);
-      } else if (json['board'] != null) {
+      } else if (json['board'] is Map<String, dynamic>) {
         if (!context.mounted) return null;
         return await _importV1(json, context, workspaces);
       } else {
@@ -130,14 +157,17 @@ class BoardIO {
 
   static ImportResult _importV2(Map<String, dynamic> json) {
     final wsJson = json['workspace'] as Map<String, dynamic>;
-    final boardsJson = wsJson['boards'] as List;
+    final boardsJson = wsJson['boards'];
+    if (boardsJson is! List) {
+      throw const FormatException('workspace.boards must be a list');
+    }
 
-    final newWs = Workspace(
-      name: wsJson['name'] ?? 'Imported',
-      colorIndex: wsJson['colorIndex'] ?? -1,
-    );
+    final newWs = Workspace.fromJson(wsJson).copyWithNewId();
 
     final boards = boardsJson.map((b) {
+      if (b is! Map<String, dynamic>) {
+        throw const FormatException('workspace.boards entry must be an object');
+      }
       final board = Board.fromJson(b).copyWithNewIds();
       board.workspaceId = newWs.id;
       return board;
@@ -151,7 +181,8 @@ class BoardIO {
     BuildContext context,
     List<Workspace> workspaces,
   ) async {
-    final board = Board.fromJson(json['board']).copyWithNewIds();
+    final board =
+        Board.fromJson(json['board'] as Map<String, dynamic>).copyWithNewIds();
 
     if (workspaces.length == 1) {
       board.workspaceId = workspaces.first.id;
