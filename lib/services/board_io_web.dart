@@ -6,11 +6,12 @@ Future<void> exportFile(String filename, String content) async {
   final bytes = utf8.encode(content);
   final nav = web.window.navigator;
 
-  // Our .pensine payload is JSON text. Use text/plain everywhere: it is on
-  // Chrome's Web Share file allow-list (application/octet-stream is not), and
-  // MIME is advisory for downloads — the .pensine extension drives open-with
-  // behaviour regardless.
-  const mime = 'text/plain';
+  // Share sheet: text/plain is on Chrome's Web Share file allow-list
+  // (application/octet-stream is not).
+  // Anchor download: octet-stream prevents Android Chrome from appending
+  // .txt to the filename to match the declared MIME.
+  const shareMime = 'text/plain';
+  const downloadMime = 'application/octet-stream';
 
   // Touch-primary devices (phones, tablets incl. iPadOS Safari which lies
   // about its UA) benefit from the native share sheet — Save to Files, Drive,
@@ -23,7 +24,7 @@ Future<void> exportFile(String filename, String content) async {
     final file = web.File(
       [bytes.toJS].toJS,
       filename,
-      web.FilePropertyBag(type: mime),
+      web.FilePropertyBag(type: shareMime),
     );
     final shareData = web.ShareData(files: [file].toJS, title: filename);
     try {
@@ -41,7 +42,7 @@ Future<void> exportFile(String filename, String content) async {
 
   final blob = web.Blob(
     [bytes.toJS].toJS,
-    web.BlobPropertyBag(type: mime),
+    web.BlobPropertyBag(type: downloadMime),
   );
   final url = web.URL.createObjectURL(blob);
   final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
