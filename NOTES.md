@@ -5,6 +5,7 @@
 
 ## Known Issues
 - `Failed to update ui::AXTree` errors on Windows — known Flutter bug with accessibility bridge during rapid widget updates (60fps ticker). Harmless, ignore.
+- **Integration tests can't use `pumpAndSettle`** (or anything that calls it, like `WidgetTester.scrollUntilVisible`) — the marble physics ticker runs continuously at 60fps, so `hasScheduledFrame` is never false and `pumpAndSettle` hangs forever. Use the `settle()` helper in `integration_test/test_helpers.dart` (timeout-bounded `pump()` loop) instead. For scrolling a widget into view, use `Scrollable.ensureVisible` wrapped by `settle()`, not `scrollUntilVisible`.
 
 ## Web Deployment
 - GitHub Pages: `https://frenchcommando.github.io/pensine/` (the app)
@@ -161,8 +162,15 @@
 - **CI builds inject `github.run_number` as the build number** — iOS via `flutter build ipa --build-number=`, Android via `GITHUB_RUN_NUMBER` in Fastfile + the APK build step, web via `flutter build web --build-number=` in `deploy.yml`. Each workflow has its own independent `run_number` counter, so web and mobile numbers won't match (that's fine — different channels).
 - **Local builds fall back to Flutter's default (`1`).** Harmless — local APKs/web builds aren't published anywhere, and the About dialog just shows `1.1.1 (build 1)`.
 - Back-to-back release runs publish the same version name with strictly-increasing build numbers, which TestFlight and Play internal track both accept.
-- **Bump pubspec only to cut a new marketing version.** Running the release workflow without bumping is normal and expected: Play/TestFlight get a fresh build under the same version name, and the GitHub Release APK at `v<version>` is overwritten with the latest build (mirrors Play's "current build of v1.1.1" model). Bump the version name when you want testers to see "v1.1.2" as a distinct release.
+- **Bump pubspec only to cut a new marketing version.** Running the release workflow without bumping is normal: Play/TestFlight get a fresh build under the same version name, and a new immutable GitHub Release at `build-<run_number>` appears (version name shown in the release title + APK filename as flavor). Bump the version name when you want testers to see "v1.1.2" as a distinct label.
 - **Don't "Re-run failed jobs"** on the release workflow — `github.run_number` stays the same across re-runs (only `run_attempt` increments), so the upload will be rejected as a duplicate build number. Trigger a fresh run instead.
+
+### Shipping a build to a device
+- No "submit to store" step — the pipeline is Play internal + TestFlight only (no production). Push commits to main, run the Release workflow from the Actions UI. That's the whole flow.
+- **Android (Play internal):** Play Store offers the update automatically within a few minutes. Nudge by opening Play Store → My apps if impatient.
+- **iOS (TestFlight):** TestFlight app notifies when Apple finishes processing (~10–30min typical, first build after a plist change can be longer).
+- **Sideload (Android):** open `github.com/FrenchCommando/pensine/releases/latest` on the phone, tap the APK, install. Signature is the upload key — consistent across your sideloaded builds, but incompatible with Play installs (can't mix on the same device without uninstalling first).
+- Native config changes (Info.plist, AndroidManifest) ride along in the binary and take effect after install. No extra store review for internal/TestFlight tracks.
 
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
