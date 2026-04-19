@@ -9,6 +9,7 @@ import '../models/board.dart';
 import '../theme.dart';
 import '../widgets/about_dialog.dart';
 import '../widgets/color_picker.dart';
+import '../widgets/items_table.dart';
 import '../widgets/marble_board.dart';
 
 class BoardScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _BoardScreenState extends State<BoardScreen> {
   Timer? _uiTicker;
   Timer? _countdownTimer;
   bool _anyFlipped = false;
+  bool _tableMode = false;
 
   @override
   void initState() {
@@ -255,11 +257,17 @@ class _BoardScreenState extends State<BoardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.vibration),
-            tooltip: 'Shake',
-            onPressed: () => _marbleBoardKey.currentState?.shake(),
+            icon: Icon(_tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),
+            tooltip: _tableMode ? 'Marble view' : 'Table view',
+            onPressed: () => setState(() => _tableMode = !_tableMode),
           ),
-          if (type == BoardType.flashcards)
+          if (!_tableMode)
+            IconButton(
+              icon: const Icon(Icons.vibration),
+              tooltip: 'Shake',
+              onPressed: () => _marbleBoardKey.currentState?.shake(),
+            ),
+          if (!_tableMode && type == BoardType.flashcards)
             IconButton(
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
@@ -383,7 +391,30 @@ class _BoardScreenState extends State<BoardScreen> {
     widget.onChanged();
   }
 
+  void _handleItemTap(BoardItem item) {
+    switch (widget.board.type) {
+      case BoardType.thoughts:
+      case BoardType.flashcards:
+        break;
+      case BoardType.todo:
+        setState(() => item.done = !item.done);
+        widget.onChanged();
+      case BoardType.checklist:
+      case BoardType.timer:
+      case BoardType.countdown:
+        _handleSequentialTap(item);
+    }
+  }
+
   Widget _buildContent() {
+    if (_tableMode) {
+      return ItemsTable(
+        board: widget.board,
+        onTap: _handleItemTap,
+        onLongPress: (item) => _itemDialog(existing: item),
+        onLongPressEmpty: () => _itemDialog(),
+      );
+    }
     return MarbleBoard(
       key: _marbleBoardKey,
       items: widget.board.items,
@@ -397,20 +428,7 @@ class _BoardScreenState extends State<BoardScreen> {
         setState(() => widget.board.items.remove(item));
         widget.onChanged();
       },
-      onTap: (item) {
-        switch (widget.board.type) {
-          case BoardType.thoughts:
-          case BoardType.flashcards:
-            break;
-          case BoardType.todo:
-            setState(() => item.done = !item.done);
-            widget.onChanged();
-          case BoardType.checklist:
-          case BoardType.timer:
-          case BoardType.countdown:
-            _handleSequentialTap(item);
-        }
-      },
+      onTap: _handleItemTap,
       onLongPress: (item) => _itemDialog(existing: item),
       onLongPressEmpty: () => _itemDialog(),
     );

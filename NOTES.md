@@ -66,6 +66,7 @@
 
 ## UI
 - Dark/light theme toggle (persisted via `shared_preferences`), available on all screens
+- Board view toggle in app bar: marble physics view (default) ↔ table view (`ItemsTable`) — columns adapt to board type (details, back, duration, done, size). Transient per session.
 - About dialog accessible from all screens, includes "Reset data" to restore default example boards
 - Default example boards are hardcoded in `home_screen.dart` (`_defaults()`), used on first launch and reset
 - Marble/net sizes scale with screen size (responsive, no hardcoded pixel values)
