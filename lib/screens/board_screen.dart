@@ -144,11 +144,15 @@ class _BoardScreenState extends State<BoardScreen> {
                   maxLines: 3,
                   minLines: 1,
                 ),
-                if (isThoughts) ...[
+                if (isThoughts || type.isSequential) ...[
                   const SizedBox(height: 12),
                   TextField(
                     controller: descController,
-                    decoration: const InputDecoration(hintText: 'Details (tap to expand)'),
+                    decoration: InputDecoration(
+                      hintText: isThoughts
+                          ? 'Details (tap to expand)'
+                          : 'Details (shown when active)',
+                    ),
                     maxLines: 5,
                     minLines: 2,
                   ),
