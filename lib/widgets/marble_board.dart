@@ -103,6 +103,7 @@ class MarbleBoardState extends State<MarbleBoard>
         m.vy += (_random.nextDouble() - 0.5) * 600;
       }
     });
+    _ensureTickerRunning();
   }
 
   void resetSizes() {
@@ -112,6 +113,49 @@ class MarbleBoardState extends State<MarbleBoard>
         m.radius = m.baseRadius * m.item.sizeMultiplier;
       }
     });
+    _ensureTickerRunning();
+  }
+
+  void _ensureTickerRunning() {
+    if (!_ticker.isActive) _ticker.start();
+  }
+
+  /// True when no marble is moving, scaling, expanding, or dying, and no drag
+  /// is in progress. Lets `_tick` stop the Ticker so `hasScheduledFrame` goes
+  /// false — unblocks `pumpAndSettle` once caught marbles converge to the net.
+  bool _isIdle() {
+    if (_dragIndex != null) return false;
+    if (_marbles.isEmpty) return true;
+
+    final hasNet = widget.boardType.hasNet;
+    final isSequential = widget.boardType.isSequential;
+    String? activeSeqId;
+    var hasActiveSeq = false;
+    if (isSequential) {
+      for (final i in widget.items) {
+        if (!i.done) {
+          activeSeqId = i.id;
+          hasActiveSeq = true;
+          break;
+        }
+      }
+    }
+
+    for (final m in _marbles) {
+      if (m.dying) return false;
+      if (m.vx != 0 || m.vy != 0) return false;
+
+      final scaleTarget = (hasNet && m.item.done) ? caughtScale : 1.0;
+      if ((m.scale - scaleTarget).abs() > 0.005) return false;
+
+      final isActiveChecklist =
+          hasActiveSeq && !m.item.done && m.item.id == activeSeqId;
+      final shouldExpand = m.expanded || isActiveChecklist;
+      final maxExpand = (_size.shortestSide * 0.45) / (m.radius * m.scale);
+      final expandTarget = shouldExpand ? maxExpand.clamp(1.0, 4.0) : 1.0;
+      if ((m.expandScale - expandTarget).abs() > 0.005) return false;
+    }
+    return true;
   }
   Size _size = Size.zero;
   int _tickCount = 0;
@@ -182,10 +226,16 @@ class MarbleBoardState extends State<MarbleBoard>
         m.dying = true;
       }
     }
+    // Parent rebuilds land here — items added/removed or `done` toggled
+    // (which moves the scale target). Wake the Ticker to resolve those.
+    _ensureTickerRunning();
   }
 
   void _tick(Duration elapsed) {
-    if (debugPauseMarblePhysics) return;
+    if (debugPauseMarblePhysics) {
+      if (_ticker.isActive) _ticker.stop();
+      return;
+    }
     if (_size == Size.zero) return;
 
     const dt = 1.0 / 60.0;
@@ -260,12 +310,12 @@ class MarbleBoardState extends State<MarbleBoard>
         m.vy = m.vy.abs() * damping;
       }
 
-      if (!isCaught) {
-        final speed = sqrt(m.vx * m.vx + m.vy * m.vy);
-        if (speed < 30) {
-          m.vx += (_random.nextDouble() - 0.5) * 40;
-          m.vy += (_random.nextDouble() - 0.5) * 40;
-        }
+      // Deadband — once friction + damping bring a marble below a pixel/s,
+      // snap to zero so `_isIdle` can detect rest. Without this, exponential
+      // friction asymptotes and `pumpAndSettle` never unblocks.
+      if (m.vx.abs() < 1 && m.vy.abs() < 1) {
+        m.vx = 0;
+        m.vy = 0;
       }
     }
 
@@ -317,6 +367,7 @@ class MarbleBoardState extends State<MarbleBoard>
     }
 
     _tickCount++;
+    if (_isIdle()) _ticker.stop();
     setState(() {});
   }
 
@@ -345,6 +396,7 @@ class MarbleBoardState extends State<MarbleBoard>
         return GestureDetector(
           onPanStart: (details) {
             _dragIndex = _hitTest(details.localPosition);
+            if (_dragIndex != null) _ensureTickerRunning();
           },
           onPanUpdate: (details) {
             if (_dragIndex != null && _dragIndex! < _marbles.length) {
@@ -353,6 +405,7 @@ class MarbleBoardState extends State<MarbleBoard>
               m.y = details.localPosition.dy;
               m.vx = 0;
               m.vy = 0;
+              _ensureTickerRunning();
             }
           },
           onPanEnd: (details) {
@@ -362,6 +415,7 @@ class MarbleBoardState extends State<MarbleBoard>
               m.vy = details.velocity.pixelsPerSecond.dy * 0.3;
             }
             _dragIndex = null;
+            _ensureTickerRunning();
           },
           onTapUp: (details) {
             final idx = _hitTest(details.localPosition);
@@ -375,6 +429,7 @@ class MarbleBoardState extends State<MarbleBoard>
                   }
                   marble.expanded = !marble.expanded;
                 });
+                _ensureTickerRunning();
               } else if (widget.boardType == BoardType.flashcards) {
                 if (marble.flipped) {
                   // Tap flipped card = wrong, flip back and grow slightly
@@ -384,6 +439,7 @@ class MarbleBoardState extends State<MarbleBoard>
                     marble.baseRadius = (marble.baseRadius * 1.15).clamp(minRadius, maxInflated);
                     marble.radius = (marble.baseRadius * marble.item.sizeMultiplier).clamp(0.0, _size.shortestSide * 0.4);
                   });
+                  _ensureTickerRunning();
                 } else {
                   // Tap unflipped card = reveal
                   setState(() => marble.flipped = true);
@@ -398,6 +454,7 @@ class MarbleBoardState extends State<MarbleBoard>
                   m.expanded = false;
                 }
               });
+              _ensureTickerRunning();
             }
           },
           onDoubleTapDown: (details) {
@@ -412,6 +469,7 @@ class MarbleBoardState extends State<MarbleBoard>
                     marble.flipped = false;
                   });
                   widget.onChanged();
+                  _ensureTickerRunning();
                 }
               }
             }

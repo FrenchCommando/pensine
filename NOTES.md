@@ -5,7 +5,8 @@
 
 ## Known Issues
 - `Failed to update ui::AXTree` errors on Windows — known Flutter bug with accessibility bridge during rapid widget updates (60fps ticker). Harmless, ignore.
-- **Integration tests can't use `pumpAndSettle`** (or anything that calls it, like `WidgetTester.scrollUntilVisible`) — the marble physics ticker runs continuously at 60fps, so `hasScheduledFrame` is never false and `pumpAndSettle` hangs forever. Use the `settle()` helper in `integration_test/test_helpers.dart` (timeout-bounded `pump()` loop) instead. For scrolling a widget into view, use `Scrollable.ensureVisible` wrapped by `settle()`, not `scrollUntilVisible`.
+- **Marble physics ticker idles when the board is at rest.** `MarbleBoardState._tick` stops the Ticker when `_isIdle()` holds (no drag, no dying marbles, all velocities zero, all scale/expandScale lerps within 0.005 of target). Deadband at the end of the physics loop snaps sub-1px/s velocities to zero so exponential friction doesn't asymptote forever. Interaction paths (`shake`, `resetSizes`, pan/tap/double-tap handlers, `_syncMarbles`) call `_ensureTickerRunning()` to restart it. Most common idle state: all items done on a net-having board — marbles converge to the net, velocities deadband to zero, ticker stops, `hasScheduledFrame` goes false, `pumpAndSettle` unblocks. Setting `debugPauseMarblePhysics = true` also stops the ticker on its next tick — screenshot tests rely on this. The `settle()` helper in `integration_test/test_helpers.dart` still exists as a bounded fallback for flows that intentionally keep physics alive mid-way (e.g. mid-fling).
+- **No low-speed wander nudge.** The old `if speed < 30: nudge` block in `_tick` was legacy from a vertical-gravity era and re-energized marbles every frame, preventing rest. Removed in favour of the idle detection above.
 
 ## Web Deployment
 - GitHub Pages: `https://frenchcommando.github.io/pensine/` (the app)
