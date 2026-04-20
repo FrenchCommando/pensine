@@ -1,0 +1,94 @@
+name: Integration
+
+# Real integration tests — `flutter drive` on each shipping platform.
+# Complements `ci.yml` (unit + widget tests on `flutter_tester`) by
+# exercising real platform channels: `shared_preferences`, `dart:html`
+# interop, PWA asset loading, iOS/Android native lifecycle. The stuff
+# `flutter_tester` can't see.
+#
+# Each job runs the same `integration_test/smoke_test.dart` suite so
+# any platform-specific breakage surfaces per-job, and the three jobs
+# run in parallel to minimize wall time.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      # Ubuntu Chrome ships without chromedriver. Install a matching pair
+      # via browser-actions/setup-chrome (keeps versions aligned; apt's
+      # chromium-chromedriver tends to lag behind Chrome major bumps).
+      - name: Install Chrome + chromedriver
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+
+      - name: Start chromedriver
+        run: chromedriver --port=4444 &
+
+      - name: Run integration smoke test
+        run: |
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/smoke_test.dart \
+            -d web-server \
+            --browser-name=chrome \
+            --driver-port=4444 \
+            --web-browser-flag=--headless=new \
+            --web-browser-flag=--no-sandbox \
+            --web-browser-flag=--disable-gpu
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+      - uses: ./.github/actions/setup-android-emulator-host
+
+      - name: Run integration smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          emulator-boot-timeout: 300
+          script: |
+            flutter drive \
+              --driver=test_driver/integration_test.dart \
+              --target=integration_test/smoke_test.dart
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      - name: Boot simulator
+        run: bash tool/boot_ios_simulator.sh "iPhone 16 Pro Max"
+
+      # macOS-latest simulator flake (documented in NOTES.md): Xcode build
+      # sometimes hangs with no output until job timeout. Per-attempt
+      # timeout + one retry absorbs the typical one-shot flake; same
+      # pattern artifacts.yml uses.
+      - name: Run integration smoke test on simulator
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          command: |
+            flutter drive \
+              --driver=test_driver/integration_test.dart \
+              --target=integration_test/smoke_test.dart \
+              -d "$UDID"

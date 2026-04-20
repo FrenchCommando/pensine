@@ -1,4 +1,9 @@
-name: Screenshots
+name: Artifacts
+
+# Generates store screenshots + preview video for iOS & Android. Not a
+# regression gate — integration behavior is gated by `integration.yml`.
+# Manual because each run is expensive (emulator boot) and artifacts are
+# only needed when preparing a store submission.
 
 on:
   workflow_dispatch:  # manual trigger only

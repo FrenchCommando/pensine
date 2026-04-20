@@ -154,6 +154,69 @@ void main() {
     });
   });
 
+  group('Lap serialization', () {
+    test('round-trip preserves all fields', () {
+      final lap = Lap(itemId: 'item-42', elapsedSeconds: 17);
+      final restored = Lap.fromJson(lap.toJson());
+      expect(restored.id, lap.id);
+      expect(restored.itemId, 'item-42');
+      expect(restored.elapsedSeconds, 17);
+      expect(restored.recordedAt, lap.recordedAt);
+    });
+
+    test('board with laps round-trips them', () {
+      final board = Board(
+        name: 'Timer',
+        type: BoardType.timer,
+        items: [BoardItem(content: 'Step 1')],
+        laps: [
+          Lap(itemId: 'a', elapsedSeconds: 5),
+          Lap(itemId: 'b', elapsedSeconds: 12),
+        ],
+      );
+      final restored = Board.fromJson(board.toJson());
+      expect(restored.laps.length, 2);
+      expect(restored.laps[0].itemId, 'a');
+      expect(restored.laps[1].elapsedSeconds, 12);
+    });
+  });
+
+  group('BoardItem.cloneWithNewId', () {
+    test('preserves all fields except id', () {
+      final item = BoardItem(
+        content: 'Q',
+        description: 'D',
+        backContent: 'A',
+        done: true,
+        colorIndex: 3,
+        sizeMultiplier: 1.7,
+        durationSeconds: 60,
+      );
+      final clone = item.cloneWithNewId();
+      expect(clone.id, isNot(item.id));
+      expect(clone.content, 'Q');
+      expect(clone.description, 'D');
+      expect(clone.backContent, 'A');
+      expect(clone.done, true);
+      expect(clone.colorIndex, 3);
+      expect(clone.sizeMultiplier, 1.7);
+      expect(clone.durationSeconds, 60);
+    });
+  });
+
+  group('Board.copyWithNewIds laps handling', () {
+    test('drops laps because their itemIds would be stale', () {
+      final original = Board(
+        name: 'Timer',
+        type: BoardType.timer,
+        items: [BoardItem(content: 'Step')],
+        laps: [Lap(itemId: 'old', elapsedSeconds: 1)],
+      );
+      final copy = original.copyWithNewIds();
+      expect(copy.laps, isEmpty);
+    });
+  });
+
   group('Board list reorder', () {
     test('reorder logic matches ReorderableListView callback', () {
       final boards = [

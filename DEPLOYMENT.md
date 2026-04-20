@@ -90,7 +90,7 @@
 - Content rating (IARC) questionnaire
 - Privacy policy URL (same `https://frenchcommando.github.io/pensine/privacy.html` used for Play/App Store)
 - Age rating, price (Free), accessibility notes
-- Screenshots — Partner Center requires at least one 1366x768 or larger; reuse the web/mobile screenshots from `screenshots.yml` or capture Windows-native ones
+- Screenshots — Partner Center requires at least one 1366x768 or larger; reuse the web/mobile screenshots from `artifacts.yml` or capture Windows-native ones
 - First submission must go through manual review (~hours to a few days)
 
 **Phase rollout:**
@@ -111,7 +111,7 @@
 
 ## Screenshots & Preview Video
 
-Automated via `.github/workflows/screenshots.yml` (manual trigger). All multi-step orchestration lives in shell scripts under `tool/` because the `reactivecircus/android-emulator-runner` action runs each YAML `script:` line as a separate `sh -c`, fragmenting variables.
+Automated via `.github/workflows/artifacts.yml` (manual trigger). All multi-step orchestration lives in shell scripts under `tool/` because the `reactivecircus/android-emulator-runner` action runs each YAML `script:` line as a separate `sh -c`, fragmenting variables.
 
 Test helpers (`settle`, `linger`, `scrollTo`) are shared between screenshot and preview tests in `integration_test/test_helpers.dart`.
 

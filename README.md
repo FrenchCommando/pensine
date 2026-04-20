@@ -5,7 +5,8 @@
 # Pensine
 
 [![CI](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml)
-[![Screenshots](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml)
+[![Integration](https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml)
+[![Artifacts](https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml)
 [![Deploy to GitHub Pages](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml)
 [![Release](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml)
 

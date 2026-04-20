@@ -662,6 +662,8 @@ class _MarblePainter extends CustomPainter {
           canvas,
           Offset(m.x - descPainter.width / 2, startY + titlePainter.height + 8),
         );
+        titlePainter.dispose();
+        descPainter.dispose();
       } else {
         final maxWidth = r * 1.4;
         final isSingleWord = !displayText.contains(' ');
@@ -688,7 +690,9 @@ class _MarblePainter extends CustomPainter {
               maxLines: isSingleWord ? 1 : 3,
             );
             painter.layout(maxWidth: baseMaxW);
-            if (painter.height <= baseMaxH && !painter.didExceedMaxLines) return size;
+            final fits = painter.height <= baseMaxH && !painter.didExceedMaxLines;
+            painter.dispose();
+            if (fits) return size;
             size *= 0.85;
           }
           return size;
@@ -712,6 +716,7 @@ class _MarblePainter extends CustomPainter {
           canvas,
           Offset(m.x - textPainter.width / 2, m.y - textPainter.height / 2),
         );
+        textPainter.dispose();
       }
 
       // Arrow indicator for flashcards
@@ -733,6 +738,7 @@ class _MarblePainter extends CustomPainter {
           canvas,
           Offset(m.x - arrowPainter.width / 2, m.y + r * 0.55),
         );
+        arrowPainter.dispose();
       }
 
       if (isSequential) {
@@ -755,6 +761,7 @@ class _MarblePainter extends CustomPainter {
             canvas,
             Offset(m.x - stepPainter.width / 2, m.y + r * 0.5),
           );
+          stepPainter.dispose();
         }
       }
 
@@ -817,6 +824,7 @@ class _MarblePainter extends CustomPainter {
         canvas,
         Offset(cx - countPainter.width / 2, cy + netSize * 0.6 + 8),
       );
+      countPainter.dispose();
     }
   }
 

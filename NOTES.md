@@ -128,6 +128,25 @@
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
 - Implementation in `lib/services/board_io.dart` with conditional imports for web vs native
 
+## Testing
+
+Three layers, each with a home:
+
+- **Unit + widget tests** — `test/` directory, run via `flutter test` (~5s, 69 tests). Gated on push/PR by `.github/workflows/ci.yml`. Covers: model serialization + negative `fromJson` cases, `.pensine` v1/v2 golden fixtures, `LocalStorage` round-trip / race regression / corrupted-file resilience, `ItemsTable` rendering, `BoardScreen` tap transitions (todo toggle, sequential advance/rewind, timer lap rules, start-marble sentinel), full-app boot + nav flow (`test/app_flow_test.dart`), dialog disposal regression (`test/dialog_disposal_test.dart`).
+- **Integration tests** — `integration_test/smoke_test.dart`, run via `flutter drive` on real targets. Gated on push/PR by `.github/workflows/integration.yml` with three parallel jobs (chrome / android / ios). Covers the same three scenarios (boot → open board → back, defaults render, create board) but with real platform channels.
+- **Artifact generation** — `integration_test/screenshot_test.dart` + `preview_test.dart`, run via `.github/workflows/artifacts.yml` (manual trigger only, on iOS + Android emulators/simulators). Produces store screenshots + preview videos. Not a regression gate.
+
+### Leak tracking
+
+- `test/flutter_test_config.dart` auto-configures `LeakTesting.settings.withTrackedAll()` for every test in `test/`. Any `Disposable` (TextEditingController, AnimationController, ValueNotifier, FocusNode, Ticker, TextPainter, ScrollController, …) that becomes GC-unreachable without `dispose()` fails the test.
+- Ignored: `ImageStreamCompleterHandle` + `_LiveImage` — framework-internal image-cache singletons with no user-land dispose contract.
+- **TextPainter in paint loops must be disposed.** `TextPainter` holds native `ui.Paragraph` buffers — undisposed painters leak native memory even after Dart-side GC. `marble_board.dart` creates 7 per-paint (title, description, fit-measurement, body text, flashcard arrow, step number, net count); all are disposed after their final `paint()` / `layout()`. New painters added to paint code must follow the same pattern or leak_tracker will fail CI. Found this leak on first leak-tracker run.
+- **TextEditingController in dialogs must be disposed.** Controllers created inline inside `showDialog` builders must be disposed via `.whenComplete(() => controller.dispose())` (or try/finally for the `await showDialog` variant). Board-screen `_itemDialog` creates 4 per open; home-screen `_promptName` creates 1. `test/dialog_disposal_test.dart` drives multiple open/close cycles as the regression guard.
+
+### Principle
+
+Every bugfix or feature ships with a test. Unit/widget if `flutter_tester` can see it; integration if it needs a real platform channel. If no tool can observe it, that's a signal — question whether the bug actually matters, or find the tool (leak_tracker was the answer for the dispose class of bugs).
+
 ## License
 - Proprietary / All Rights Reserved (see `LICENSE`)
 
@@ -155,7 +174,7 @@
 - Marketing / website URL: `https://frenchcommando.github.io/pensine/site/` (landing page in `web/site/index.html`; the Pages root `/` is the live web app itself)
 - Target audience: declared **13+** to skip Designed for Families / COPPA flow. The app collects nothing, so no kids-specific disclosures apply, but marketing to under-13s would force the extra review.
 - Data safety: declared **no data collected, no data shared** — matches the privacy policy and the actual app (no network calls).
-- Screenshot AVD → Play tier: `pixel_7` = phone, `nexus_7` = 7" tablet, `pixel_tablet` = 10" tablet. The `screenshots.yml` matrix produces one artifact per tier.
+- Screenshot AVD → Play tier: `pixel_7` = phone, `nexus_7` = 7" tablet, `pixel_tablet` = 10" tablet. The `artifacts.yml` matrix produces one artifact per tier.
 
 ### Dev
 - `flutter run -d windows` (or `-d chrome`, `-d macos`, etc.)
@@ -199,7 +218,8 @@
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
 - `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
 - `.github/workflows/build-windows.yml` — push/PR to main: `build` job does `flutter build windows --release` (always) and `dart run msix:create --store` (push only, uses `MSIX_*` secrets); `validate` job runs WACK (`appcert.exe`) against the MSIX and uploads the report. MSIX + WACK are gated on push-to-main via `if: github.event_name == 'push'` so fork PRs (no secrets) don't redly fail — they just exercise the compilation path
-- `.github/workflows/screenshots.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md). iOS jobs wrap the test/preview step in `nick-fields/retry@v3` (per-attempt timeout + 1 retry) — `macos-latest` simulators intermittently hang after Xcode build with no output until the job timeout. Different device hangs each run, so it's environmental flake, not a real bug. Android jobs run KVM-accelerated, no flake observed.
+- `.github/workflows/artifacts.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md). iOS jobs wrap the test/preview step in `nick-fields/retry@v3` (per-attempt timeout + 1 retry) — `macos-latest` simulators intermittently hang after Xcode build with no output until the job timeout. Different device hangs each run, so it's environmental flake, not a real bug. Android jobs run KVM-accelerated, no flake observed.
+- `.github/workflows/integration.yml` — runs on push/PR to main; three parallel jobs (chrome / android / ios) each run `flutter drive` against `integration_test/smoke_test.dart` on their respective platform. Complements `ci.yml` (unit/widget tests on `flutter_tester`) by exercising real platform channels: actual `shared_preferences`, web `dart:html` bindings, Android/iOS native lifecycle. Chrome uses `browser-actions/setup-chrome@v2` + chromedriver; Android uses `reactivecircus/android-emulator-runner@v2` (KVM) with the same pixel_7 profile as `artifacts.yml`; iOS uses `macos-latest` + `tool/boot_ios_simulator.sh` wrapped in `nick-fields/retry@v3` (same flake mitigation as artifacts.yml). Wall time ~10-15 min dominated by iOS Xcode build.
 - `.github/workflows/release.yml` — manual trigger only (`workflow_dispatch`); uploads to Play internal + TestFlight + publishes signed APK as a GitHub Release tagged `build-<run_number>` (see DEPLOYMENT.md)
 - Local composite actions in `.github/actions/`: `setup-flutter` (Flutter SDK + pub get) and `setup-android-emulator-host` (KVM + JDK 25). Caller must run `actions/checkout@v5` immediately before `- uses: ./.github/actions/<name>` — local composite actions are loaded from disk, so the checkout has to happen first.
 - Orchestration scripts in `tool/` (`run_screenshot_test.sh`, `run_ios_preview.sh`, `run_android_preview.sh`, `boot_ios_simulator.sh`, `setup_ios_status_bar.sh`, `setup_android_status_bar.sh`, `screenshot_server.py`). Multi-line bash with shared variables must live in a script file because `reactivecircus/android-emulator-runner` runs each YAML `script:` line as a separate `sh -c`.
@@ -220,7 +240,7 @@
   - `setup_wsl_android.sh` — idempotent installer (Temurin JDK 25 via Adoptium apt, Android SDK API 35 x86_64, Flutter SDK, AVDs)
   - `boot_android_emulator.sh` — boots the AVD and configures the status bar
   - `wsl_env.sh` — canonical env (JAVA_HOME, ANDROID_HOME, FLUTTER_HOME, PATH); sourced by setup, the `.bat`, and `~/.bashrc`
-  - `screenshot_test.bat` — pixel_7 (phone), `screenshot_tablet7.bat` — nexus_7 (7" tablet), `screenshot_tablet.bat` — pixel_tablet (10" tablet). One .bat per device by design — swiftshader can't reliably finish the full suite back-to-back, so capturing all three store tiers in one go is the `screenshots.yml` workflow's job (KVM matrix run on CI)
+  - `screenshot_test.bat` — pixel_7 (phone), `screenshot_tablet7.bat` — nexus_7 (7" tablet), `screenshot_tablet.bat` — pixel_tablet (10" tablet). One .bat per device by design — swiftshader can't reliably finish the full suite back-to-back, so capturing all three store tiers in one go is the `artifacts.yml` workflow's job (KVM matrix run on CI)
   - `preview_test.bat` — setup + boot + preview walkthrough recording for `pixel_7`
   - `local/IOS/` — macOS VM setup via OSX-KVM (QEMU) for iOS testing; see scripts inside
 - Requires WSL2 with nested virtualization (toggle in the WSL Settings app → System tab)

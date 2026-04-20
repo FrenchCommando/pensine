@@ -32,6 +32,7 @@ dev_dependencies:
   flutter_driver:
     sdk: flutter
   msix: ^3.16.13
+  leak_tracker_flutter_testing: ^3.0.0
 
 flutter_launcher_icons:
   android: true
