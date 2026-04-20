@@ -288,36 +288,40 @@ class _HomeScreenState extends State<HomeScreen> {
     String submitLabel = 'OK',
   }) async {
     final controller = TextEditingController(text: initial);
-    String? result;
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        void submit() {
-          final name = controller.text.trim();
-          if (name.isEmpty) return;
-          result = name;
-          Navigator.pop(ctx);
-        }
-        return AlertDialog(
-          backgroundColor: PensineColors.surface(context),
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: InputDecoration(hintText: hint),
-            onSubmitted: (_) => submit(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+    try {
+      String? result;
+      await showDialog(
+        context: context,
+        builder: (ctx) {
+          void submit() {
+            final name = controller.text.trim();
+            if (name.isEmpty) return;
+            result = name;
+            Navigator.pop(ctx);
+          }
+          return AlertDialog(
+            backgroundColor: PensineColors.surface(context),
+            title: Text(title),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(hintText: hint),
+              onSubmitted: (_) => submit(),
             ),
-            FilledButton(onPressed: submit, child: Text(submitLabel)),
-          ],
-        );
-      },
-    );
-    return result;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(onPressed: submit, child: Text(submitLabel)),
+            ],
+          );
+        },
+      );
+      return result;
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _pickColor({

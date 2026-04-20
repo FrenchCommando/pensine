@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb, TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/board.dart';
 import '../models/workspace.dart';
@@ -35,7 +35,8 @@ class LocalStorage {
   static Future<List<Board>> loadBoards() async {
     try {
       return _isDesktop ? await _loadDesktop() : await _loadPrefs();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('LocalStorage.loadBoards failed: $e\n$st');
       return [];
     }
   }
@@ -67,7 +68,8 @@ class LocalStorage {
       return _isDesktop
           ? await _loadWorkspacesDesktop()
           : await _loadWorkspacesPrefs();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('LocalStorage.loadWorkspaces failed: $e\n$st');
       return [];
     }
   }
@@ -125,7 +127,14 @@ class LocalStorage {
     }
 
     final files = await loadAllBoardFiles();
-    final boards = files.map((data) => Board.fromJson(jsonDecode(data))).toList();
+    final boards = <Board>[];
+    for (final data in files) {
+      try {
+        boards.add(Board.fromJson(jsonDecode(data)));
+      } catch (e) {
+        debugPrint('Skipping unreadable board file: $e');
+      }
+    }
 
     final order = await loadBoardOrderFile();
     if (order != null) _applyOrder(boards, order, (b) => b.id);
@@ -151,7 +160,12 @@ class LocalStorage {
     final boards = <Board>[];
     for (final id in ids) {
       final data = prefs.getString(PrefKeys.boardData(id));
-      if (data != null) boards.add(Board.fromJson(jsonDecode(data)));
+      if (data == null) continue;
+      try {
+        boards.add(Board.fromJson(jsonDecode(data)));
+      } catch (e) {
+        debugPrint('Skipping unreadable board $id: $e');
+      }
     }
     return boards;
   }
@@ -177,8 +191,14 @@ class LocalStorage {
 
   static Future<List<Workspace>> _loadWorkspacesDesktop() async {
     final files = await loadAllWorkspaceFiles();
-    final workspaces =
-        files.map((data) => Workspace.fromJson(jsonDecode(data))).toList();
+    final workspaces = <Workspace>[];
+    for (final data in files) {
+      try {
+        workspaces.add(Workspace.fromJson(jsonDecode(data)));
+      } catch (e) {
+        debugPrint('Skipping unreadable workspace file: $e');
+      }
+    }
 
     final order = await loadWorkspaceOrderFile();
     if (order != null) _applyOrder(workspaces, order, (w) => w.id);
@@ -191,7 +211,12 @@ class LocalStorage {
     final workspaces = <Workspace>[];
     for (final id in ids) {
       final data = prefs.getString(PrefKeys.workspaceData(id));
-      if (data != null) workspaces.add(Workspace.fromJson(jsonDecode(data)));
+      if (data == null) continue;
+      try {
+        workspaces.add(Workspace.fromJson(jsonDecode(data)));
+      } catch (e) {
+        debugPrint('Skipping unreadable workspace $id: $e');
+      }
     }
     return workspaces;
   }

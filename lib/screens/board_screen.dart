@@ -259,7 +259,12 @@ class _BoardScreenState extends State<BoardScreen> {
         ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      controller.dispose();
+      descController.dispose();
+      backController.dispose();
+      durationController.dispose();
+    });
   }
 
   @override
