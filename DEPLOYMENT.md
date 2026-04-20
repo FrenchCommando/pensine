@@ -53,7 +53,7 @@
 
 **No local Mac — fully CI-based:**
 - GitHub Actions macOS runners (free for public repos)
-- `.github/workflows/build-ios.yml` — builds iOS (no signing) on push to main, proves the app compiles
+- `ci.yml`'s `build-ios` job — builds iOS (no signing) on push/PR to main, proves the app compiles
 - Release signing + TestFlight upload: see Release Automation below
 - Not using `fastlane match` (solo-dev, CI-only signing → GitHub Secrets directly is simpler)
 
@@ -74,7 +74,7 @@ release tagged `build-<run_number>`. Appends to the release the
 android-release job creates — `softprops/action-gh-release@v2` is
 create-or-update on tag.
 
-`build-windows.yml` additionally uploads the zip as a workflow artifact
+`ci.yml`'s `build-windows` job additionally uploads the zip as a workflow artifact
 on every push/PR, so any green build is downloadable for QA without
 cutting a formal release.
 
@@ -100,7 +100,7 @@ zero code change.
 
 **Build format:** MSIX (`dart run msix:create --store`). Microsoft re-signs the package during Store upload — the generated MSIX is unsigned and not directly sideloadable.
 
-**CI workflow** (`build-windows.yml` — push/PR triggers, not `release.yml`):
+**CI workflow** (`ci.yml`'s `build-windows` + `validate-msix` jobs — push/PR triggers, not `release.yml`):
 - Runs on `windows-latest` (Windows SDK, MakeAppx, SignTool preinstalled).
 - `build` job: `flutter build windows --release` on every push/PR (proves compilation). On push-to-main only (where secrets are available), additionally runs `dart run msix:create --store` with identity flags injected from Secrets.
 - `validate` job (push-to-main only, `needs: build`): downloads the MSIX artifact, runs WACK (`appcert.exe`) against it, uploads `wack-report.xml`. ~10-15 min.
@@ -123,12 +123,12 @@ zero code change.
 
 **Phase rollout:**
 1. ✅ `msix` dev dep + `msix_config` in `pubspec.yaml` (non-identity fields only)
-2. ✅ `build-windows.yml` `build` job producing MSIX artifact on push to main
-3. ✅ `build-windows.yml` `validate` job running Windows App Certification Kit (WACK / `appcert.exe`) against the MSIX artifact — report uploaded as `wack-report-build-<N>`
+2. ✅ `ci.yml`'s `build-windows` job producing MSIX artifact on push to main
+3. ✅ `ci.yml`'s `validate-msix` job running Windows App Certification Kit (WACK / `appcert.exe`) against the MSIX artifact — report uploaded as `wack-report-build-<N>`
 4. ⏳ Partner Center account + app reservation (manual — individual registration is free; ID-verification flow)
 5. ⏳ GitHub Secrets populated (`MSIX_PUBLISHER_DISPLAY_NAME`, `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER`, `MSIX_STORE_ID`)
 6. ⏳ First manual upload to Partner Center (download MSIX artifact from the Actions run)
-7. ⏳ Partner Center Submission API automation — new `windows-release` job in `release.yml` that downloads the most recent `build-windows.yml` MSIX artifact and uploads via Azure AD app registration + `msstore-cli` or direct API calls
+7. ⏳ Partner Center Submission API automation — new `windows-store-release` job in `release.yml` that downloads the most recent MSIX artifact from `ci.yml` and uploads via Azure AD app registration + `msstore-cli` or direct API calls
 8. ⏳ `.pensine` file association on Windows (MSIX manifest `FileTypeAssociation` entry + Dart-side command-line arg handling in `pending_import_native.dart`)
 
 **Required GitHub Secrets (Windows):**

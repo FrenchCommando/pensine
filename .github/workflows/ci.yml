@@ -6,10 +6,11 @@ on:
   pull_request:
     branches: [main]
 
-# Three parallel jobs instead of one serial chain. Faster wall time +
-# failure surfaces which check broke without scrolling a combined log.
+# Parallel jobs — static + compile checks that must pass before merge.
+# Integration tests live in `integration.yml` (separate workflow — slower,
+# real-platform-channels, different failure class).
 # `deploy.yml` triggers on this workflow's overall success (all jobs must
-# pass), so the split is behaviorally transparent to the Pages deploy.
+# pass) to publish the web build to GitHub Pages.
 
 jobs:
   analyze:
@@ -32,3 +33,124 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
       - run: flutter build web "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+  build-ios:
+    # Proves the app compiles on iOS (no signing — signing is release-only).
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter build ios --release --no-codesign "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+  build-windows:
+    # Compile + zip the plain-exe sideload bundle on every push/PR.
+    # MSIX/Store steps live downstream — gated on `MSIX_PUBLISHER` secret
+    # so they skip cleanly until the Partner Center account lands.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    outputs:
+      msix_enabled: ${{ steps.msix_check.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      - name: Extract version from pubspec.yaml
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "PENSINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build Windows release
+        shell: bash
+        run: flutter build windows --release --build-number=${{ github.run_number }} "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      # Plain-exe zip: users download → extract → run pensine.exe.
+      # SmartScreen warning on first launch is expected (unsigned).
+      - name: Zip Windows release
+        shell: pwsh
+        run: |
+          $zip = "pensine-v${env:PENSINE_VERSION}-build${{ github.run_number }}-windows.zip"
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $zip
+          "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+
+      - name: Upload Windows zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pensine-windows-build-${{ github.run_number }}
+          path: ${{ env.ZIP_NAME }}
+          if-no-files-found: error
+
+      - name: Check if MSIX secrets are configured
+        id: msix_check
+        shell: bash
+        env:
+          MSIX_PUBLISHER: ${{ secrets.MSIX_PUBLISHER }}
+        run: |
+          if [ -n "$MSIX_PUBLISHER" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "MSIX build skipped: MSIX_PUBLISHER secret not set."
+          fi
+
+      - name: Build MSIX for Microsoft Store
+        if: github.event_name == 'push' && steps.msix_check.outputs.enabled == 'true'
+        shell: bash
+        env:
+          MSIX_PUBLISHER_DISPLAY_NAME: ${{ secrets.MSIX_PUBLISHER_DISPLAY_NAME }}
+          MSIX_IDENTITY_NAME: ${{ secrets.MSIX_IDENTITY_NAME }}
+          MSIX_PUBLISHER: ${{ secrets.MSIX_PUBLISHER }}
+        run: |
+          dart run msix:create \
+            --store \
+            --version="${PENSINE_VERSION}.0" \
+            --publisher-display-name="$MSIX_PUBLISHER_DISPLAY_NAME" \
+            --identity-name="$MSIX_IDENTITY_NAME" \
+            --publisher="$MSIX_PUBLISHER"
+
+      - name: Rename MSIX
+        if: github.event_name == 'push' && steps.msix_check.outputs.enabled == 'true'
+        shell: bash
+        run: mv build/windows/msix/pensine.msix "pensine-v${PENSINE_VERSION}-build${{ github.run_number }}.msix"
+
+      - name: Upload MSIX artifact
+        if: github.event_name == 'push' && steps.msix_check.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pensine-msix-build-${{ github.run_number }}
+          path: pensine-v${{ env.PENSINE_VERSION }}-build${{ github.run_number }}.msix
+          if-no-files-found: error
+
+  validate-msix:
+    # WACK certification against the MSIX artifact, when one was produced.
+    if: github.event_name == 'push' && needs.build-windows.outputs.msix_enabled == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: build-windows
+    steps:
+      - name: Download MSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pensine-msix-build-${{ github.run_number }}
+          path: msix
+
+      - name: Run Windows App Certification Kit
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem msix\*.msix | Select-Object -First 1
+          Write-Host "Validating $($msix.FullName)"
+          $appcert = 'C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe'
+          & $appcert reset
+          & $appcert test -appxpackagepath $msix.FullName -reportoutputpath wack-report.xml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload WACK report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wack-report-build-${{ github.run_number }}
+          path: wack-report.xml
+          if-no-files-found: warn
