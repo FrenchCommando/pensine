@@ -7,7 +7,7 @@
 
 A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your way through different board types — lofi vibes, gamified interactions, no backend required.
 
-**Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/)
+**Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/) · [Website](https://frenchcommando.github.io/pensine/site/)
 
 **Android beta** — to install via Play Store:
 - [Testers group](https://groups.google.com/g/pensine-testers) — join first (required for access)

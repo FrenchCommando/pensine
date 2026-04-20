@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/board.dart';
 import '../theme.dart';
 import '../utils/pluralize.dart';
+
+const String _siteUrl = 'https://frenchcommando.github.io/pensine/site/';
 
 Widget _boardTypeRow(IconData icon, String text) {
   return Padding(
@@ -71,8 +74,20 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
           ),
           SizedBox(height: 8),
           Text(
-            'Build: $_buildDate',
+            'Build ${info.buildNumber} · $_buildDate',
             style: TextStyle(fontSize: 12, color: PensineColors.muted(context)),
+          ),
+          SizedBox(height: 8),
+          InkWell(
+            onTap: () => launchUrl(Uri.parse(_siteUrl), mode: LaunchMode.externalApplication),
+            child: Text(
+              'frenchcommando.github.io/pensine',
+              style: TextStyle(
+                fontSize: 12,
+                color: PensineColors.accent,
+                decoration: TextDecoration.underline,
+              ),
+            ),
           ),
         ],
       )),

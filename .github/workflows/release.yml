@@ -58,7 +58,7 @@ jobs:
           echo "PENSINE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Build release APK
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        run: flutter build apk --release --build-number=${{ github.run_number }} "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk "pensine-v${PENSINE_VERSION}-build${{ github.run_number }}.apk"
@@ -158,6 +158,7 @@ jobs:
         run: |
           flutter build ipa --release \
             --build-number=${{ github.run_number }} \
+            "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
 
       - name: Upload to TestFlight
