@@ -128,11 +128,18 @@
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
 - Implementation in `lib/services/board_io.dart` with conditional imports for web vs native
 
+## Architecture
+
+- **`BoardsController`** (`lib/controllers/boards_controller.dart`) is a `ChangeNotifier` that owns workspaces, boards, collapsed state, loading flag, and the persistence calls. `HomeScreen` holds one, listens for changes, and renders. Don't call `LocalStorage` from screens — go through the controller so mutations are atomic (in-memory + disk + notify).
+- **`applyBoardTap`** (`lib/behavior/board_tap.dart`) is a pure function that encodes per-board-type tap rules. Takes `(Board, BoardItem, stepStart?)`, mutates `board` in place, returns a `BoardTapOutcome` describing what the screen should do next (fire haptics, start/stop/freeze timers, persist). The screen stays thin — it's an orchestrator, not a state machine. `test/board_tap_test.dart` exercises every tap variant directly (no widget pump).
+- **Default seed data** lives in `lib/data/defaults.dart` as `buildDefaults()`. Used on first launch and after Reset. Pure data — no `build()`, no `BuildContext`.
+- **Adding a new board type**: (a) add the enum value + extension metadata in `lib/models/board.dart`; (b) add one case to the switch in `applyBoardTap`; (c) add any type-specific UI branches in `board_screen.dart` / `items_table.dart` / `marble_board.dart` only if the visual/interaction is genuinely different. The pre-refactor pattern of switch statements scattered across 5 files is the anti-pattern to avoid.
+
 ## Testing
 
 Three layers, each with a home:
 
-- **Unit + widget tests** — `test/` directory, run via `flutter test` (~5s, 69 tests). Gated on push/PR by `.github/workflows/ci.yml`. Covers: model serialization + negative `fromJson` cases, `.pensine` v1/v2 golden fixtures, `LocalStorage` round-trip / race regression / corrupted-file resilience, `ItemsTable` rendering, `BoardScreen` tap transitions (todo toggle, sequential advance/rewind, timer lap rules, start-marble sentinel), full-app boot + nav flow (`test/app_flow_test.dart`), dialog disposal regression (`test/dialog_disposal_test.dart`).
+- **Unit + widget tests** — `test/` directory, run via `flutter test` (~20s, 94 tests). Gated on push/PR by `.github/workflows/ci.yml`. Covers: model serialization + negative `fromJson` cases, `.pensine` v1/v2 golden fixtures, `LocalStorage` round-trip / race regression / corrupted-file resilience, `ItemsTable` rendering, `BoardScreen` tap transitions (todo toggle, sequential advance/rewind, timer lap rules, start-marble sentinel), full-app boot + nav flow (`test/app_flow_test.dart`), dialog disposal regression (`test/dialog_disposal_test.dart`).
 - **Integration tests** — `integration_test/smoke_test.dart`, run via `flutter drive` on real targets. Gated on push/PR by `.github/workflows/integration.yml` with three parallel jobs (chrome / android / ios). Covers the same three scenarios (boot → open board → back, defaults render, create board) but with real platform channels.
 - **Artifact generation** — `integration_test/screenshot_test.dart` + `preview_test.dart`, run via `.github/workflows/artifacts.yml` (manual trigger only, on iOS + Android emulators/simulators). Produces store screenshots + preview videos. Not a regression gate.
 

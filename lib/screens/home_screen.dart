@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../controllers/boards_controller.dart';
 import '../main.dart';
 import '../models/board.dart';
 import '../models/workspace.dart';
 import '../services/board_io.dart';
 import '../services/pending_import.dart';
-import '../storage/local_storage.dart';
 import '../theme.dart';
 import '../utils/pluralize.dart';
 import '../widgets/about_dialog.dart';
@@ -25,260 +24,38 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Workspace> _workspaces = [];
-  List<Board> _boards = [];
-  Map<String, List<Board>> _byWorkspace = {};
-  Set<String> _collapsed = {};
-  bool _loading = true;
+  final _ctrl = BoardsController();
+
+  // Local UI state only — view-level, not persisted/shared.
+  // (Everything else now lives on `_ctrl`.)
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  void _rebuildIndex() {
-    _byWorkspace = {};
-    for (final b in _boards) {
-      (_byWorkspace[b.workspaceId] ??= []).add(b);
-    }
-  }
-
-  Future<void> _load() async {
-    final results = await Future.wait([
-      LocalStorage.loadWorkspaces(),
-      LocalStorage.loadBoards(),
-    ]);
-    var workspaces = results[0].cast<Workspace>();
-    var boards = results[1].cast<Board>();
-
-    // Migration: if no workspaces exist, create defaults or migrate existing boards
-    if (workspaces.isEmpty) {
-      if (boards.isEmpty) {
-        final defaults = _defaults();
-        workspaces = defaults.workspaces;
-        boards = defaults.boards;
-      } else {
-        // Existing boards from before workspaces — put them in "General"
-        final general = Workspace(name: 'General');
-        for (final board in boards) {
-          board.workspaceId = general.id;
-        }
-        workspaces = [general];
-      }
-      await LocalStorage.saveAllWorkspaces(workspaces);
-      await LocalStorage.saveAllBoards(boards);
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    final collapsedList = prefs.getStringList(PrefKeys.collapsedWorkspaces) ?? [];
-
-    setState(() {
-      _workspaces = workspaces;
-      _boards = boards;
-      _collapsed = collapsedList.toSet();
-      _loading = false;
-      _rebuildIndex();
+    _ctrl.addListener(_onControllerChanged);
+    _ctrl.load().then((_) {
+      if (!mounted) return;
+      listenForPendingImports(_handlePendingImport);
     });
+  }
 
-    listenForPendingImports(_handlePendingImport);
+  @override
+  void dispose() {
+    _ctrl.removeListener(_onControllerChanged);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _handlePendingImport(String content) async {
     if (!mounted) return;
-    final result = await BoardIO.importContent(content, context, _workspaces);
-    await _applyImportResult(result);
-  }
-
-  Future<void> _applyImportResult(ImportResult? result) async {
-    if (result == null || !mounted) return;
-    setState(() {
-      if (result.workspace != null) {
-        _workspaces.add(result.workspace!);
-      }
-      _boards.addAll(result.boards);
-      _rebuildIndex();
-    });
-    await Future.wait([
-      if (result.workspace != null) ...[
-        LocalStorage.saveWorkspace(result.workspace!),
-        LocalStorage.saveWorkspaceOrder(_workspaceIds()),
-      ],
-      ...result.boards.map(LocalStorage.saveBoard),
-      LocalStorage.saveBoardOrder(_boardIds()),
-    ]);
-  }
-
-  ({List<Workspace> workspaces, List<Board> boards}) _defaults() {
-    final welcome = Workspace(name: 'Welcome', colorIndex: 4);
-    final cooking = Workspace(name: 'Cooking Recipes', colorIndex: 0);
-    final workout = Workspace(name: 'Workout Routines', colorIndex: 3);
-    final french = Workspace(name: 'French Vocab', colorIndex: 5);
-    final pilot = Workspace(name: 'Pilot Checklists', colorIndex: 7);
-
-    final workspaces = [welcome, cooking, workout, french, pilot];
-    final boards = <Board>[
-      // --- Welcome ---
-      Board(name: 'Getting Started', type: BoardType.thoughts, workspaceId: welcome.id, items: [
-        BoardItem(content: 'Welcome', description: 'A place for your thoughts, tasks, and memories. Tap a marble to peek inside.', colorIndex: 0, sizeMultiplier: 1.5),
-        BoardItem(content: 'Fling me!', description: 'Drag marbles around and let them go — they bounce off the walls.', colorIndex: 1),
-        BoardItem(content: 'Long-press', description: 'Hold down on any marble to edit or delete it.', colorIndex: 2, sizeMultiplier: 0.8),
-        BoardItem(content: 'Workspaces', description: 'Boards are grouped into workspaces. Collapse a workspace by tapping its header. Use the folder icon to create new ones.', colorIndex: 3, sizeMultiplier: 0.6),
-        BoardItem(content: 'Penser', description: 'French for "to think". That\'s what this app is for.', colorIndex: 4, sizeMultiplier: 1.2),
-      ]),
-      Board(name: 'Weekend', type: BoardType.todo, workspaceId: welcome.id, items: [
-        BoardItem(content: 'Water the plants', colorIndex: 5),
-        BoardItem(content: 'Call grandma', colorIndex: 6),
-        BoardItem(content: 'Finish that book', colorIndex: 7),
-        BoardItem(content: 'Try a new recipe', colorIndex: 0),
-      ]),
-
-      // --- Cooking Recipes ---
-      Board(name: 'Pancakes', type: BoardType.checklist, workspaceId: cooking.id, items: [
-        BoardItem(content: 'Mix dry ingredients', description: '1 cup flour, 2 tbsp sugar, pinch of salt.', colorIndex: 0),
-        BoardItem(content: 'Add wet ingredients', description: '1 egg, 3/4 cup milk, 2 tbsp melted butter.', colorIndex: 1),
-        BoardItem(content: 'Whisk until smooth', description: 'A few lumps are fine — don\'t overmix!', colorIndex: 2),
-        BoardItem(content: 'Heat the pan', description: 'Medium heat, small knob of butter. Wait until it sizzles.', colorIndex: 3),
-        BoardItem(content: 'Cook pancakes', description: 'Pour 1/4 cup batter. Flip when bubbles pop on the surface.', colorIndex: 4),
-        BoardItem(content: 'Serve', description: 'Stack them up. Maple syrup, berries, whatever you like.', colorIndex: 5),
-      ]),
-      Board(name: 'Pasta Aglio e Olio', type: BoardType.checklist, workspaceId: cooking.id, items: [
-        BoardItem(content: 'Boil pasta', description: 'Salt the water generously. Cook spaghetti until al dente.', colorIndex: 1),
-        BoardItem(content: 'Slice garlic', description: '6 cloves, thinly sliced. The thinner, the crispier.', colorIndex: 2),
-        BoardItem(content: 'Toast garlic in oil', description: 'Low heat, olive oil, until just golden. Don\'t burn it!', colorIndex: 3),
-        BoardItem(content: 'Add chili flakes', description: 'A good pinch of red pepper flakes. Off the heat to avoid burning.', colorIndex: 0),
-        BoardItem(content: 'Toss with pasta', description: 'Add pasta + a splash of pasta water. Toss until glossy.', colorIndex: 4),
-        BoardItem(content: 'Finish', description: 'Fresh parsley, more olive oil, and parmesan if you like.', colorIndex: 5),
-      ]),
-      Board(name: 'Grocery List', type: BoardType.todo, workspaceId: cooking.id, items: [
-        BoardItem(content: 'Eggs', colorIndex: 1),
-        BoardItem(content: 'Flour', colorIndex: 2),
-        BoardItem(content: 'Olive oil', colorIndex: 3),
-        BoardItem(content: 'Garlic', colorIndex: 0),
-        BoardItem(content: 'Parsley', colorIndex: 4),
-      ]),
-
-      // --- Workout Routines ---
-      Board(name: 'Morning Stretch', type: BoardType.checklist, workspaceId: workout.id, items: [
-        BoardItem(content: 'Neck rolls', description: '30 seconds each direction. Slow and gentle.', colorIndex: 3),
-        BoardItem(content: 'Shoulder shrugs', description: '10 reps. Squeeze at the top.', colorIndex: 4),
-        BoardItem(content: 'Cat-cow stretch', description: '8 reps. Sync with your breath.', colorIndex: 5),
-        BoardItem(content: 'Forward fold', description: 'Hold for 30 seconds. Let gravity do the work.', colorIndex: 6),
-        BoardItem(content: 'Hip circles', description: '10 each direction. Loosen up those hips.', colorIndex: 7),
-      ]),
-      Board(name: 'Push Day', type: BoardType.todo, workspaceId: workout.id, items: [
-        BoardItem(content: 'Bench press 4x8', colorIndex: 0),
-        BoardItem(content: 'Overhead press 3x10', colorIndex: 1),
-        BoardItem(content: 'Incline dumbbell press 3x12', colorIndex: 2),
-        BoardItem(content: 'Lateral raises 3x15', colorIndex: 3),
-        BoardItem(content: 'Tricep dips 3x12', colorIndex: 4),
-      ]),
-      Board(name: 'Running Log', type: BoardType.thoughts, workspaceId: workout.id, items: [
-        BoardItem(content: 'Mon 5K', description: '27:12 — felt good, new route through the park.', colorIndex: 3),
-        BoardItem(content: 'Wed 3K', description: '16:45 — easy recovery run. Legs still sore from push day.', colorIndex: 4),
-        BoardItem(content: 'Sat 8K', description: '42:30 — long run PB! Negative split in the last 2K.', colorIndex: 5),
-      ]),
-
-      // --- French Vocab ---
-      Board(name: 'Essentials', type: BoardType.flashcards, workspaceId: french.id, items: [
-        BoardItem(content: 'Penser', backContent: 'To think', colorIndex: 0),
-        BoardItem(content: 'Souvenir', backContent: 'Memory', colorIndex: 1),
-        BoardItem(content: 'Oublier', backContent: 'To forget', colorIndex: 2),
-        BoardItem(content: 'Comprendre', backContent: 'To understand', colorIndex: 3),
-        BoardItem(content: 'Savoir', backContent: 'To know (a fact)', colorIndex: 4),
-        BoardItem(content: 'Pouvoir', backContent: 'To be able to / can', colorIndex: 5),
-      ]),
-      Board(name: 'Nature', type: BoardType.flashcards, workspaceId: french.id, items: [
-        BoardItem(content: 'Nuage', backContent: 'Cloud', colorIndex: 7),
-        BoardItem(content: 'Lune', backContent: 'Moon', colorIndex: 5),
-        BoardItem(content: 'Fleuve', backContent: 'River (large)', colorIndex: 4),
-        BoardItem(content: 'Feuille', backContent: 'Leaf', colorIndex: 3),
-      ]),
-      Board(name: 'Faux Amis', type: BoardType.flashcards, workspaceId: french.id, items: [
-        BoardItem(content: 'Actuellement', backContent: 'Currently', description: 'Means "currently/right now" — NOT "actually". For "actually" use "en fait".', colorIndex: 0),
-        BoardItem(content: 'Bras', backContent: 'Arm', description: 'The body part. A "bra" (undergarment) is "soutien-gorge".', colorIndex: 1),
-        BoardItem(content: 'Chair', backContent: 'Flesh', description: 'As in the human body. A chair (furniture) is "chaise".', colorIndex: 2),
-        BoardItem(content: 'Monnaie', backContent: 'Change / coins', description: 'Small change in your pocket. Money in general is "argent".', colorIndex: 6),
-        BoardItem(content: 'Raisin', backContent: 'Grape', description: 'The fresh fruit. A dried raisin is "raisin sec".', colorIndex: 7),
-      ]),
-
-      // --- Pilot Checklists ---
-      Board(name: 'Pre-Flight', type: BoardType.checklist, workspaceId: pilot.id, items: [
-        BoardItem(content: 'Weather briefing', description: 'Check METAR, TAF, NOTAMs for departure, en-route, and destination.', colorIndex: 7),
-        BoardItem(content: 'Weight & balance', description: 'Calculate total weight, CG position. Verify within limits.', colorIndex: 4),
-        BoardItem(content: 'Fuel check', description: 'Visual inspection of fuel level. Confirm sufficient for flight + reserves.', colorIndex: 3),
-        BoardItem(content: 'Walk-around', description: 'Inspect control surfaces, tires, pitot tube, oil level, antennas.', colorIndex: 0),
-        BoardItem(content: 'Instruments check', description: 'Altimeter set, heading indicator aligned, radios tuned.', colorIndex: 1),
-      ]),
-      Board(name: 'Before Takeoff', type: BoardType.checklist, workspaceId: pilot.id, items: [
-        BoardItem(content: 'Seats & belts', description: 'Seats locked, belts fastened, shoulder harness secured.', colorIndex: 7),
-        BoardItem(content: 'Flight controls', description: 'Free and correct. Full deflection all axes.', colorIndex: 0),
-        BoardItem(content: 'Fuel selector', description: 'Set to BOTH (or fullest tank as appropriate).', colorIndex: 3),
-        BoardItem(content: 'Trim', description: 'Set for takeoff.', colorIndex: 4),
-        BoardItem(content: 'Transponder', description: 'Set to ALT. Squawk assigned code.', colorIndex: 1),
-        BoardItem(content: 'Lights', description: 'Landing light ON, strobes ON, nav lights ON.', colorIndex: 5),
-      ]),
-      Board(name: 'Emergency: Engine Failure', type: BoardType.checklist, workspaceId: pilot.id, items: [
-        BoardItem(content: 'Airspeed', description: 'Best glide speed immediately. Pitch for Vg.', colorIndex: 0),
-        BoardItem(content: 'Best field', description: 'Pick a landing spot. Fly toward it. Commit early.', colorIndex: 1),
-        BoardItem(content: 'Restart attempt', description: 'Fuel selector BOTH, mixture RICH, carb heat ON, mags BOTH, primer IN & LOCKED.', colorIndex: 2),
-        BoardItem(content: 'Mayday call', description: '121.5 MHz — "Mayday, Mayday, Mayday" + callsign, position, intentions.', colorIndex: 0),
-        BoardItem(content: 'Secure engine', description: 'If no restart: mixture CUTOFF, fuel selector OFF, mags OFF, master OFF (flaps last).', colorIndex: 7),
-      ]),
-      Board(name: 'Flight Log', type: BoardType.timer, workspaceId: pilot.id, items: [
-        BoardItem(content: 'Engine start', description: 'Pre-start checks complete. Engine running, radios tuned, ready to taxi. Tap to start the clock.', colorIndex: 3),
-        BoardItem(content: 'Taxi', description: 'Ground movement to runway holding point.', colorIndex: 4),
-        BoardItem(content: 'Takeoff & Climb', description: 'Departure and climb to cruise altitude.', colorIndex: 2),
-        BoardItem(content: 'Cruise', description: 'En-route level flight.', colorIndex: 1),
-        BoardItem(content: 'Descent & Approach', description: 'Arrival procedures and approach.', colorIndex: 5),
-        BoardItem(content: 'Landing', description: 'Touchdown and roll-out to taxi speed.', colorIndex: 7),
-        BoardItem(content: 'Shutdown', description: 'Taxi to parking, mixture CUTOFF, mags OFF, master OFF. Tap to stop the clock.', colorIndex: 0),
-      ]),
-
-      // --- Workout countdown ---
-      Board(name: 'Tabata', type: BoardType.countdown, workspaceId: workout.id, items: [
-        BoardItem(content: 'Warm-up', description: 'Easy movement — light cardio, joint mobility.', durationSeconds: 60, colorIndex: 3),
-        BoardItem(content: 'Jumping Jacks', durationSeconds: 20, colorIndex: 0),
-        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
-        BoardItem(content: 'Squats', durationSeconds: 20, colorIndex: 1),
-        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
-        BoardItem(content: 'Push-ups', durationSeconds: 20, colorIndex: 3),
-        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
-        BoardItem(content: 'Burpees', durationSeconds: 20, colorIndex: 5),
-        BoardItem(content: 'Rest', durationSeconds: 10, colorIndex: 7),
-        BoardItem(content: 'Cool-down', description: 'Stretch, lower heart rate, hydrate.', durationSeconds: 60, colorIndex: 4),
-      ]),
-    ];
-
-    return (workspaces: workspaces, boards: boards);
-  }
-
-  Future<void> _saveCollapsed() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(PrefKeys.collapsedWorkspaces, _collapsed.toList());
-  }
-
-  List<Board> _boardsForWorkspace(String workspaceId) =>
-      _byWorkspace[workspaceId] ?? const [];
-
-  List<String> _boardIds() => _boards.map((b) => b.id).toList();
-
-  List<String> _workspaceIds() => _workspaces.map((w) => w.id).toList();
-
-  Future<void> _saveBoard(Board board) => LocalStorage.saveBoard(board);
-
-  Future<void> _addBoard(Board board) async {
-    setState(() {
-      _boards.add(board);
-      _rebuildIndex();
-    });
-    await LocalStorage.saveBoard(board);
-    await LocalStorage.saveBoardOrder(_boardIds());
-  }
-
-  Future<void> _deleteBoard(String id) async {
-    await LocalStorage.deleteBoard(id);
-    await LocalStorage.saveBoardOrder(_boardIds());
+    final result =
+        await BoardIO.importContent(content, context, _ctrl.workspaces);
+    if (!mounted) return;
+    await _ctrl.applyImport(result);
   }
 
   Future<String?> _promptName({
@@ -332,10 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       submitLabel: 'Create',
     );
     if (name == null) return;
-    final ws = Workspace(name: name);
-    setState(() => _workspaces.add(ws));
-    await LocalStorage.saveWorkspace(ws);
-    await LocalStorage.saveWorkspaceOrder(_workspaceIds());
+    await _ctrl.addWorkspace(Workspace(name: name));
   }
 
   Future<void> _renameWorkspace(Workspace ws) async {
@@ -346,8 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
       submitLabel: 'Rename',
     );
     if (name == null) return;
-    setState(() => ws.name = name);
-    await LocalStorage.saveWorkspace(ws);
+    ws.name = name;
+    await _ctrl.saveWorkspace(ws);
   }
 
   Future<void> _changeWorkspaceColor(Workspace ws) {
@@ -355,14 +129,14 @@ class _HomeScreenState extends State<HomeScreen> {
       title: 'Workspace Color',
       current: ws.colorIndex,
       onPicked: (i) {
-        setState(() => ws.colorIndex = i);
-        LocalStorage.saveWorkspace(ws);
+        ws.colorIndex = i;
+        _ctrl.saveWorkspace(ws);
       },
     );
   }
 
   void _confirmDeleteWorkspace(Workspace ws) async {
-    final wsBoards = _boardsForWorkspace(ws.id);
+    final wsBoards = _ctrl.boardsForWorkspace(ws.id);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -375,25 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (confirm != true) return;
-
-    final toDelete = List<Board>.from(wsBoards);
-    setState(() {
-      _boards.removeWhere((b) => b.workspaceId == ws.id);
-      _workspaces.remove(ws);
-      _rebuildIndex();
-    });
-    await Future.wait([
-      LocalStorage.deleteWorkspace(ws.id),
-      ...toDelete.map((b) => LocalStorage.deleteBoard(b.id)),
-    ]);
-    await Future.wait([
-      LocalStorage.saveWorkspaceOrder(_workspaceIds()),
-      LocalStorage.saveBoardOrder(_boardIds()),
-    ]);
+    await _ctrl.deleteWorkspace(ws);
   }
 
   void _exportWorkspace(Workspace ws) {
-    final wsBoards = _boardsForWorkspace(ws.id);
+    final wsBoards = _ctrl.boardsForWorkspace(ws.id);
     BoardIO.exportWorkspace(ws, wsBoards, context);
   }
 
@@ -425,20 +185,18 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => _NewBoardDialog(
-        workspaces: _workspaces,
-        initialWorkspaceId: workspaceId ?? _workspaces.first.id,
+        workspaces: _ctrl.workspaces,
+        initialWorkspaceId: workspaceId ?? _ctrl.workspaces.first.id,
         boardTypeList: _boardTypeList,
         onCreate: (name, type, wsId) {
-          _addBoard(Board(name: name, type: type, workspaceId: wsId));
+          _ctrl.addBoard(Board(name: name, type: type, workspaceId: wsId));
         },
       ),
     );
   }
 
   void _duplicateBoard(Board board) {
-    final copy = board.copyWithNewIds();
-    copy.name = '${board.name} (copy)';
-    _addBoard(copy);
+    _ctrl.duplicateBoard(board);
   }
 
   void _changeBoardType(Board board) {
@@ -449,8 +207,8 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Change Type'),
         content: SingleChildScrollView(
           child: _boardTypeList(board.type, (type) {
-            setState(() => board.type = type);
-            _saveBoard(board);
+            board.type = type;
+            _ctrl.boardChanged(board);
             Navigator.pop(ctx);
           }),
         ),
@@ -463,14 +221,14 @@ class _HomeScreenState extends State<HomeScreen> {
       title: 'Board Color',
       current: board.colorIndex,
       onPicked: (i) {
-        setState(() => board.colorIndex = i);
-        _saveBoard(board);
+        board.colorIndex = i;
+        _ctrl.boardChanged(board);
       },
     );
   }
 
   void _moveBoardToWorkspace(Board board) {
-    if (_workspaces.length < 2) return;
+    if (_ctrl.workspaces.length < 2) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -479,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _workspaces.map((ws) {
+            children: _ctrl.workspaces.map((ws) {
               final isSelected = ws.id == board.workspaceId;
               return ListTile(
                 dense: true,
@@ -496,11 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 selected: isSelected,
                 onTap: () {
-                  setState(() {
-                    board.workspaceId = ws.id;
-                    _rebuildIndex();
-                  });
-                  _saveBoard(board);
+                  board.workspaceId = ws.id;
+                  _ctrl.boardChanged(board);
                   Navigator.pop(ctx);
                 },
               );
@@ -524,11 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (confirm != true) return;
-    setState(() {
-      _boards.remove(board);
-      _rebuildIndex();
-    });
-    _deleteBoard(board.id);
+    await _ctrl.deleteBoard(board.id);
   }
 
   Future<void> _renameBoard(Board board) async {
@@ -539,35 +290,18 @@ class _HomeScreenState extends State<HomeScreen> {
       submitLabel: 'Rename',
     );
     if (name == null) return;
-    setState(() => board.name = name);
-    await _saveBoard(board);
+    board.name = name;
+    await _ctrl.boardChanged(board);
   }
 
   void _showAbout() {
-    final totalItems = _boards.fold<int>(0, (sum, b) => sum + b.items.length);
+    final totalItems = _ctrl.boards.fold<int>(0, (sum, b) => sum + b.items.length);
     showPensineAbout(
       context,
-      workspaceCount: _workspaces.length,
-      boardCount: _boards.length,
+      workspaceCount: _ctrl.workspaces.length,
+      boardCount: _ctrl.boards.length,
       itemCount: totalItems,
-      onReset: () async {
-        await Future.wait([
-          ..._boards.map((b) => LocalStorage.deleteBoard(b.id)),
-          ..._workspaces.map((w) => LocalStorage.deleteWorkspace(w.id)),
-        ]);
-        final defaults = _defaults();
-        await Future.wait([
-          LocalStorage.saveAllWorkspaces(defaults.workspaces),
-          LocalStorage.saveAllBoards(defaults.boards),
-        ]);
-        setState(() {
-          _workspaces = defaults.workspaces;
-          _boards = defaults.boards;
-          _collapsed = {};
-          _rebuildIndex();
-        });
-        _saveCollapsed();
-      },
+      onReset: _ctrl.reset,
     );
   }
 
@@ -608,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const PopupMenuItem(value: _BoardAction.rename, child: Text('Rename')),
             const PopupMenuItem(value: _BoardAction.changeType, child: Text('Change type')),
             const PopupMenuItem(value: _BoardAction.changeColor, child: Text('Board color')),
-            if (_workspaces.length > 1)
+            if (_ctrl.workspaces.length > 1)
               const PopupMenuItem(value: _BoardAction.move, child: Text('Move to workspace')),
             const PopupMenuItem(value: _BoardAction.duplicate, child: Text('Duplicate')),
             const PopupMenuItem(value: _BoardAction.export, child: Text('Export')),
@@ -621,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(
               builder: (_) => BoardScreen(
                 board: board,
-                onChanged: () => _saveBoard(board),
+                onChanged: () => _ctrl.saveBoard(board),
               ),
             ),
           );
@@ -632,24 +366,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWorkspaceSection(Workspace ws) {
-    final wsBoards = _boardsForWorkspace(ws.id);
-    final isCollapsed = _collapsed.contains(ws.id);
+    final wsBoards = _ctrl.boardsForWorkspace(ws.id);
+    final isCollapsed = _ctrl.collapsed.contains(ws.id);
 
     return Column(
       key: Key('ws_${ws.id}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: () {
-            setState(() {
-              if (isCollapsed) {
-                _collapsed.remove(ws.id);
-              } else {
-                _collapsed.add(ws.id);
-              }
-            });
-            _saveCollapsed();
-          },
+          onTap: () => _ctrl.toggleCollapsed(ws.id),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Row(
@@ -743,8 +468,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.file_open),
             tooltip: 'Import',
             onPressed: () async {
-              final result = await BoardIO.importFile(context, _workspaces);
-              await _applyImportResult(result);
+              final result = await BoardIO.importFile(context, _ctrl.workspaces);
+              if (!context.mounted) return;
+              await _ctrl.applyImport(result);
             },
           ),
           IconButton(
@@ -763,9 +489,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _loading
+      body: _ctrl.loading
           ? const Center(child: CircularProgressIndicator())
-          : _workspaces.isEmpty
+          : _ctrl.workspaces.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -782,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : ListView(
                   padding: const EdgeInsets.all(16),
-                  children: _workspaces.map(_buildWorkspaceSection).toList(),
+                  children: _ctrl.workspaces.map(_buildWorkspaceSection).toList(),
                 ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,

@@ -8,6 +8,13 @@ A fun, visual notes app with different board types (thoughts, to-do, flashcards,
 - Local storage only, no backend
 - Multiplatform mono-repo (mobile-first)
 
+## Architecture
+
+- **`BoardsController`** (`lib/controllers/boards_controller.dart`) — `ChangeNotifier` that owns `workspaces`, `boards`, `collapsed`, `loading` state plus all persistence calls. `HomeScreen` is a consumer; don't call `LocalStorage` directly from screens.
+- **`applyBoardTap`** (`lib/behavior/board_tap.dart`) — pure tap state machine per `BoardType`. Returns a declarative `BoardTapOutcome` (changed / addLap / timer command / haptics). `BoardScreen` orchestrates side effects from the outcome. Adding a new board type: one case in the switch + metadata on `BoardType`.
+- **`buildDefaults`** (`lib/data/defaults.dart`) — seed workspaces + boards for first launch and Reset. Pure data, no widgets.
+- **Platform split** via conditional imports: `file_storage.dart` / `_stub.dart`, `board_io_native.dart` / `_web.dart`, `pending_import_native.dart` / `_web.dart`. Same pattern for any new platform-spanning feature.
+
 ## Conventions
 
 - Incremental development, always documented

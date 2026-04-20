@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../behavior/board_tap.dart';
 import '../main.dart';
 import '../models/board.dart';
 import '../theme.dart';
@@ -300,57 +301,42 @@ class _BoardScreenState extends State<BoardScreen> {
     );
   }
 
-  void _handleSequentialTap(BoardItem item) {
-    final tappedIndex = widget.board.items.indexOf(item);
-    final nextIndex = widget.board.items.indexWhere((i) => !i.done);
-    final targetDone = (tappedIndex == nextIndex) ? tappedIndex + 1 : tappedIndex;
-    setState(() {
-      // Only the active step had a real elapsed time — leapfrogged steps don't.
-      // Index 0 is the start marble: tapping it arms the clock, never logs.
-      if (targetDone > nextIndex && nextIndex > 0 && _stepStartTime != null) {
-        final activeItem = widget.board.items[nextIndex];
-        widget.board.laps.add(Lap(
-          itemId: activeItem.id,
-          elapsedSeconds: DateTime.now().difference(_stepStartTime!).inSeconds,
-        ));
+  void _handleItemTap(BoardItem item) {
+    final outcome = applyBoardTap(
+      board: widget.board,
+      item: item,
+      stepStart: _stepStartTime,
+    );
+    if (!outcome.changed) return;
+
+    setState(() {}); // model was mutated in place; force rebuild.
+
+    for (final cue in outcome.haptics) {
+      switch (cue) {
+        case HapticCue.selectionClick:
+          HapticFeedback.selectionClick();
+        case HapticCue.lightImpact:
+          HapticFeedback.lightImpact();
+        case HapticCue.mediumImpact:
+          HapticFeedback.mediumImpact();
       }
-      for (var i = 0; i < widget.board.items.length; i++) {
-        widget.board.items[i].done = i < targetDone;
-      }
-    });
-    HapticFeedback.selectionClick();
-    if (targetDone == widget.board.items.length && targetDone > nextIndex) {
-      HapticFeedback.mediumImpact();
     }
-    final t = widget.board.type;
-    if (t == BoardType.timer || t == BoardType.countdown) {
-      if (targetDone == 0) {
+
+    switch (outcome.timer) {
+      case null:
+        break;
+      case TimerCommand.stop:
         _stopTimers();
-      } else if (targetDone == widget.board.items.length) {
+      case TimerCommand.freeze:
         _freezeTimers();
-      } else {
+      case TimerCommand.startOrContinue:
         _timerStartTime ??= DateTime.now();
         _stepStartTime = DateTime.now();
         if (_uiTicker == null) _startUiTicker();
-        if (t == BoardType.countdown) _startCountdown();
-      }
+        if (widget.board.type == BoardType.countdown) _startCountdown();
     }
-    widget.onChanged();
-  }
 
-  void _handleItemTap(BoardItem item) {
-    switch (widget.board.type) {
-      case BoardType.thoughts:
-      case BoardType.flashcards:
-        break;
-      case BoardType.todo:
-        setState(() => item.done = !item.done);
-        widget.onChanged();
-      case BoardType.checklist:
-      case BoardType.timer:
-      case BoardType.countdown:
-        _handleSequentialTap(item);
-    }
+    widget.onChanged();
   }
 
   Widget _buildContent() {
