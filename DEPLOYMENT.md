@@ -59,7 +59,7 @@
 
 ## Microsoft Store (Windows)
 
-**Account:** Microsoft Partner Center — $19 one-time at `partner.microsoft.com/dashboard` (Developer Program, Individual). Account is tied to a Microsoft account (personal MSA or work/school Azure AD) — ownership is hard to transfer, so pick deliberately.
+**Account:** Microsoft Partner Center — **free** for individual developers at `partner.microsoft.com/dashboard` (new onboarding flow, ~200 markets). Identity is verified via government-issued ID + selfie (MFA enforced); verified data auto-fills the developer profile, then redirects to Partner Center. Account is tied to a Microsoft account (personal MSA or work/school Azure AD) — ownership is hard to transfer, so pick deliberately. (Historical: the $19 one-time fee was waived for individuals in the new flow; organization accounts still pay.)
 
 **App reservation (one-time):**
 1. Partner Center → Apps and games → **New product** → **MSIX or PWA app**.
@@ -72,10 +72,12 @@
 
 **Build format:** MSIX (`dart run msix:create --store`). Microsoft re-signs the package during Store upload — the generated MSIX is unsigned and not directly sideloadable.
 
-**CI lane** (`release.yml` → `windows-release`):
+**CI workflow** (`build-windows.yml` — push/PR triggers, not `release.yml`):
 - Runs on `windows-latest` (Windows SDK, MakeAppx, SignTool preinstalled).
-- `flutter build windows --release` then `dart run msix:create --store` with identity flags injected from Secrets.
+- `build` job: `flutter build windows --release` on every push/PR (proves compilation). On push-to-main only (where secrets are available), additionally runs `dart run msix:create --store` with identity flags injected from Secrets.
+- `validate` job (push-to-main only, `needs: build`): downloads the MSIX artifact, runs WACK (`appcert.exe`) against it, uploads `wack-report.xml`. ~10-15 min.
 - Produces `pensine-v<version>-build<N>.msix` as a workflow artifact — download from the Actions UI and upload manually to Partner Center until API automation lands.
+- Split rationale: `release.yml` is reserved for actual distribution actions (Play Store upload, TestFlight upload). Build + certification happens on every commit to main, not gated behind a manual trigger.
 
 **Version rules (MSIX):**
 - 4-part `a.b.c.d`; Store requires the 4th part to be `0`.
@@ -93,12 +95,13 @@
 
 **Phase rollout:**
 1. ✅ `msix` dev dep + `msix_config` in `pubspec.yaml` (non-identity fields only)
-2. ✅ `windows-release` CI job producing MSIX artifact
-3. ⏳ Partner Center account + app reservation (manual, $19)
-4. ⏳ GitHub Secrets populated (`MSIX_PUBLISHER_DISPLAY_NAME`, `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER`, `MSIX_STORE_ID`)
-5. ⏳ First manual upload to Partner Center
-6. ⏳ Partner Center Submission API automation (Azure AD app registration, `msstore-cli` or direct API calls in CI)
-7. ⏳ `.pensine` file association on Windows (MSIX manifest `FileTypeAssociation` entry + Dart-side command-line arg handling in `pending_import_native.dart`)
+2. ✅ `build-windows.yml` `build` job producing MSIX artifact on push to main
+3. ✅ `build-windows.yml` `validate` job running Windows App Certification Kit (WACK / `appcert.exe`) against the MSIX artifact — report uploaded as `wack-report-build-<N>`
+4. ⏳ Partner Center account + app reservation (manual — individual registration is free; ID-verification flow)
+5. ⏳ GitHub Secrets populated (`MSIX_PUBLISHER_DISPLAY_NAME`, `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER`, `MSIX_STORE_ID`)
+6. ⏳ First manual upload to Partner Center (download MSIX artifact from the Actions run)
+7. ⏳ Partner Center Submission API automation — new `windows-release` job in `release.yml` that downloads the most recent `build-windows.yml` MSIX artifact and uploads via Azure AD app registration + `msstore-cli` or direct API calls
+8. ⏳ `.pensine` file association on Windows (MSIX manifest `FileTypeAssociation` entry + Dart-side command-line arg handling in `pending_import_native.dart`)
 
 **Required GitHub Secrets (Windows):**
 - `MSIX_PUBLISHER_DISPLAY_NAME` — human-readable publisher name (e.g. "Martial Ren")
