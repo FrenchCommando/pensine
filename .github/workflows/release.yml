@@ -170,3 +170,43 @@ jobs:
           IPA=$(ls "$GITHUB_WORKSPACE/build/ios/ipa/"*.ipa | head -1)
           echo "Uploading $IPA"
           IPA_PATH="$IPA" bundle exec fastlane ios beta
+
+  windows-release:
+    # Plain unsigned exe zip attached to the same GitHub Release as the APK.
+    # No Microsoft Store dependency — defers until the Partner Center
+    # account lands. Users download → extract → run pensine.exe.
+    # SmartScreen warns on first launch (expected: no code signing cert).
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      - name: Extract version from pubspec.yaml
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          echo "PENSINE_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build Windows release
+        shell: bash
+        run: flutter build windows --release --build-number=${{ github.run_number }} "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Zip Windows release
+        shell: pwsh
+        run: |
+          $zip = "pensine-v${env:PENSINE_VERSION}-build${{ github.run_number }}-windows.zip"
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $zip
+          "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release with Windows zip
+        # `softprops/action-gh-release@v2` is create-or-update on tag.
+        # The android-release job (same workflow, same run_number) creates
+        # the release; this step appends the Windows zip to it.
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: v${{ env.PENSINE_VERSION }} · build ${{ github.run_number }}
+          files: ${{ env.ZIP_NAME }}

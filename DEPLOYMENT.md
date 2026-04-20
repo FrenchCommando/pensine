@@ -57,7 +57,35 @@
 - Release signing + TestFlight upload: see Release Automation below
 - Not using `fastlane match` (solo-dev, CI-only signing → GitHub Secrets directly is simpler)
 
+## Windows — sideload zip (current primary channel)
+
+Until Partner Center account is ready, Windows ships as a plain unsigned
+zip attached to each GitHub Release (same page as the APK). Users:
+
+1. Open `github.com/FrenchCommando/pensine/releases/latest` on their PC.
+2. Download `pensine-v<version>-build<N>-windows.zip`.
+3. Extract, run `pensine.exe`.
+4. Accept the SmartScreen "Run anyway" warning on first launch (expected — no code-signing cert).
+
+Wired via a `windows-release` job in `release.yml` that runs on
+`windows-latest`, builds `flutter build windows --release`, zips
+`build\windows\x64\runner\Release\*`, and attaches the zip to the
+release tagged `build-<run_number>`. Appends to the release the
+android-release job creates — `softprops/action-gh-release@v2` is
+create-or-update on tag.
+
+`build-windows.yml` additionally uploads the zip as a workflow artifact
+on every push/PR, so any green build is downloadable for QA without
+cutting a formal release.
+
 ## Microsoft Store (Windows)
+
+Deferred until Partner Center individual-developer registration
+unblocks. The MSIX pipeline stays in place but gates on
+`MSIX_PUBLISHER` secret being set — until that lands, MSIX build +
+WACK validation are skipped automatically. When the account comes
+through, setting the 4 `MSIX_*` secrets re-enables the full flow with
+zero code change.
 
 **Account:** Microsoft Partner Center — **free** for individual developers at `partner.microsoft.com/dashboard` (new onboarding flow, ~200 markets). Identity is verified via government-issued ID + selfie (MFA enforced); verified data auto-fills the developer profile, then redirects to Partner Center. Account is tied to a Microsoft account (personal MSA or work/school Azure AD) — ownership is hard to transfer, so pick deliberately. (Historical: the $19 one-time fee was waived for individuals in the new flow; organization accounts still pay.)
 
