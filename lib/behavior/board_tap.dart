@@ -60,6 +60,10 @@ BoardTapOutcome applyBoardTap({
   DateTime? stepStart,
   DateTime Function()? now,
 }) {
+  // Defensive: don't mutate an item that's not part of this board. Prevents
+  // caller-side bugs from silently toggling/ordering orphans.
+  if (!board.items.contains(item)) return BoardTapOutcome.noop;
+
   switch (board.type) {
     case BoardType.thoughts:
     case BoardType.flashcards:

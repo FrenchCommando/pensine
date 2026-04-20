@@ -103,6 +103,47 @@ void main() {
     });
   });
 
+  group('reorderBoards', () {
+    test('applies the given id order', () async {
+      final c = BoardsController();
+      await c.load();
+      final originalIds = c.boards.map((b) => b.id).toList();
+      final reversed = originalIds.reversed.toList();
+
+      await c.reorderBoards(reversed);
+
+      expect(c.boards.map((b) => b.id).toList(), reversed);
+
+      // Persists: a fresh controller sees the new order.
+      final c2 = BoardsController();
+      await c2.load();
+      expect(c2.boards.map((b) => b.id).toList(), reversed);
+
+      c.dispose();
+      c2.dispose();
+    });
+
+    test('newOrder missing an id drops that board from _boards (documented)',
+        () async {
+      // Known behavior of `reorderBoards`: `[for (final id in newOrder)
+      // if (byId[id] != null) byId[id]!]` filters out ids not in the map,
+      // and silently omits ids missing from newOrder. Callers (UI)
+      // construct the full list; this test pins the contract so a future
+      // caller bug drops a board at most once across a test run.
+      final c = BoardsController();
+      await c.load();
+      final all = c.boards.map((b) => b.id).toList();
+      final dropOne = List<String>.from(all)..removeLast();
+
+      await c.reorderBoards(dropOne);
+
+      expect(c.boards.length, all.length - 1);
+      expect(c.boards.any((b) => b.id == all.last), false);
+
+      c.dispose();
+    });
+  });
+
   group('Workspace CRUD', () {
     test('addWorkspace persists and notifies', () async {
       final c = BoardsController();

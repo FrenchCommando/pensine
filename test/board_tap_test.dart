@@ -161,6 +161,29 @@ void main() {
     });
   });
 
+  group('Edge cases', () {
+    test('item not in board is a no-op (no crash, no mutation)', () {
+      final board = Board(name: 'x', type: BoardType.todo, items: [
+        BoardItem(content: 'a'),
+      ]);
+      final orphan = BoardItem(content: 'not in this board');
+
+      final out = applyBoardTap(board: board, item: orphan);
+
+      expect(out.changed, false);
+      expect(out.haptics, isEmpty);
+      expect(board.items[0].done, false);
+    });
+
+    test('empty items list: indexOf returns -1, no-op', () {
+      final board = Board(name: 'x', type: BoardType.checklist, items: []);
+      final orphan = BoardItem(content: 'anything');
+      final out = applyBoardTap(board: board, item: orphan);
+      expect(out.changed, false);
+      expect(out.timer, isNull);
+    });
+  });
+
   group('Sequential: countdown shares timer semantics', () {
     test('commands startOrContinue on mid-advance', () {
       final b = Board(name: 'x', type: BoardType.countdown, items: [
