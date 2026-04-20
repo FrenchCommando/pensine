@@ -227,7 +227,7 @@ Every bugfix or feature ships with a test. Unit/widget if `flutter_tester` can s
 - Native config changes (Info.plist, AndroidManifest) ride along in the binary and take effect after install. No extra store review for Play internal / TestFlight Internal tracks; TestFlight External gets a quick Beta App Review (~minutes after the first approval).
 
 ### CI
-- `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`
+- `.github/workflows/ci.yml` — runs on push/PR to main as 3 parallel jobs: `analyze` (flutter analyze), `test` (flutter test), `build-web` (flutter build web). `deploy.yml` triggers on the overall CI workflow success — all 3 jobs must pass.
 - `.github/workflows/build-ios.yml` — builds iOS (no signing) on push/PR to main
 - `.github/workflows/build-windows.yml` — push/PR to main: `build` job does `flutter build windows --release` + zips the output as `pensine-v<ver>-build<N>-windows.zip` (artifact uploaded every run). MSIX build + WACK validation gated on the `MSIX_PUBLISHER` secret being set — when Partner Center account lands and secrets are populated, the MSIX path activates automatically. Until then those steps skip cleanly.
 - `.github/workflows/artifacts.yml` — manual trigger; generates store screenshots + preview video (see DEPLOYMENT.md). iOS jobs wrap the test/preview step in `nick-fields/retry@v3` (per-attempt timeout + 1 retry) — `macos-latest` simulators intermittently hang after Xcode build with no output until the job timeout. Different device hangs each run, so it's environmental flake, not a real bug. Android jobs run KVM-accelerated, no flake observed.

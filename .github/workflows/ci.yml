@@ -6,18 +6,29 @@ on:
   pull_request:
     branches: [main]
 
+# Three parallel jobs instead of one serial chain. Faster wall time +
+# failure surfaces which check broke without scrolling a combined log.
+# `deploy.yml` triggers on this workflow's overall success (all jobs must
+# pass), so the split is behaviorally transparent to the Pages deploy.
+
 jobs:
-  ci:
+  analyze:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
+      - run: flutter analyze
 
-      - name: Analyze
-        run: flutter analyze
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter test
 
-      - name: Test
-        run: flutter test
-
-      - name: Build web
-        run: flutter build web "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter build web "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
