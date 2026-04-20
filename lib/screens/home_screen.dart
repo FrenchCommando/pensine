@@ -286,42 +286,16 @@ class _HomeScreenState extends State<HomeScreen> {
     String initial = '',
     String hint = 'Name',
     String submitLabel = 'OK',
-  }) async {
-    final controller = TextEditingController(text: initial);
-    try {
-      String? result;
-      await showDialog(
-        context: context,
-        builder: (ctx) {
-          void submit() {
-            final name = controller.text.trim();
-            if (name.isEmpty) return;
-            result = name;
-            Navigator.pop(ctx);
-          }
-          return AlertDialog(
-            backgroundColor: PensineColors.surface(context),
-            title: Text(title),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(hintText: hint),
-              onSubmitted: (_) => submit(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(onPressed: submit, child: Text(submitLabel)),
-            ],
-          );
-        },
-      );
-      return result;
-    } finally {
-      controller.dispose();
-    }
+  }) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => _PromptNameDialog(
+        title: title,
+        initial: initial,
+        hint: hint,
+        submitLabel: submitLabel,
+      ),
+    );
   }
 
   Future<void> _pickColor({
@@ -448,62 +422,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _createBoard({String? workspaceId}) {
-    final nameController = TextEditingController();
-    var selectedType = BoardType.thoughts;
-    var selectedWorkspaceId = workspaceId ?? _workspaces.first.id;
-
-    void submit(BuildContext ctx) {
-      final name = nameController.text.trim();
-      if (name.isEmpty) return;
-      _addBoard(Board(name: name, type: selectedType, workspaceId: selectedWorkspaceId));
-      Navigator.pop(ctx);
-    }
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: PensineColors.surface(context),
-          title: const Text('New Board'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  autofocus: true,
-                  decoration: const InputDecoration(hintText: 'Board name'),
-                  onSubmitted: (_) => submit(ctx),
-                ),
-                if (_workspaces.length > 1) ...[
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedWorkspaceId,
-                    decoration: const InputDecoration(labelText: 'Workspace'),
-                    items: _workspaces.map((ws) {
-                      return DropdownMenuItem(value: ws.id, child: Text(ws.name));
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedWorkspaceId = v);
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-                _boardTypeList(selectedType, (t) => setDialogState(() => selectedType = t)),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => submit(ctx),
-              child: const Text('Create'),
-            ),
-          ],
-        ),
+      builder: (ctx) => _NewBoardDialog(
+        workspaces: _workspaces,
+        initialWorkspaceId: workspaceId ?? _workspaces.first.id,
+        boardTypeList: _boardTypeList,
+        onCreate: (name, type, wsId) {
+          _addBoard(Board(name: name, type: type, workspaceId: wsId));
+        },
       ),
     );
   }
@@ -877,6 +804,152 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
         ),
       ),
+    );
+  }
+}
+
+/// Stateful dialog: owns its TextEditingController so `dispose()` fires
+/// when the route is fully torn down (canonical Flutter pattern). A naive
+/// `try { await showDialog } finally { controller.dispose() }` races the
+/// exit transition and triggers "used after disposed" on heavy parent
+/// widget trees like the full home screen.
+class _PromptNameDialog extends StatefulWidget {
+  final String title;
+  final String initial;
+  final String hint;
+  final String submitLabel;
+
+  const _PromptNameDialog({
+    required this.title,
+    required this.initial,
+    required this.hint,
+    required this.submitLabel,
+  });
+
+  @override
+  State<_PromptNameDialog> createState() => _PromptNameDialogState();
+}
+
+class _PromptNameDialogState extends State<_PromptNameDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: PensineColors.surface(context),
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(hintText: widget.hint),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
+      ],
+    );
+  }
+}
+
+/// Dialog for creating a new board. Same StatefulWidget pattern as
+/// `_PromptNameDialog` — see that class for the rationale.
+class _NewBoardDialog extends StatefulWidget {
+  final List<Workspace> workspaces;
+  final String initialWorkspaceId;
+  final Widget Function(BoardType, ValueChanged<BoardType>) boardTypeList;
+  final void Function(String name, BoardType type, String workspaceId) onCreate;
+
+  const _NewBoardDialog({
+    required this.workspaces,
+    required this.initialWorkspaceId,
+    required this.boardTypeList,
+    required this.onCreate,
+  });
+
+  @override
+  State<_NewBoardDialog> createState() => _NewBoardDialogState();
+}
+
+class _NewBoardDialogState extends State<_NewBoardDialog> {
+  final _nameController = TextEditingController();
+  BoardType _selectedType = BoardType.thoughts;
+  late String _selectedWorkspaceId = widget.initialWorkspaceId;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+    widget.onCreate(name, _selectedType, _selectedWorkspaceId);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: PensineColors.surface(context),
+      title: const Text('New Board'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'Board name'),
+              onSubmitted: (_) => _submit(),
+            ),
+            if (widget.workspaces.length > 1) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedWorkspaceId,
+                decoration: const InputDecoration(labelText: 'Workspace'),
+                items: widget.workspaces.map((ws) {
+                  return DropdownMenuItem(value: ws.id, child: Text(ws.name));
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedWorkspaceId = v);
+                },
+              ),
+            ],
+            const SizedBox(height: 16),
+            widget.boardTypeList(
+              _selectedType,
+              (t) => setState(() => _selectedType = t),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Create'),
+        ),
+      ],
     );
   }
 }

@@ -52,5 +52,10 @@ Future<void> exportFile(String filename, String content) async {
   web.document.body?.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  web.URL.revokeObjectURL(url);
+  // Defer revoke: `anchor.click()` dispatches the event synchronously but the
+  // browser reads the blob URL asynchronously to start the download. Revoking
+  // immediately works on Chrome but intermittently truncates/cancels the
+  // download on Firefox and Safari. A small delay lets the browser latch the
+  // URL before we release it.
+  Future.delayed(const Duration(seconds: 1), () => web.URL.revokeObjectURL(url));
 }

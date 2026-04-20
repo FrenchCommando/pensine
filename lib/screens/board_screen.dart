@@ -124,147 +124,46 @@ class _BoardScreenState extends State<BoardScreen> {
   }
 
   void _itemDialog({BoardItem? existing}) {
-    final type = widget.board.type;
-    final isFlashcard = type == BoardType.flashcards;
-    final isThoughts = type == BoardType.thoughts;
-    final isCountdown = type == BoardType.countdown;
-
-    final controller = TextEditingController(text: existing?.content ?? '');
-    final descController = TextEditingController(text: existing?.description ?? '');
-    final backController = TextEditingController(text: existing?.backContent ?? '');
-    final durationController = TextEditingController(
-        text: '${existing?.durationSeconds ?? 60}');
-    var size = existing?.sizeMultiplier ?? 1.0;
-    var colorIndex = existing?.colorIndex ?? _random.nextInt(PensineColors.bubbles.length);
-
-    final title = existing != null
-        ? 'Edit'
-        : (isFlashcard ? 'New Flashcard' : 'New Item');
-    final submitLabel = existing != null ? 'Save' : 'Add';
-
-    void submit(BuildContext ctx) {
-      final text = controller.text.trim();
-      if (text.isEmpty) return;
-      final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
-      final back = backController.text.trim().isEmpty ? null : backController.text.trim();
-      final duration = isCountdown ? int.tryParse(durationController.text) : null;
-      setState(() {
-        if (existing != null) {
-          existing.content = text;
-          existing.description = desc;
-          existing.backContent = back;
-          existing.sizeMultiplier = size;
-          existing.colorIndex = colorIndex;
-          if (isCountdown) existing.durationSeconds = duration;
-        } else {
-          widget.board.items.add(BoardItem(
-            content: text,
-            description: desc,
-            backContent: back,
-            colorIndex: colorIndex,
-            sizeMultiplier: size,
-            durationSeconds: duration,
-          ));
-        }
-      });
-      widget.onChanged();
-      Navigator.pop(ctx);
-    }
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false): () => submit(ctx),
-          },
-          child: AlertDialog(
-          backgroundColor: PensineColors.surface(context),
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: isFlashcard ? 'Front side' : 'Title',
-                  ),
-                ),
-                if (isThoughts || type.isSequential || isFlashcard) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descController,
-                    decoration: InputDecoration(
-                      hintText: isThoughts
-                          ? 'Details (tap to expand)'
-                          : isFlashcard
-                              ? 'Details (shown with the answer)'
-                              : 'Details (shown when active)',
-                    ),
-                    maxLines: 5,
-                    minLines: 2,
-                  ),
-                ],
-                if (isFlashcard) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: backController,
-                    decoration: const InputDecoration(hintText: 'Back side (answer)'),
-                  ),
-                ],
-                if (isCountdown) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: durationController,
-                    decoration: const InputDecoration(
-                      hintText: 'Duration (seconds)',
-                      labelText: 'Duration (seconds)',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                PensineColorPicker(
-                  selected: colorIndex,
-                  onChanged: (v) => setDialogState(() => colorIndex = v),
-                ),
-                const SizedBox(height: 12),
-                _sizeSlider(size, (v) => setDialogState(() => size = v)),
-              ],
-            ),
-          ),
-          actions: [
-            if (existing != null)
-              TextButton(
-                onPressed: () {
-                  setState(() => widget.board.items.remove(existing));
-                  widget.onChanged();
-                  HapticFeedback.lightImpact();
-                  Navigator.pop(ctx);
-                },
-                style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
-                child: const Text('Delete'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => submit(ctx),
-              child: Text(submitLabel),
-            ),
-          ],
-        ),
-        ),
+      builder: (ctx) => _ItemDialog(
+        boardType: widget.board.type,
+        existing: existing,
+        defaultColorIndex: _random.nextInt(PensineColors.bubbles.length),
+        sizeSlider: _sizeSlider,
+        onSubmit: (content, description, back, color, size, duration) {
+          setState(() {
+            if (existing != null) {
+              existing.content = content;
+              existing.description = description;
+              existing.backContent = back;
+              existing.sizeMultiplier = size;
+              existing.colorIndex = color;
+              if (widget.board.type == BoardType.countdown) {
+                existing.durationSeconds = duration;
+              }
+            } else {
+              widget.board.items.add(BoardItem(
+                content: content,
+                description: description,
+                backContent: back,
+                colorIndex: color,
+                sizeMultiplier: size,
+                durationSeconds: duration,
+              ));
+            }
+          });
+          widget.onChanged();
+        },
+        onDelete: existing == null
+            ? null
+            : () {
+                setState(() => widget.board.items.remove(existing));
+                widget.onChanged();
+                HapticFeedback.lightImpact();
+              },
       ),
-    ).whenComplete(() {
-      controller.dispose();
-      descController.dispose();
-      backController.dispose();
-      durationController.dispose();
-    });
+    );
   }
 
   @override
@@ -666,6 +565,160 @@ class _LapSummary extends StatelessWidget {
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+}
+
+/// Stateful dialog: owns its four TextEditingControllers so `dispose()`
+/// fires when the route is fully torn down — the canonical Flutter pattern.
+/// A naive `.whenComplete(dispose)` races the exit-transition rebuild and
+/// triggers "used after disposed" on heavy parent widget trees.
+class _ItemDialog extends StatefulWidget {
+  final BoardType boardType;
+  final BoardItem? existing;
+  final int defaultColorIndex;
+  final Widget Function(double, ValueChanged<double>) sizeSlider;
+  final void Function(String content, String? description, String? back,
+      int colorIndex, double sizeMultiplier, int? durationSeconds) onSubmit;
+  final VoidCallback? onDelete;
+
+  const _ItemDialog({
+    required this.boardType,
+    required this.existing,
+    required this.defaultColorIndex,
+    required this.sizeSlider,
+    required this.onSubmit,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ItemDialog> createState() => _ItemDialogState();
+}
+
+class _ItemDialogState extends State<_ItemDialog> {
+  late final _content = TextEditingController(text: widget.existing?.content ?? '');
+  late final _description =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final _back =
+      TextEditingController(text: widget.existing?.backContent ?? '');
+  late final _duration = TextEditingController(
+      text: '${widget.existing?.durationSeconds ?? 60}');
+  late double _size = widget.existing?.sizeMultiplier ?? 1.0;
+  late int _colorIndex =
+      widget.existing?.colorIndex ?? widget.defaultColorIndex;
+
+  bool get _isFlashcard => widget.boardType == BoardType.flashcards;
+  bool get _isThoughts => widget.boardType == BoardType.thoughts;
+  bool get _isCountdown => widget.boardType == BoardType.countdown;
+
+  @override
+  void dispose() {
+    _content.dispose();
+    _description.dispose();
+    _back.dispose();
+    _duration.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _content.text.trim();
+    if (text.isEmpty) return;
+    final desc = _description.text.trim().isEmpty ? null : _description.text.trim();
+    final back = _back.text.trim().isEmpty ? null : _back.text.trim();
+    final duration = _isCountdown ? int.tryParse(_duration.text) : null;
+    widget.onSubmit(text, desc, back, _colorIndex, _size, duration);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.existing != null
+        ? 'Edit'
+        : (_isFlashcard ? 'New Flashcard' : 'New Item');
+    final submitLabel = widget.existing != null ? 'Save' : 'Add';
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false):
+            _submit,
+      },
+      child: AlertDialog(
+        backgroundColor: PensineColors.surface(context),
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _content,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: _isFlashcard ? 'Front side' : 'Title',
+                ),
+              ),
+              if (_isThoughts || widget.boardType.isSequential || _isFlashcard) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _description,
+                  decoration: InputDecoration(
+                    hintText: _isThoughts
+                        ? 'Details (tap to expand)'
+                        : _isFlashcard
+                            ? 'Details (shown with the answer)'
+                            : 'Details (shown when active)',
+                  ),
+                  maxLines: 5,
+                  minLines: 2,
+                ),
+              ],
+              if (_isFlashcard) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _back,
+                  decoration: const InputDecoration(hintText: 'Back side (answer)'),
+                ),
+              ],
+              if (_isCountdown) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _duration,
+                  decoration: const InputDecoration(
+                    hintText: 'Duration (seconds)',
+                    labelText: 'Duration (seconds)',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+              const SizedBox(height: 16),
+              PensineColorPicker(
+                selected: _colorIndex,
+                onChanged: (v) => setState(() => _colorIndex = v),
+              ),
+              const SizedBox(height: 12),
+              widget.sizeSlider(_size, (v) => setState(() => _size = v)),
+            ],
+          ),
+        ),
+        actions: [
+          if (widget.onDelete != null)
+            TextButton(
+              onPressed: () {
+                widget.onDelete!();
+                Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(foregroundColor: PensineColors.accent),
+              child: const Text('Delete'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: Text(submitLabel),
+          ),
+        ],
       ),
     );
   }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pensine/main.dart';
 import 'package:pensine/models/board.dart';
 import 'package:pensine/screens/board_screen.dart';
 import 'package:pensine/widgets/marble_board.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Regression guard for the dialog controller disposal fix. Pre-fix, the
 /// `_itemDialog` in `board_screen.dart` created 4 TextEditingControllers
@@ -21,7 +23,8 @@ void _silenceWakelockChannel() {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     _silenceWakelockChannel();
     debugPauseMarblePhysics = true;
   });
@@ -29,6 +32,17 @@ void main() {
   tearDown(() {
     debugPauseMarblePhysics = false;
   });
+
+  Future<void> pumpHome(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1400, 1800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const PensineApp());
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
 
   testWidgets('_itemDialog disposes its TextEditingControllers', (tester) async {
     final board = Board(
@@ -53,7 +67,12 @@ void main() {
       expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-      await tester.pump();
+      // Pump through the full ~150ms AlertDialog exit animation — catches
+      // a "used after disposed" error if the dispose pattern races the
+      // route's exit transition.
+      for (var j = 0; j < 5; j++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // Dialog closed — Cancel gone.
       expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
@@ -61,5 +80,47 @@ void main() {
 
     // End of test: leak_tracker runs its check. If any of the 12 expected
     // controllers (4 per open × 3 opens) leaked, the framework fails here.
+  });
+
+  testWidgets('_createBoard dialog disposes its TextEditingController',
+      (tester) async {
+    await pumpHome(tester);
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byTooltip('New board'));
+      for (var j = 0; j < 5; j++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      for (var j = 0; j < 5; j++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    }
+  });
+
+  testWidgets('_promptName dialog (new workspace) disposes its controller',
+      (tester) async {
+    await pumpHome(tester);
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byTooltip('New workspace'));
+      for (var j = 0; j < 5; j++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      for (var j = 0; j < 5; j++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    }
   });
 }
