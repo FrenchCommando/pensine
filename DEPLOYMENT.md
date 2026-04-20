@@ -3,13 +3,13 @@
 ## Current state
 - App ID: `com.frenchcommando.pensine` (both platforms)
 - App icons: configured for all sizes via `flutter_launcher_icons`
-- Version: defined in `pubspec.yaml`, currently `1.1.0+2`
+- Version: defined in `pubspec.yaml`, currently `1.1.3` (no `+<build>` suffix — build number injected at CI build time from `github.run_number`)
 - iOS deployment target: 13.0
 - Android: uses Flutter default min/target SDK versions
-- Android release signing: `build.gradle.kts` reads from `android/key.properties` (written by CI from secrets); keystore + secrets pending first setup pass (2026-04-18)
-- iOS development team: **not configured**
+- Android release signing: `build.gradle.kts` reads from `android/key.properties` (written by CI from secrets); keystore + secrets configured, first release shipped to Play internal
+- iOS development team: injected via `APPLE_TEAM_ID` secret at CI build time (not baked into the Xcode project)
 - Screenshots + preview video: **automated** (see Screenshots & Preview Video)
-- Binary upload + metadata upload: **not automated yet** (see Release Automation)
+- Binary upload: **automated** (both platforms — see Release Automation); metadata + screenshot upload: **not automated yet**
 
 ## Android (Google Play)
 
@@ -121,7 +121,7 @@ fastlane/
 - `android metadata` *(not yet)* — would upload Play listing + screenshots via `upload_to_play_store(skip_upload_aab: true, ...)`.
 
 ### Phase rollout
-1. ⏳ Android → Play internal track — scaffolding (workflow, Fastfile, `build.gradle.kts`) was in place before any real Play Console app existed, so early `workflow_dispatch` runs all failed at `signReleaseBundle` ("Failed to read key from store: Tag number over 30 is not supported") against empty/placeholder secrets. Actual setup started 2026-04-18: Play Console app being created, Temurin JDK 25 installed locally so `keytool` exists, keystore to live at `C:\Users\Martial\.android\pensine-release.jks`.
+1. ✅ Android → Play internal track. Historical note: early `workflow_dispatch` runs failed at `signReleaseBundle` ("Failed to read key from store: Tag number over 30 is not supported") against placeholder secrets. Resolved 2026-04-18 once the keystore at `C:\Users\Martial\.android\pensine-release.jks` and all four Android secrets landed.
 2. ✅ iOS → TestFlight (adds cert/profile complexity; ~24h first-build review).
 3. ✅ iOS CI signing secrets configured (2026-04-18).
 4. ✅ iOS release workflow unblocked (2026-04-18) — p12 re-exported with `-legacy` using the **mingw64** openssl (not msys2's `usr/bin` one) so it pairs with `mingw64/lib/ossl-modules/legacy.dll`. See bootstrap steps below.
@@ -213,9 +213,9 @@ This is the **upload key**. On first Play Console release, opt into Play App Sig
 - `APPSTORE_CONNECT_API_KEY_P8_BASE64`
 
 ### Build number / versionCode strategy
-- **iOS `CFBundleVersion`**: `increment_build_number` fastlane action auto-increments the Xcode project value per release.
+- **iOS `CFBundleVersion`**: derived from `github.run_number` at build time, passed via `--build-number` to `flutter build ipa`. Same mechanism as Android.
 - **Android `versionCode`**: derived from `github.run_number` at build time, passed via `--build-number` to `flutter build appbundle`. Monotonic across all runs.
-- **Short version string** (`1.1.0`) stays in `pubspec.yaml`; the build number auto-increments.
+- **Short version string** (e.g. `1.1.3`) stays in `pubspec.yaml`; the build number is injected at CI build time, never in pubspec.
 
 ### Gotchas (one-time or recurring)
 - Apple Developer enrollment can take hours to days for org accounts; usually same-day for individuals.

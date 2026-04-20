@@ -3,10 +3,18 @@
 [![CI](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml)
 [![Screenshots](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/screenshots.yml)
 [![Deploy to GitHub Pages](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml)
+[![Release](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml)
 
 A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your way through different board types — lofi vibes, gamified interactions, no backend required.
 
 **Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/)
+
+**Android beta** — to install via Play Store:
+- [Testers group](https://groups.google.com/g/pensine-testers) — join first (required for access)
+- [Play Store](https://play.google.com/store/apps/details?id=com.frenchcommando.pensine) — install on Android
+- [Web](https://play.google.com/apps/testing/com.frenchcommando.pensine) — enrol from any browser
+
+Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/latest) — enable "Install unknown apps" for your browser when prompted.
 
 ## Board Types
 
