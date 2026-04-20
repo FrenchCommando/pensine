@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/app_icon.png" alt="Pensine logo" width="128" height="128">
+</p>
+
 # Pensine
 
 [![CI](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml)
