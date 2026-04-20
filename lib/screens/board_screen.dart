@@ -142,10 +142,43 @@ class _BoardScreenState extends State<BoardScreen> {
         : (isFlashcard ? 'New Flashcard' : 'New Item');
     final submitLabel = existing != null ? 'Save' : 'Add';
 
+    void submit(BuildContext ctx) {
+      final text = controller.text.trim();
+      if (text.isEmpty) return;
+      final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
+      final back = backController.text.trim().isEmpty ? null : backController.text.trim();
+      final duration = isCountdown ? int.tryParse(durationController.text) : null;
+      setState(() {
+        if (existing != null) {
+          existing.content = text;
+          existing.description = desc;
+          existing.backContent = back;
+          existing.sizeMultiplier = size;
+          existing.colorIndex = colorIndex;
+          if (isCountdown) existing.durationSeconds = duration;
+        } else {
+          widget.board.items.add(BoardItem(
+            content: text,
+            description: desc,
+            backContent: back,
+            colorIndex: colorIndex,
+            sizeMultiplier: size,
+            durationSeconds: duration,
+          ));
+        }
+      });
+      widget.onChanged();
+      Navigator.pop(ctx);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter, includeRepeats: false): () => submit(ctx),
+          },
+          child: AlertDialog(
           backgroundColor: PensineColors.surface(context),
           title: Text(title),
           content: SingleChildScrollView(
@@ -158,17 +191,17 @@ class _BoardScreenState extends State<BoardScreen> {
                   decoration: InputDecoration(
                     hintText: isFlashcard ? 'Front side' : 'Title',
                   ),
-                  maxLines: 3,
-                  minLines: 1,
                 ),
-                if (isThoughts || type.isSequential) ...[
+                if (isThoughts || type.isSequential || isFlashcard) ...[
                   const SizedBox(height: 12),
                   TextField(
                     controller: descController,
                     decoration: InputDecoration(
                       hintText: isThoughts
                           ? 'Details (tap to expand)'
-                          : 'Details (shown when active)',
+                          : isFlashcard
+                              ? 'Details (shown with the answer)'
+                              : 'Details (shown when active)',
                     ),
                     maxLines: 5,
                     minLines: 2,
@@ -179,8 +212,6 @@ class _BoardScreenState extends State<BoardScreen> {
                   TextField(
                     controller: backController,
                     decoration: const InputDecoration(hintText: 'Back side (answer)'),
-                    maxLines: 3,
-                    minLines: 1,
                   ),
                 ],
                 if (isCountdown) ...[
@@ -221,37 +252,11 @@ class _BoardScreenState extends State<BoardScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                final text = controller.text.trim();
-                if (text.isEmpty) return;
-                final desc = descController.text.trim().isEmpty ? null : descController.text.trim();
-                final back = backController.text.trim().isEmpty ? null : backController.text.trim();
-                final duration = isCountdown ? int.tryParse(durationController.text) : null;
-                setState(() {
-                  if (existing != null) {
-                    existing.content = text;
-                    existing.description = desc;
-                    existing.backContent = back;
-                    existing.sizeMultiplier = size;
-                    existing.colorIndex = colorIndex;
-                    if (isCountdown) existing.durationSeconds = duration;
-                  } else {
-                    widget.board.items.add(BoardItem(
-                      content: text,
-                      description: desc,
-                      backContent: back,
-                      colorIndex: colorIndex,
-                      sizeMultiplier: size,
-                      durationSeconds: duration,
-                    ));
-                  }
-                });
-                widget.onChanged();
-                Navigator.pop(ctx);
-              },
+              onPressed: () => submit(ctx),
               child: Text(submitLabel),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -264,7 +269,14 @@ class _BoardScreenState extends State<BoardScreen> {
         (type == BoardType.timer || type == BoardType.countdown) &&
             _timerStartTime != null;
 
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN): () => _itemDialog(),
+        const SingleActivator(LogicalKeyboardKey.keyT): () => _setTableMode(!widget.board.tableMode),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
       appBar: AppBar(
         title: Text(
           widget.board.name,
@@ -379,6 +391,8 @@ class _BoardScreenState extends State<BoardScreen> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        ),
+      ),
     );
   }
 

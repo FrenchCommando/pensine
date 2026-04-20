@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../models/board.dart';
@@ -194,11 +195,11 @@ class _HomeScreenState extends State<HomeScreen> {
         BoardItem(content: 'Feuille', backContent: 'Leaf', colorIndex: 3),
       ]),
       Board(name: 'Faux Amis', type: BoardType.flashcards, workspaceId: french.id, items: [
-        BoardItem(content: 'Actuellement', backContent: 'Currently (NOT actually)', colorIndex: 0),
-        BoardItem(content: 'Bras', backContent: 'Arm (NOT bra)', colorIndex: 1),
-        BoardItem(content: 'Chair', backContent: 'Flesh (NOT chair)', colorIndex: 2),
-        BoardItem(content: 'Monnaie', backContent: 'Change/coins (NOT money)', colorIndex: 6),
-        BoardItem(content: 'Raisin', backContent: 'Grape (NOT raisin)', colorIndex: 7),
+        BoardItem(content: 'Actuellement', backContent: 'Currently', description: 'Means "currently/right now" — NOT "actually". For "actually" use "en fait".', colorIndex: 0),
+        BoardItem(content: 'Bras', backContent: 'Arm', description: 'The body part. A "bra" (undergarment) is "soutien-gorge".', colorIndex: 1),
+        BoardItem(content: 'Chair', backContent: 'Flesh', description: 'As in the human body. A chair (furniture) is "chaise".', colorIndex: 2),
+        BoardItem(content: 'Monnaie', backContent: 'Change / coins', description: 'Small change in your pocket. Money in general is "argent".', colorIndex: 6),
+        BoardItem(content: 'Raisin', backContent: 'Grape', description: 'The fresh fruit. A dried raisin is "raisin sec".', colorIndex: 7),
       ]),
 
       // --- Pilot Checklists ---
@@ -789,7 +790,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true): () => _createBoard(),
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () => _createBoard(),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -862,6 +870,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Icon(Icons.add),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

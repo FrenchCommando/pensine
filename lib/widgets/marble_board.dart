@@ -150,7 +150,10 @@ class MarbleBoardState extends State<MarbleBoard>
 
       final isActiveChecklist =
           hasActiveSeq && !m.item.done && m.item.id == activeSeqId;
-      final shouldExpand = m.expanded || isActiveChecklist;
+      final isFlashcardFlipped = widget.boardType == BoardType.flashcards &&
+          m.flipped &&
+          m.item.description != null;
+      final shouldExpand = m.expanded || isActiveChecklist || isFlashcardFlipped;
       final maxExpand = (_size.shortestSide * 0.45) / (m.radius * m.scale);
       final expandTarget = shouldExpand ? maxExpand.clamp(1.0, 4.0) : 1.0;
       if ((m.expandScale - expandTarget).abs() > 0.005) return false;
@@ -267,9 +270,12 @@ class MarbleBoardState extends State<MarbleBoard>
       final isActiveChecklist = hasActiveSequential &&
           !m.item.done &&
           m.item.id == activeSequentialId;
+      final isFlashcardFlipped = widget.boardType == BoardType.flashcards &&
+          m.flipped &&
+          m.item.description != null;
 
       final maxExpand = (_size.shortestSide * 0.45) / (m.radius * m.scale);
-      final shouldExpand = m.expanded || isActiveChecklist;
+      final shouldExpand = m.expanded || isActiveChecklist || isFlashcardFlipped;
       final targetExpand = shouldExpand ? maxExpand.clamp(1.0, 4.0) : 1.0;
       m.expandScale += (targetExpand - m.expandScale) * 0.1;
 
@@ -607,7 +613,11 @@ class _MarblePainter extends CustomPainter {
         displayText = m.item.content;
       }
 
-      final isExpanded = (m.expanded || isActiveChecklist) && m.expandScale > 1.5;
+      final isFlashcardFlipped = boardType == BoardType.flashcards &&
+          m.flipped &&
+          m.item.description != null;
+      final isExpanded = (m.expanded || isActiveChecklist || isFlashcardFlipped) &&
+          m.expandScale > 1.5;
 
       if (isExpanded && m.item.description != null) {
         // Expanded: show title + description

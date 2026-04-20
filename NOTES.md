@@ -57,7 +57,7 @@
 ## Board Interactions
 - **Thoughts**: tap to expand/collapse, long-press to edit
 - **To-do**: tap to catch in net (done), long-press to edit, reset button releases all
-- **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button
+- **Flashcards**: tap to flip, tap again = wrong (flips back, grows), double-tap = correct (shrinks to net), flip-all button, reset button. If the item has a `description`, the flipped card auto-expands and shows `backContent` + `description` together (reuses the same expansion render path as thoughts/sequential — gated on `m.flipped && description != null` in `_isIdle`, the physics tick, and paint).
 - **Steps (checklist)**: sequential order — active step inflates and shows description, numbered marbles, tap active step to complete, tap any other marble to jump there (sets everything before it as done), reset button
 - **Timer**: like checklist + stopwatch overlay. Timer starts when first step is completed, shows total elapsed and per-step time. Each advance appends a `Lap` (itemId + elapsedSeconds + recordedAt) to `Board.laps`. Bottom-right shows the lap log. Reset clears timer state **and laps** (tap-back to an earlier marble preserves laps — Reset is the clean-slate action). Overlay freezes on the final total when all steps complete (ticker cancelled, start time kept).
 - **Countdown**: like checklist + per-step countdown. Each item has `durationSeconds`; auto-advances when countdown hits zero. Marbles still tappable to jump around. Duration field in add/edit dialogs. Auto-advance also appends a `Lap`. Reset clears countdown state + laps; overlay freezes on the final total on completion (same freeze-not-stop behaviour as timer).
@@ -101,6 +101,12 @@
 - Marble exit animation: deleted marbles shrink to zero before removal
 - Accessibility: `Semantics` label on marble board, tooltips on all icon buttons
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
+
+## Keyboard (desktop / web)
+- Shortcuts are wired via `CallbackShortcuts` at the Scaffold root (`Focus(autofocus: true)` wrapper so they fire with no other focus). Bindings: `N` = new item (board screen), `T` = toggle marble/table view, `Ctrl/Cmd+N` = new board (home screen).
+- Item dialog: plain `Enter` submits, wired via `CallbackShortcuts` around the `AlertDialog` (Flutter has no "default button" concept — without this wrapper Enter only activates the focused button). Multiline `TextField`s (description only) consume Enter as newline before it bubbles; single-line fields (title, back, duration) let it through. `includeRepeats: false` guards against held-Enter double-submit.
+- **Title and back are single-line; only description is multiline.** UX rule — keeps Enter-submits predictable everywhere except the one field that actually needs newlines. If you need more room on a flashcard answer, put it in the description (which now renders on the flipped card).
+- About dialog lists the shortcuts gated on `kIsWeb || desktop` — Android/iOS builds never show the section.
 
 ## Export / Import
 - `.pensine` file format spec: see `PENSINE_FORMAT.md`

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,13 @@ import '../utils/pluralize.dart';
 
 const String _siteUrl = 'https://frenchcommando.github.io/pensine/site/';
 
+bool _hasKeyboardShortcuts() {
+  if (kIsWeb) return true;
+  return defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+}
+
 Widget _boardTypeRow(IconData icon, String text) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 4),
@@ -15,6 +23,25 @@ Widget _boardTypeRow(IconData icon, String text) {
         Icon(icon, size: 18, color: PensineColors.accent),
         const SizedBox(width: 8),
         Expanded(child: Text(text)),
+      ],
+    ),
+  );
+}
+
+Widget _shortcutRow(String keyLabel, String desc) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            keyLabel,
+            style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(child: Text(desc)),
       ],
     ),
   );
@@ -58,6 +85,14 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
           _boardTypeRow(BoardType.checklist.icon, 'Steps — tap to complete in order'),
           _boardTypeRow(BoardType.timer.icon, 'Timer — steps with elapsed time tracking'),
           _boardTypeRow(BoardType.countdown.icon, 'Countdown — steps auto-advance when time runs out'),
+          if (_hasKeyboardShortcuts()) ...[
+            SizedBox(height: 12),
+            Text('Keyboard shortcuts:'),
+            SizedBox(height: 4),
+            _shortcutRow('N', 'New item (on a board)'),
+            _shortcutRow('T', 'Toggle marble / table view'),
+            _shortcutRow('Ctrl + N', 'New board (home screen)'),
+          ],
           if (boardCount > 0) ...[
             SizedBox(height: 12),
             Text(
