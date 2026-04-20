@@ -324,8 +324,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildBoardTile(Board board) {
+  Widget _buildBoardTile(Board board, int indexInWorkspace) {
+    final muted = PensineColors.muted(context);
     return Card(
+      key: ValueKey(board.id),
       color: PensineColors.boardCard(context, board.colorIndex),
       margin: const EdgeInsets.only(bottom: 8, left: 16, right: 0),
       child: ListTile(
@@ -333,20 +335,38 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(board.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           pluralize(board.items.length, 'item'),
-          style: TextStyle(color: PensineColors.muted(context)),
+          style: TextStyle(color: muted),
         ),
-        trailing: PopupMenuButton<_BoardAction>(
-          icon: const Icon(Icons.more_vert),
-          onSelected: (action) => _handleBoardAction(action, board),
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: _BoardAction.rename, child: Text('Rename')),
-            const PopupMenuItem(value: _BoardAction.changeType, child: Text('Change type')),
-            const PopupMenuItem(value: _BoardAction.changeColor, child: Text('Board color')),
-            if (_ctrl.workspaces.length > 1)
-              const PopupMenuItem(value: _BoardAction.move, child: Text('Move to workspace')),
-            const PopupMenuItem(value: _BoardAction.duplicate, child: Text('Duplicate')),
-            const PopupMenuItem(value: _BoardAction.export, child: Text('Export')),
-            const PopupMenuItem(value: _BoardAction.delete, child: Text('Delete')),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Explicit drag handle — tap-and-drag, no long-press. Matches
+            // the items_table pattern (`ReorderableDragStartListener`) so
+            // `ListTile.onTap` stays free to open the board.
+            ReorderableDragStartListener(
+              index: indexInWorkspace,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.drag_handle, color: muted, size: 20),
+                ),
+              ),
+            ),
+            PopupMenuButton<_BoardAction>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) => _handleBoardAction(action, board),
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: _BoardAction.rename, child: Text('Rename')),
+                const PopupMenuItem(value: _BoardAction.changeType, child: Text('Change type')),
+                const PopupMenuItem(value: _BoardAction.changeColor, child: Text('Board color')),
+                if (_ctrl.workspaces.length > 1)
+                  const PopupMenuItem(value: _BoardAction.move, child: Text('Move to workspace')),
+                const PopupMenuItem(value: _BoardAction.duplicate, child: Text('Duplicate')),
+                const PopupMenuItem(value: _BoardAction.export, child: Text('Export')),
+                const PopupMenuItem(value: _BoardAction.delete, child: Text('Delete')),
+              ],
+            ),
           ],
         ),
         onTap: () async {
@@ -363,6 +383,33 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  /// Apply a drag-reorder within one workspace to the global board order
+  /// that `BoardsController.reorderBoards` expects. Preserves the positions
+  /// of boards in OTHER workspaces; shuffles only this workspace's slots.
+  void _reorderBoardsWithinWorkspace(
+      String workspaceId, int oldIndex, int newIndex) {
+    final wsBoards = _ctrl.boardsForWorkspace(workspaceId);
+    final reordered = List<Board>.from(wsBoards);
+    // ReorderableListView callback convention: newIndex is post-removal.
+    if (newIndex > oldIndex) newIndex--;
+    final moved = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, moved);
+
+    // Walk the global board list; at each slot owned by this workspace,
+    // emit the next id from the reordered list instead.
+    final globalIds = <String>[];
+    var wsIdx = 0;
+    for (final b in _ctrl.boards) {
+      if (b.workspaceId == workspaceId) {
+        globalIds.add(reordered[wsIdx].id);
+        wsIdx++;
+      } else {
+        globalIds.add(b.id);
+      }
+    }
+    _ctrl.reorderBoards(globalIds);
   }
 
   Widget _buildWorkspaceSection(Workspace ws) {
@@ -430,8 +477,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        if (!isCollapsed)
-          ...wsBoards.map(_buildBoardTile),
+        if (!isCollapsed && wsBoards.isNotEmpty)
+          ReorderableListView.builder(
+            // Nested inside the outer ListView of workspace sections, so we
+            // must not self-scroll and must size to children.
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            // Our own drag handle (`ReorderableDragStartListener` in each
+            // tile) starts the drag — no long-press, no whole-row drag.
+            buildDefaultDragHandles: false,
+            itemCount: wsBoards.length,
+            itemBuilder: (context, i) => _buildBoardTile(wsBoards[i], i),
+            onReorder: (oldIndex, newIndex) =>
+                _reorderBoardsWithinWorkspace(ws.id, oldIndex, newIndex),
+          ),
         if (!isCollapsed && wsBoards.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 32, bottom: 8),
