@@ -16,6 +16,8 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 
 Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/latest) — enable "Install unknown apps" for your browser when prompted.
 
+**iOS beta (TestFlight):** [join the beta](https://testflight.apple.com/join/KDHvbWKH) — tap the link on iPhone/iPad; installs the TestFlight app if needed.
+
 ## Board Types
 
 - **Thoughts** — free-form notes that expand on tap

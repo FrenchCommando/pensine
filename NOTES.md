@@ -176,9 +176,9 @@
 ### Shipping a build to a device
 - No "submit to store" step — the pipeline is Play internal + TestFlight only (no production). Push commits to main, run the Release workflow from the Actions UI. That's the whole flow.
 - **Android (Play internal):** Play Store offers the update automatically within a few minutes. Nudge by opening Play Store → My apps if impatient.
-- **iOS (TestFlight):** TestFlight app notifies when Apple finishes processing (~10–30min typical, first build after a plist change can be longer).
+- **iOS (TestFlight):** TestFlight app notifies when Apple finishes processing (~10–30min typical, first build after a plist change can be longer). External testers join via public link `https://testflight.apple.com/join/KDHvbWKH` (also linked from README + landing page); internal team members are added by Apple ID in App Store Connect → TestFlight → Internal Testing.
 - **Sideload (Android):** open `github.com/FrenchCommando/pensine/releases/latest` on the phone, tap the APK, install. Signature is the upload key — consistent across your sideloaded builds, but incompatible with Play installs (can't mix on the same device without uninstalling first).
-- Native config changes (Info.plist, AndroidManifest) ride along in the binary and take effect after install. No extra store review for internal/TestFlight tracks.
+- Native config changes (Info.plist, AndroidManifest) ride along in the binary and take effect after install. No extra store review for Play internal / TestFlight Internal tracks; TestFlight External gets a quick Beta App Review (~minutes after the first approval).
 
 ### CI
 - `.github/workflows/ci.yml` — runs on push/PR to main: `flutter analyze`, `flutter test`, `flutter build web`

@@ -49,6 +49,7 @@
 - ✅ App Privacy nutrition label: "No, we do not collect data from this app" (Pensine is local-only; no plugin collects data)
 - ✅ Export compliance: declared via `ITSAppUsesNonExemptEncryption = false` in Info.plist — skips the per-upload questionnaire
 - ⬜ App Clip: not applicable (no single-task flow suited to App Clip)
+- ✅ TestFlight External Testing: group created (2026-04-19), Beta App Review passed, public link live at `https://testflight.apple.com/join/KDHvbWKH` (linked from README + landing page, mirrors the Android Google Group flow)
 
 **No local Mac — fully CI-based:**
 - GitHub Actions macOS runners (free for public repos)
@@ -219,7 +220,7 @@ This is the **upload key**. On first Play Console release, opt into Play App Sig
 
 ### Gotchas (one-time or recurring)
 - Apple Developer enrollment can take hours to days for org accounts; usually same-day for individuals.
-- TestFlight first-build review is ~24h even for internal testers.
+- TestFlight Beta App Review (External Testing) is ~24h for the first build, minutes for subsequent. Internal Testing skips review entirely.
 - Distribution cert + provisioning profile expire yearly — `fastlane cert`/`sigh` renew in ~5 min.
 - Privacy manifest (`ios/Runner/PrivacyInfo.xcprivacy`) required for new App Store submissions (post-May 2024). Flutter 3.19+ ships a default; verify or customize.
 - Flutter's default iOS project uses automatic signing with `iPhone Developer` identity — fine locally, fatal on CI runners that have no Apple ID logged in. The release workflow overrides this via xcconfig append (see phase rollout step 5). If you ever regenerate the iOS project, re-verify the override still bites.
