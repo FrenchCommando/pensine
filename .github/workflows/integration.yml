@@ -63,10 +63,10 @@ jobs:
           arch: x86_64
           profile: pixel_7
           emulator-boot-timeout: 300
-          script: |
-            flutter drive \
-              --driver=test_driver/integration_test.dart \
-              --target=integration_test/smoke_test.dart
+          # `script:` lines run as separate `sh -c` invocations — backslash
+          # continuations break (fails with `Target file "\" not found`).
+          # Keep the flutter drive on a single line.
+          script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/smoke_test.dart
 
   ios:
     runs-on: macos-latest

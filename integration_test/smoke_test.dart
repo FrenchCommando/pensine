@@ -45,6 +45,10 @@ void main() {
     await tester.pumpWidget(const PensineApp());
     await settle(tester);
 
+    // Scroll each name into view before asserting — the home ListView is
+    // lazy, and on real devices (phones/tablets) 2-3 workspaces are below
+    // the fold. Without `scrollTo`, `find.text` returns 0 matches for
+    // anything not yet laid out.
     for (final name in [
       'Welcome',
       'Cooking Recipes',
@@ -52,6 +56,7 @@ void main() {
       'French Vocab',
       'Pilot Checklists',
     ]) {
+      await scrollTo(tester, find.text(name));
       expect(find.text(name), findsOneWidget,
           reason: '$name should render on the home screen');
     }
