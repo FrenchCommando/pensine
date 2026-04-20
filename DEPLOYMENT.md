@@ -57,12 +57,54 @@
 - Release signing + TestFlight upload: see Release Automation below
 - Not using `fastlane match` (solo-dev, CI-only signing → GitHub Secrets directly is simpler)
 
-## Microsoft Store
+## Microsoft Store (Windows)
 
-- $19 one-time developer account
-- Use `msix` pub package to build MSIX from `pubspec.yaml`
-- Microsoft handles code signing
-- Easiest store option for native Windows distribution
+**Account:** Microsoft Partner Center — $19 one-time at `partner.microsoft.com/dashboard` (Developer Program, Individual). Account is tied to a Microsoft account (personal MSA or work/school Azure AD) — ownership is hard to transfer, so pick deliberately.
+
+**App reservation (one-time):**
+1. Partner Center → Apps and games → **New product** → **MSIX or PWA app**.
+2. Reserve the app name "Pensine" (fall back to e.g. "Pensine Notes" if taken).
+3. From the app identity page, grab the four values that feed GitHub Secrets + the CI lane:
+   - **Publisher Display Name** → `MSIX_PUBLISHER_DISPLAY_NAME`
+   - **Publisher ID** (the `CN=...` string, under Account settings → Identity) → `MSIX_PUBLISHER`
+   - **Package Identity Name** (e.g. `12345FrenchCommando.Pensine`) → `MSIX_IDENTITY_NAME`
+   - **Store ID** (12-char alphanumeric) → `MSIX_STORE_ID` (for future Partner Center Submission API automation)
+
+**Build format:** MSIX (`dart run msix:create --store`). Microsoft re-signs the package during Store upload — the generated MSIX is unsigned and not directly sideloadable.
+
+**CI lane** (`release.yml` → `windows-release`):
+- Runs on `windows-latest` (Windows SDK, MakeAppx, SignTool preinstalled).
+- `flutter build windows --release` then `dart run msix:create --store` with identity flags injected from Secrets.
+- Produces `pensine-v<version>-build<N>.msix` as a workflow artifact — download from the Actions UI and upload manually to Partner Center until API automation lands.
+
+**Version rules (MSIX):**
+- 4-part `a.b.c.d`; Store requires the 4th part to be `0`.
+- Version string is `<pubspec version>.0`, e.g. pubspec `1.1.3` → MSIX `1.1.3.0`.
+- Store rejects duplicate versions across submissions, so **every Store upload requires a pubspec version bump** (unlike Play internal / TestFlight, which accept same version name with different build numbers).
+- In-app build number (About dialog) still comes from `github.run_number` via `flutter build windows --build-number=...`.
+
+**Manual store-listing tasks (one-time):**
+- App name, description, category
+- Content rating (IARC) questionnaire
+- Privacy policy URL (same `https://frenchcommando.github.io/pensine/privacy.html` used for Play/App Store)
+- Age rating, price (Free), accessibility notes
+- Screenshots — Partner Center requires at least one 1366x768 or larger; reuse the web/mobile screenshots from `screenshots.yml` or capture Windows-native ones
+- First submission must go through manual review (~hours to a few days)
+
+**Phase rollout:**
+1. ✅ `msix` dev dep + `msix_config` in `pubspec.yaml` (non-identity fields only)
+2. ✅ `windows-release` CI job producing MSIX artifact
+3. ⏳ Partner Center account + app reservation (manual, $19)
+4. ⏳ GitHub Secrets populated (`MSIX_PUBLISHER_DISPLAY_NAME`, `MSIX_IDENTITY_NAME`, `MSIX_PUBLISHER`, `MSIX_STORE_ID`)
+5. ⏳ First manual upload to Partner Center
+6. ⏳ Partner Center Submission API automation (Azure AD app registration, `msstore-cli` or direct API calls in CI)
+7. ⏳ `.pensine` file association on Windows (MSIX manifest `FileTypeAssociation` entry + Dart-side command-line arg handling in `pending_import_native.dart`)
+
+**Required GitHub Secrets (Windows):**
+- `MSIX_PUBLISHER_DISPLAY_NAME` — human-readable publisher name (e.g. "Martial Ren")
+- `MSIX_IDENTITY_NAME` — Package Identity Name from Partner Center
+- `MSIX_PUBLISHER` — the `CN=...` Publisher ID string, verbatim
+- `MSIX_STORE_ID` — 12-char Store ID (not used yet; reserved for upload automation)
 
 ## Screenshots & Preview Video
 

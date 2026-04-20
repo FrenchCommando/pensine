@@ -164,10 +164,17 @@
 - Unix: `tool/generate_icon.sh`
 
 ### Release builds
-- Windows: `flutter build windows`
+- Windows: `flutter build windows` (bare exe + DLLs) or `dart run msix:create --store` (MSIX for Microsoft Store — requires identity flags, see DEPLOYMENT.md)
 - Android: `flutter build appbundle` (AAB, for Play) or `flutter build apk` (sideloading)
 - iOS: `flutter build ipa` (signed, for App Store) or `flutter build ios` (unsigned, for local run)
 - Web: `flutter build web`
+
+### Windows MSIX
+- `msix_config` in `pubspec.yaml` holds non-identity fields only (display_name, logo_path, architecture, store mode, output path). Identity fields (`publisher`, `publisher_display_name`, `identity_name`) live in GitHub Secrets and are injected via CLI flags in CI — same pattern as Android keystore / iOS cert, treats identifying Store values as secrets even though they're technically visible post-publish.
+- MSIX version: 4-part `a.b.c.d`; Store requires the 4th part to be `0`. CI uses `<pubspec version>.0`, so every Store upload needs a pubspec version bump (Store rejects duplicate versions — differs from Play internal / TestFlight which accept same version name with different build numbers).
+- Output: `build/windows/msix/pensine.msix`, renamed to `pensine-v<version>-build<N>.msix` and uploaded as a workflow artifact. Download from Actions UI and upload manually to Partner Center until Submission API automation lands.
+- MSIX built with `--store` is unsigned — Microsoft re-signs on upload, so sideload installs of the CI artifact won't work without re-signing locally. If we ever want sideloadable Windows builds (pre-Store testing on someone else's machine), add a separate self-signed build path.
+- `.pensine` file association on Windows: deferred. Requires MSIX manifest `FileTypeAssociation` entry + Dart-side handling of command-line args on cold launch and a Windows activation hook for warm launches. Tracked under the "Not yet set up" section.
 
 ### Version
 - Version defined in `pubspec.yaml` (`version:` field), displayed in about dialog via `package_info_plus`
