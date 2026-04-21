@@ -25,7 +25,7 @@ A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your 
 
 Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/latest) — enable "Install unknown apps" for your browser when prompted.
 
-**iOS beta (TestFlight):** [join the beta](https://testflight.apple.com/join/KDHvbWKH) — tap the link on iPhone/iPad; installs the TestFlight app if needed.
+**iOS:** [App Store](https://apps.apple.com/app/pensine/id6762313502) for the stable release, or [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for the latest beta build (installs the TestFlight app if needed).
 
 **Windows:** requires **Windows 10 (version 1809) or later, on an x64 PC or Windows 11 ARM64**. Two options on the [latest release page](https://github.com/FrenchCommando/pensine/releases/latest):
 

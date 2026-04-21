@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../utils/pluralize.dart';
 
 const String _siteUrl = 'https://frenchcommando.github.io/pensine/site/';
+const String _appStoreUrl = 'https://apps.apple.com/app/pensine/id6762313502';
 
 bool _hasKeyboardShortcuts() {
   if (kIsWeb) return true;
@@ -14,6 +15,8 @@ bool _hasKeyboardShortcuts() {
       defaultTargetPlatform == TargetPlatform.macOS ||
       defaultTargetPlatform == TargetPlatform.linux;
 }
+
+bool _isIos() => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
 Widget _boardTypeRow(IconData icon, String text) {
   return Padding(
@@ -140,6 +143,20 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
               ),
             ),
           ),
+          if (_isIos()) ...[
+            SizedBox(height: 4),
+            InkWell(
+              onTap: () => launchUrl(Uri.parse(_appStoreUrl), mode: LaunchMode.externalApplication),
+              child: Text(
+                'Rate on the App Store',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: PensineColors.accent,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
         ],
       )),
       actions: [

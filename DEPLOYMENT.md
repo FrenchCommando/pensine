@@ -31,6 +31,8 @@
 **Account:** Apple Developer — $99/year at developer.apple.com (enrolled 2026-04-15)
 
 **App Store Connect listing:**
+- ✅ Live URL: `https://apps.apple.com/app/pensine/id6762313502` (Apple ID: `6762313502`)
+- ✅ Release setting: **Automatically release this version** (after Apple approval) — each new version still needs a manual "Add for Review" click in App Store Connect, but no second click is required once it clears review.
 - ✅ App name: Pensine
 - ✅ Subtitle: "Visual notes with marbles"
 - ✅ Bundle ID: `com.frenchcommando.pensine`
