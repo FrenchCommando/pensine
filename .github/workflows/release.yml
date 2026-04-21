@@ -416,19 +416,42 @@ jobs:
             "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
       - name: Re-sign .app with Developer ID + hardened runtime (DMG)
-        # Build 31 notarization returned `status: Invalid` — exit 65 from
-        # the stapler, generic. Empirically (matches MAS pattern where
-        # xcconfig manual signing didn't embed sandbox) this is hardened
-        # runtime missing. Re-sign inside-out with `--options runtime` so
-        # notarytool accepts the binary.
+        # Build 31 notarization returned `status: Invalid` with exit 65
+        # from the stapler — generic "no ticket for this cdhash". The
+        # earlier framework-only re-sign loop (`find -name "*.framework"`)
+        # missed two classes of Mach-O files that notarytool still checks:
+        #   - loose .dylib / .so files Flutter plugins occasionally drop
+        #     under Contents/Frameworks or Contents/Resources
+        #   - the inner binary inside each framework at
+        #     Versions/A/<FrameworkName>, which some 2025 Flutter engines
+        #     need signed explicitly before the framework container
+        # Per Apple TN2206: sign nested code first, then containers, then
+        # the outer app. The inside-out pass below does that properly.
+        # (--deep is explicitly discouraged by Apple; manual recursion.)
         run: |
           APP_PATH="build/macos/Build/Products/Release/pensine.app"
+          IDENTITY="Developer ID Application"
+
+          # Step 1: every Mach-O file inside, deepest-first.
+          # `file --mime-type` reports application/x-mach-binary for
+          # executables and dylibs. `-depth` on find visits files before
+          # their parent dirs, giving natural leaf-first order.
+          find "$APP_PATH/Contents" -depth -type f | while read -r f; do
+            if file --mime-type -b "$f" 2>/dev/null | grep -q "mach-binary"; then
+              codesign --force --sign "$IDENTITY" --options runtime --timestamp "$f"
+            fi
+          done
+
+          # Step 2: framework *bundles* — must be signed as a unit after
+          # their inner Mach-O is signed.
           if [ -d "$APP_PATH/Contents/Frameworks" ]; then
-            find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read fw; do
-              codesign --force --sign "Developer ID Application" --options runtime --timestamp "$fw"
+            find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read -r fw; do
+              codesign --force --sign "$IDENTITY" --options runtime --timestamp "$fw"
             done
           fi
-          codesign --force --sign "Developer ID Application" \
+
+          # Step 3: outer .app with entitlements.
+          codesign --force --sign "$IDENTITY" \
             --entitlements macos/Runner/Release.entitlements \
             --options runtime --timestamp \
             "$APP_PATH"
@@ -470,6 +493,7 @@ jobs:
             --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" \
             --wait \
             --timeout 20m \
+            --no-s3-acceleration \
             --output-format json)
           NOTARY_EXIT=$?
           set -e
@@ -527,6 +551,7 @@ jobs:
             --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" \
             --wait \
             --timeout 20m \
+            --no-s3-acceleration \
             --output-format json)
           NOTARY_EXIT=$?
           set -e

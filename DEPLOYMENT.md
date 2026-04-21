@@ -96,6 +96,10 @@ Plus one provisioning profile:
 
 **DMG not notarizing?** Most likely causes in order: (1) hardened runtime not enabled — check `ENABLE_HARDENED_RUNTIME = YES` in `macos/Runner/Configs/Release.xcconfig` at build time (the job's `cat >>` appends it); (2) Developer ID cert not installed with the right `productbuild`/`codesign` partition list — keychain import in the job uses the same `-T /usr/bin/codesign` pattern as iOS; (3) notarytool auth — check the API key is the same one that works for iOS TestFlight.
 
+**Reading Apple's rejection reason** — `xcrun notarytool submit --wait` returns exit 0 even when Apple rejects the submission, it just reports `status: Invalid` in stdout. The CI step runs `--output-format json`, parses the result with `jq`, and on anything other than `Accepted` runs `xcrun notarytool log <submission-id>` to fetch Apple's structured rejection reason (specific file paths, entitlement violations, timestamping errors). Without that log-fetch step every failure looks identical — "status: Invalid, stapler Error 65" — and iteration is blind.
+
+**`notarytool submit --wait` has no internal wall-clock limit.** Apple's notary can hang indefinitely on their end; `--wait` polls until they respond. Always pass `--timeout 20m` so the step fails fast and the log-fetch block below gets to run. Without it, a stuck Apple-side submission eats the whole 45-min job budget and the step dies on the job timeout before capturing any diagnostic output. Wrap the submit in `set +e` / capture `$?` / `set -e` so a non-zero exit (from timeout or hard failure) doesn't abort the script under bash's `-e` mode — the log fetch needs to run regardless of how the submit ended.
+
 **Mac TestFlight:** skipped initially. Available on the same `upload_to_testflight` fastlane action if we want it later — would need a fourth cert (Mac App Distribution without "3rd Party" prefix) and a separate profile. Direct App Store submission with auto-release matches the iOS cadence you already run.
 
 ## Windows — Inno Setup installer + sideload zip (primary channels)

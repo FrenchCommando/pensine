@@ -135,7 +135,7 @@ void showPensineAbout(BuildContext context, {VoidCallback? onReset, int workspac
           InkWell(
             onTap: () => launchUrl(Uri.parse(_siteUrl), mode: LaunchMode.externalApplication),
             child: Text(
-              'frenchcommando.github.io/pensine',
+              'frenchcommando.github.io/pensine/site',
               style: TextStyle(
                 fontSize: 12,
                 color: PensineColors.accent,
