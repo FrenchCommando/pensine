@@ -2,80 +2,107 @@
   <img src="assets/app_icon.png" alt="Pensine logo" width="128" height="128">
 </p>
 
-# Pensine
+<h1 align="center">Pensine 🫧</h1>
 
-[![CI](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml)
-[![Integration](https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml)
-[![Artifacts](https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml)
-[![Deploy to GitHub Pages](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml)
-[![Release](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml/badge.svg)](https://github.com/FrenchCommando/pensine/actions/workflows/release.yml)
+<p align="center">
+  <em>A place for your thoughts.</em><br>
+  Drag, fling, and tap your way through boards of floating marbles. Lofi vibes, gamified, no backend, no account.<br>
+  <sub><em>Penser</em> = to think 🇫🇷</sub>
+</p>
 
-A fun, visual notes app where ideas float as marbles. Drag, fling, and tap your way through different board types — lofi vibes, gamified interactions, no backend required.
+<p align="center">
+  <a href="https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml"><img src="https://github.com/FrenchCommando/pensine/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml"><img src="https://github.com/FrenchCommando/pensine/actions/workflows/integration.yml/badge.svg" alt="Integration"></a>
+  <a href="https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml"><img src="https://github.com/FrenchCommando/pensine/actions/workflows/artifacts.yml/badge.svg" alt="Artifacts"></a>
+  <a href="https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml"><img src="https://github.com/FrenchCommando/pensine/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
+  <a href="https://github.com/FrenchCommando/pensine/actions/workflows/release.yml"><img src="https://github.com/FrenchCommando/pensine/actions/workflows/release.yml/badge.svg" alt="Release"></a>
+</p>
 
-**Try it now:** [frenchcommando.github.io/pensine](https://frenchcommando.github.io/pensine/)
+---
 
-**Website:** [frenchcommando.github.io/pensine/site](https://frenchcommando.github.io/pensine/site/)
+## 🚀 Grab it
 
-> Store listings are a slog to get through, so the links below point to testing platforms instead. That's actually the better deal — builds come straight from the release workflow, completely transparent.
+<p align="center">
+  <a href="https://frenchcommando.github.io/pensine/"><img src="https://img.shields.io/badge/Play_in_browser-5A0FC8?logo=pwa&logoColor=white&style=for-the-badge" alt="Play in browser"></a>
+  &nbsp;
+  <a href="https://apps.apple.com/app/pensine/id6762313502"><img src="https://img.shields.io/badge/App_Store-0D96F6?logo=apple&logoColor=white&style=for-the-badge" alt="App Store"></a>
+  &nbsp;
+  <a href="https://play.google.com/store/apps/details?id=com.frenchcommando.pensine"><img src="https://img.shields.io/badge/Google_Play-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Google Play"></a>
+  &nbsp;
+  <a href="https://github.com/FrenchCommando/pensine/releases/latest"><img src="https://img.shields.io/badge/Windows_installer-0078D6?logo=windows11&logoColor=white&style=for-the-badge" alt="Windows installer"></a>
+</p>
 
-**Android beta** — to install via Play Store:
-- [Testers group](https://groups.google.com/g/pensine-testers) — join first (required for access)
-- [Play Store](https://play.google.com/store/apps/details?id=com.frenchcommando.pensine) — install on Android
-- [Web](https://play.google.com/apps/testing/com.frenchcommando.pensine) — enrol from any browser
+<p align="center">
+  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android via closed test (join below) · 🪟 Windows 10 1809+ / 11 ARM64</sub>
+</p>
 
-Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/latest) — enable "Install unknown apps" for your browser when prompted.
+### 🧪 Beta + alternative paths
 
-**iOS:** [App Store](https://apps.apple.com/app/pensine/id6762313502) for the stable release, or [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for the latest beta build (installs the TestFlight app if needed).
+| 🍎 iOS | 🤖 Android | 🪟 Windows |
+|---|---|---|
+| [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for bleeding-edge builds | [Testers group](https://groups.google.com/g/pensine-testers) (join first) · [Web install](https://play.google.com/apps/testing/com.frenchcommando.pensine) · [Sideload APK](https://github.com/FrenchCommando/pensine/releases/latest) | [Portable zip](https://github.com/FrenchCommando/pensine/releases/latest) — extract, run, leave no trace |
 
-**Windows:** requires **Windows 10 (version 1809) or later, on an x64 PC or Windows 11 ARM64**. Two options on the [latest release page](https://github.com/FrenchCommando/pensine/releases/latest):
+<details>
+<summary>💡 <strong>Windows heads-up</strong> — SmartScreen + uninstall notes</summary>
 
-- `pensine-v*-setup.exe` — **installer (recommended for most users)**: Start Menu entry, `.pensine` file association, proper uninstaller.
-- `pensine-v*-windows.zip` — **portable build**: extract anywhere, run `pensine.exe`. Use this for USB-stick installs, locked-down PCs where you can't run installers, or to leave no trace on the host machine.
+Both Windows artifacts are unsigned while Microsoft Store listing is pending — SmartScreen warns on first launch; click **More info → Run anyway**.
 
-Both are unsigned while Microsoft Store listing is pending — SmartScreen warns on first launch; click "More info → Run anyway".
+**Uninstall the installer build:** Settings → Apps → Pensine → Uninstall (or "Uninstall Pensine" in the Start Menu folder). Removes all installed files and the `.pensine` file association. Your boards live under `%APPDATA%\pensine\` and survive uninstall — delete that folder by hand for a clean wipe, or use the in-app **About → Reset** before uninstalling.
 
-To uninstall the installer build: Settings → Apps → Pensine → Uninstall (or use the "Uninstall Pensine" shortcut in the Start Menu folder). Removes all installed files and the `.pensine` file association. Your boards and workspaces live under `%APPDATA%\pensine\` and are kept on uninstall — delete that folder by hand if you want a clean wipe, or use the in-app **About → Reset** before uninstalling. To uninstall the portable zip: just delete the extracted folder.
+**Uninstall the portable zip:** just delete the extracted folder.
 
-## Board Types
+</details>
 
-- **Thoughts** — free-form notes that expand on tap
-- **To-do** — tap to catch in the net (mark done), reset to release all
-- **Flashcards** — tap to flip, double-tap when correct (shrinks to net), grows on wrong answer
-- **Steps** — sequential checklist with numbered marbles, one active at a time
+---
 
-## Workspaces
+## 🧩 Board types
 
-Boards are grouped into workspaces — collections of related boards (e.g. Cooking Recipes, French Vocab, Pilot Checklists). Create, rename, recolor, and reorder workspaces from the home screen. Export a whole workspace as a single `.pensine` file.
+Pick a flavor, drop your marbles in. Every board lives inside a workspace.
 
-## Features
+| | Board | What it does |
+|---|---|---|
+| 💭 | **Thoughts** | Free-form notes that expand on tap. Long-press to edit. |
+| ✅ | **To-do** | Tap to catch in the net (done). Reset releases everything back into play. |
+| 🎴 | **Flashcards** | Tap to flip. Tap again = wrong (grows + flips back). Double-tap = correct (shrinks to net). |
+| 🪜 | **Steps** | Sequential checklist with numbered marbles, one active at a time. |
+| ⏱️ | **Timer** | Steps + stopwatch overlay. Logs a lap every advance. |
+| ⏳ | **Countdown** | Steps + per-step timer. Auto-advances when the clock hits zero. |
 
-- Dark/light theme toggle
-- Drag and fling marbles around the screen
-- Shake button to scatter
-- Per-board accent color (tints title, net, and icon)
-- Color picker and size slider per item
-- Reorder boards by long-press drag on the home screen
-- Rename, duplicate, or change board type from the popup menu
-- Swipe to delete with undo, or delete from menu with confirmation
-- Export/import boards as `.pensine` files
-- Installable as a PWA on mobile and desktop
+## 🗂️ Workspaces
 
-## Stack
+Boards live in workspaces — collections of related boards (e.g. **Cooking Recipes**, **French Vocab**, **Pilot Checklists**). Create, rename, recolor, and reorder them from the home screen. Export a whole workspace as a single `.pensine` file.
 
-- Flutter / Dart
-- Local storage only (no backend, no account)
+## ✨ Features
 
-## Development
+- 🌓 Dark / light theme toggle
+- 🫧 Drag and fling marbles around the screen
+- 📳 Shake button to scatter everything
+- 🎨 Per-board accent color (tints title, net, and icon)
+- 🎨 Color picker and size slider per item
+- 🔀 Reorder boards by long-press drag on the home screen
+- 🏷️ Rename, duplicate, or change board type from the popup menu
+- 🗑️ Swipe to delete with undo
+- 📤 Export / import as `.pensine` files
+- 📲 Installable as a PWA on mobile and desktop
+- ⌨️ Full keyboard shortcuts on desktop / web
+
+---
+
+## 🛠️ Stack
+
+- **Flutter / Dart** — one codebase, 6 targets
+- **Local storage only** — no backend, no account, your boards never leave your device unless you export them
+
+## 💻 Development
 
 ```bash
 flutter run -d chrome    # web
 flutter run -d windows   # desktop
+flutter run -d macos     # desktop
 ```
 
-## Deployment
+Web builds deploy automatically to GitHub Pages on every push to `main`.
 
-Web builds deploy automatically to GitHub Pages on every push to `main` via GitHub Actions. Installable as a PWA on mobile and desktop.
-
-## License
+## 📄 License
 
 All Rights Reserved. See [LICENSE](LICENSE).
