@@ -3,6 +3,8 @@ name: Release
 on:
   workflow_dispatch:
 
+run-name: Release · build ${{ github.run_number }}
+
 jobs:
   android-release:
     runs-on: ubuntu-latest

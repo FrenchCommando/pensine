@@ -92,3 +92,24 @@ jobs:
               --driver=test_driver/integration_test.dart \
               --target=integration_test/smoke_test.dart \
               -d "$UDID"
+
+  windows:
+    # Exercises real shared_preferences + path_provider on Windows, and
+    # specifically covers the native -> Dart temp-file handoff added for
+    # the Inno Setup file-association flow (see pending_import_test.dart).
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      # Both steps go through tool/run_windows_integration.sh so any local
+      # invocation gets instant rejection before paying the ~30s Windows
+      # build cost. CI sets CI=true automatically; the script enforces it.
+      - name: Run integration smoke test
+        shell: bash
+        run: tool/run_windows_integration.sh integration_test/smoke_test.dart
+
+      - name: Run pending-import integration test
+        shell: bash
+        run: tool/run_windows_integration.sh integration_test/pending_import_test.dart

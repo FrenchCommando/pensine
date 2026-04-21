@@ -1,5 +1,30 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Hard-guard against running Windows integration tests on a developer
+/// machine: dev builds and the installed Pensine share `%APPDATA%`,
+/// `%TEMP%`, and the shared_preferences registry hive — local runs would
+/// pollute the user's real workspaces and leak the test's `Integration
+/// Test Workspace` board into them.
+///
+/// Other targets (chrome / android / ios) run sandboxed (browser storage,
+/// emulator/simulator FS) and are safe locally, so the guard only fires
+/// on Windows.
+///
+/// CI sets `CI=true` (GitHub Actions does this automatically). To override
+/// for local debugging — accepting the data pollution — set `CI=true` in
+/// the shell before `flutter drive`.
+void requireCIOnWindows() {
+  if (Platform.isWindows && Platform.environment['CI'] != 'true') {
+    throw StateError(
+      'Windows integration tests are CI-only: dev builds share user data '
+      'with the installed app (%APPDATA%, %TEMP%, shared_preferences). '
+      'Set CI=true in your shell to override locally.',
+    );
+  }
+}
 
 /// Pumps frames until no more are scheduled, or [timeout] elapses.
 /// Unlike pumpAndSettle this won't throw on continuous animations.
