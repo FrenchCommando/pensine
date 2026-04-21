@@ -25,13 +25,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Pin to system /usr/bin/python3 — it ships with `pyobjc-framework-Quartz`
-# (required for `_find_pensine_window_id`). GHA macos-15's bare `python3`
-# usually resolves to Homebrew Python, which lacks pyobjc out of the box,
-# so `from Quartz import ...` would fall back to full-display capture and
-# screenshots would be the wrong resolution for Mac App Store validation.
-PYTHON=${PYTHON:-/usr/bin/python3}
-"$PYTHON" tool/screenshot_server.py \
+# pyobjc isn't preinstalled on GHA macos-15 (neither Homebrew python3 nor
+# /usr/bin/python3 ships it in practice). Set up a throwaway venv with
+# just `pyobjc-framework-Quartz` so `_find_pensine_window_id` can use
+# CGWindowList → screencapture -l <windowID> for clean window-region
+# captures at the right Mac-App-Store resolution. Without this the server
+# falls back to full-display capture and a passing TCC dialog lands in
+# the screenshot.
+VENV="${RUNNER_TEMP:-/tmp}/screenshot-venv"
+if [ ! -d "$VENV" ]; then
+  python3 -m venv "$VENV"
+  "$VENV/bin/pip" install --quiet pyobjc-framework-Quartz
+fi
+"$VENV/bin/python" tool/screenshot_server.py \
   --mode macos \
   --port "$PORT" --out "$OUT_DIR" &
 SERVER_PID=$!
