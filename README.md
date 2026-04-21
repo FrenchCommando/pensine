@@ -30,16 +30,19 @@
   <a href="#-android--two-step-install"><img src="https://img.shields.io/badge/Android_(beta)-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Android (beta)"></a>
   &nbsp;
   <a href="https://github.com/FrenchCommando/pensine/releases/latest"><img src="https://img.shields.io/badge/Windows_installer-0078D6?logo=windows11&logoColor=white&style=for-the-badge" alt="Windows installer"></a>
+  &nbsp;
+  <a href="https://github.com/FrenchCommando/pensine/releases/latest"><img src="https://img.shields.io/badge/Linux_.deb_+_AppImage-E95420?logo=ubuntu&logoColor=white&style=for-the-badge" alt="Linux .deb + AppImage"></a>
 </p>
 
 <p align="center">
-  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android is in closed test — <a href="#-android--two-step-install">two-step install below</a> · 🪟 Windows 10 1809+ / 11 ARM64</sub>
+  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android is in closed test — <a href="#-android--two-step-install">two-step install below</a> · 🪟 Windows 10 1809+ / 11 ARM64 · 🐧 Linux x86_64 (glibc 2.31+)</sub>
 </p>
 
 ### 🧪 Beta + alternative paths
 
 - 🍎 **iOS beta** — [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for bleeding-edge builds before they hit the App Store
 - 🪟 **Windows portable** — [zip from Releases](https://github.com/FrenchCommando/pensine/releases/latest): extract, run `pensine.exe`, leave no trace. Good for locked-down PCs or USB-stick installs.
+- 🐧 **Linux AppImage** — single-file portable: `chmod +x pensine-*.AppImage && ./pensine-*.AppImage`. No install, no root, any glibc-2.31+ distro. Delete the file to remove.
 
 <details>
 <summary>💡 <strong>Windows heads-up</strong> — SmartScreen + uninstall notes</summary>
@@ -49,6 +52,18 @@ Both Windows artifacts are unsigned while Microsoft Store listing is pending —
 **Uninstall the installer build:** Settings → Apps → Pensine → Uninstall (or "Uninstall Pensine" in the Start Menu folder). Removes all installed files and the `.pensine` file association. Your boards live under `%APPDATA%\pensine\` and survive uninstall — delete that folder by hand for a clean wipe, or use the in-app **About → Reset** before uninstalling.
 
 **Uninstall the portable zip:** just delete the extracted folder.
+
+</details>
+
+<details>
+<summary>💡 <strong>Linux heads-up</strong> — .deb vs AppImage, uninstall</summary>
+
+Two unsigned artifacts on every release:
+
+- **`.deb`** (Debian / Ubuntu / Mint / Pop!_OS) — `sudo apt install ./pensine-*.deb`. Installs to `/usr/lib/pensine/`, adds a Start menu entry + `.pensine` file association. Uninstall with `sudo apt remove pensine`. apt will warn once about "untrusted origin" — expected, the .deb isn't GPG-signed.
+- **AppImage** (any distro, glibc 2.31+) — single file, `chmod +x` and run. No install, no menu entry unless you run [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) or similar to register it. Uninstall = delete the file.
+
+Your boards live in your XDG data directory (typically under `~/.local/share/`) and survive uninstall; use in-app **About → Reset** for a clean wipe.
 
 </details>
 
