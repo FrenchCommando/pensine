@@ -360,8 +360,16 @@ jobs:
     # attached to the same GitHub Release as the APK / Windows artifacts.
     # Distinct from the MAS job: no provisioning profile, Developer ID
     # signing instead of MAS, notarytool staple replaces store review.
+    #
+    # PARKED: Apple notarization is running long enough per submission that
+    # the two notarize+wait steps (one for the .app, one for the .dmg) eat
+    # most of the 45-min job budget and routinely time out at the 20m cap.
+    # MAS is our primary macOS channel, so the DMG isn't blocking shipping.
+    # To revive: restore the original gate check
+    #   if: needs.macos-gate.outputs.dmg_enabled == 'true'
+    # (secrets and every build step below are still wired and current).
     needs: macos-gate
-    if: needs.macos-gate.outputs.dmg_enabled == 'true'
+    if: false
     runs-on: macos-15
     timeout-minutes: 45
     permissions:

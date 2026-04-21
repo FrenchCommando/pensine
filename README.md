@@ -27,7 +27,7 @@
   &nbsp;
   <a href="https://apps.apple.com/app/pensine/id6762313502"><img src="https://img.shields.io/badge/App_Store-0D96F6?logo=apple&logoColor=white&style=for-the-badge" alt="App Store"></a>
   &nbsp;
-  <a href="#-android--two-step-install"><img src="https://img.shields.io/badge/Android_(beta)-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Android (beta)"></a>
+  <a href="#-android"><img src="https://img.shields.io/badge/Android_(beta)-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Android (beta)"></a>
   &nbsp;
   <a href="https://github.com/FrenchCommando/pensine/releases/latest"><img src="https://img.shields.io/badge/Windows_installer-0078D6?logo=windows11&logoColor=white&style=for-the-badge" alt="Windows installer"></a>
   &nbsp;
@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android is in closed test — <a href="#-android--two-step-install">two-step install below</a> · 🪟 Windows 10 1809+ / 11 ARM64 · 🐧 Linux x86_64 (glibc 2.31+)</sub>
+  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android is in closed test — sideload the APK, or <a href="#-android">opt in via Play</a> · 🪟 Windows 10 1809+ / 11 ARM64 · 🐧 Linux x86_64 (glibc 2.31+)</sub>
 </p>
 
 ### 🧪 Beta + alternative paths
@@ -67,29 +67,26 @@ Your boards live in your XDG data directory (typically under `~/.local/share/`) 
 
 </details>
 
-## 🤖 Android — two-step install
+## 🤖 Android
 
-Android ships through Google Play's **closed test** track, so the Play Store listing is hidden by default. You need to opt in before it shows up.
+Two ways in. The sideload route is self-contained; the Play route needs an opt-in because Pensine is still in Google Play's **closed test** track.
 
-### Step 1 · Join the testers group
+### ⚡ Sideload the APK — no Google account required
 
-Sign up here with the Google account you'll use on your phone:
+Grab the latest `.apk` from [Releases](https://github.com/FrenchCommando/pensine/releases/latest), open it on the phone, enable "Install unknown apps" for your browser when prompted. Done — no sign-up, no Play listing to unlock.
 
-👉 **[groups.google.com/g/pensine-testers](https://groups.google.com/g/pensine-testers)**
+### 📱 Install via Google Play — opt in first
 
-Free, needs a Google login, approval is near-instant. This is the account gate — whichever Google account joins the group is the one that can see the Play listing.
+The Play Store listing is hidden until your Google account is on the testers list.
 
-### Step 2 · Pick an install path
-
-| Route | What it looks like |
-|---|---|
-| 📱 **Play Store on the phone** | Open [this link](https://play.google.com/store/apps/details?id=com.frenchcommando.pensine) on your Android device (signed into the same Google account from Step 1). Install button appears normally. |
-| 🌐 **Web enrol first** | Open [this link](https://play.google.com/apps/testing/com.frenchcommando.pensine) from any browser (even desktop) to flip the per-account opt-in flag. Then open Play Store on the phone and install as usual. |
-| ⚡ **Sideload the APK** | Skip Play entirely. Grab the latest `.apk` from [Releases](https://github.com/FrenchCommando/pensine/releases/latest), open it on the phone, enable "Install unknown apps" for your browser when prompted. |
+1. **Join the testers group** with the Google account you'll use on your phone: **[groups.google.com/g/pensine-testers](https://groups.google.com/g/pensine-testers)**. Free, near-instant approval.
+2. **Install**, either:
+   - 📱 **On the phone:** open [the Play listing](https://play.google.com/store/apps/details?id=com.frenchcommando.pensine) while signed in with the group account. Install button appears.
+   - 🌐 **From any browser first:** open [the opt-in page](https://play.google.com/apps/testing/com.frenchcommando.pensine) to flip the per-account flag, then open Play Store on the phone as usual.
 
 > ⚠️ **Sideload vs. Play are not interchangeable on the same device.** The sideloaded APK is signed with the upload key; the Play version is re-signed by Google. If you have one installed, Android will refuse the other with a signature-conflict error — uninstall first to switch.
 
-Pensine hasn't been promoted to Google Play's production track yet. When it is, Step 1 goes away and the listing becomes a normal one-click install like the App Store.
+Pensine hasn't been promoted to Google Play's production track yet. When it is, the testers-group step goes away and the Play listing becomes a normal one-click install like the App Store.
 
 ---
 
