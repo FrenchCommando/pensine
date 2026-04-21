@@ -28,7 +28,7 @@ import 'test_helpers.dart';
 ///       --target=integration_test/pending_import_test.dart \
 ///       -d windows
 void main() {
-  requireCIOnWindows();
+  requireCIForNativeDesktop();
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   const workspaceName = 'Integration Test Workspace';

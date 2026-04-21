@@ -4,35 +4,31 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Hard-guard against running Windows integration tests on a developer
-/// machine: dev builds and the installed Pensine share `%APPDATA%`,
-/// `%TEMP%`, and the shared_preferences registry hive — local runs would
-/// pollute the user's real workspaces and leak the test's `Integration
-/// Test Workspace` board into them.
+/// Refuses to run when the target is a native desktop OS (Windows, macOS,
+/// Linux) and `CI` is not set — because dev builds share user-data
+/// directories and the shared_preferences backing store with an installed
+/// Pensine on those platforms, so local test runs pollute the user's real
+/// workspaces with fixture data.
 ///
-/// Other targets (chrome / android / ios) run sandboxed (browser storage,
-/// emulator/simulator FS) and are safe locally, so the guard only fires
-/// on Windows.
+/// Sandboxed targets (browser storage on web, emulator/simulator FS on
+/// Android/iOS) have no shared-data concern, so the guard is a no-op there
+/// — `kIsWeb` and the mobile OS checks let the call fall straight through.
 ///
-/// CI sets `CI=true` (GitHub Actions does this automatically). To override
-/// for local debugging — accepting the data pollution — set `CI=true` in
-/// the shell before `flutter drive`.
-void requireCIOnWindows() {
-  // `Platform` from `dart:io` throws `UnsupportedError` on web at runtime
-  // (even though the import resolves at compile time). Chrome driver
-  // builds this test, `main()` runs under the web engine, and without
-  // the `kIsWeb` short-circuit `Platform.isWindows` throws, `main()`
-  // never finishes, and `flutter drive` hangs until the job times out.
-  // Web always runs sandboxed browser storage anyway — no data leak
-  // concern — so the guard is a no-op there.
+/// CI sets `CI=true` automatically on GitHub Actions. To override locally
+/// for debugging, set `CI=true` in the shell before `flutter drive` and
+/// accept the data pollution.
+void requireCIForNativeDesktop() {
   if (kIsWeb) return;
-  if (Platform.isWindows && Platform.environment['CI'] != 'true') {
-    throw StateError(
-      'Windows integration tests are CI-only: dev builds share user data '
-      'with the installed app (%APPDATA%, %TEMP%, shared_preferences). '
-      'Set CI=true in your shell to override locally.',
-    );
-  }
+  final isNativeDesktop =
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  if (!isNativeDesktop) return;
+  if (Platform.environment['CI'] == 'true') return;
+  throw StateError(
+    'Native-desktop integration tests are CI-only: dev builds share user '
+    'data with the installed app (shared_preferences + the platform '
+    'app-support directory). Set CI=true in your shell to override '
+    'locally and accept the pollution.',
+  );
 }
 
 /// Pumps frames until no more are scheduled, or [timeout] elapses.

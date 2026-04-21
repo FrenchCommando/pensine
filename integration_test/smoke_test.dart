@@ -17,7 +17,7 @@ import 'test_helpers.dart';
 ///       --target=integration_test/smoke_test.dart \
 ///       -d chrome
 void main() {
-  requireCIOnWindows();
+  requireCIForNativeDesktop();
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('Boot → defaults populate → open board → back to home',
