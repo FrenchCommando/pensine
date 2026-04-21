@@ -287,23 +287,49 @@ jobs:
       - name: Re-sign .app with entitlements + embed profile (MAS)
         # `flutter build macos` + xcconfig manual signing was observed to
         # ship a binary without `com.apple.security.app-sandbox` embedded
-        # (App Store Connect rejects with "App sandbox not enabled") and
-        # without the MAS provisioning profile in `Contents/embedded.provisionprofile`
-        # (App Store Connect warns ITMS-90889 — TestFlight ineligible,
-        # blocks "Add for Review"). Fix both: copy the profile into the
-        # bundle, then re-sign inside-out with explicit entitlements so
-        # the new signature covers the profile file.
+        # (ASC: "App sandbox not enabled") and without the provisioning
+        # profile in `Contents/embedded.provisionprofile` (ITMS-90889 —
+        # TestFlight ineligible). Fix both: copy the profile in, then
+        # re-sign inside-out with a *merged* entitlements file that
+        # includes Release.entitlements' sandbox/file/network keys PLUS
+        # the `application-identifier` and `team-identifier` keys the
+        # provisioning profile expects the signature to carry (ITMS-90886:
+        # signature's app-identifier must match the profile's, or
+        # TestFlight rejects). Release.entitlements is left repo-clean;
+        # team id only lives in secrets.
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           APP_PATH="build/macos/Build/Products/Release/pensine.app"
           cp "$RUNNER_TEMP/mas_profile.provisionprofile" \
              "$APP_PATH/Contents/embedded.provisionprofile"
+
+          cat > "$RUNNER_TEMP/mas.entitlements" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.network.client</key>
+            <true/>
+            <key>com.apple.security.files.user-selected.read-write</key>
+            <true/>
+            <key>com.apple.application-identifier</key>
+            <string>${TEAM_ID}.com.frenchcommando.pensine</string>
+            <key>com.apple.developer.team-identifier</key>
+            <string>${TEAM_ID}</string>
+          </dict>
+          </plist>
+          EOF
+
           if [ -d "$APP_PATH/Contents/Frameworks" ]; then
             find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read fw; do
               codesign --force --sign "3rd Party Mac Developer Application" "$fw"
             done
           fi
           codesign --force --sign "3rd Party Mac Developer Application" \
-            --entitlements macos/Runner/Release.entitlements \
+            --entitlements "$RUNNER_TEMP/mas.entitlements" \
             "$APP_PATH"
 
       - name: Product-sign .pkg for Mac App Store

@@ -13,10 +13,9 @@ set -euo pipefail
 OUT_DIR=build/screenshots
 PORT=8765
 
-# Pins the Pensine window to 1440x900 points via MainFlutterWindow.swift
-# so screencapture produces a Mac-App-Store-accepted resolution. Env vars
-# set here propagate to the child process `flutter drive` launches.
-export PENSINE_WINDOW_SIZE=1440x900
+# Window size comes from the XIB (`macos/Runner/Base.lproj/MainMenu.xib`
+# contentRect), set to 1440x900 points — a Mac-App-Store-accepted size
+# for the screenshot capture (Retina renders at 2880x1800 px).
 
 SERVER_PID=
 
