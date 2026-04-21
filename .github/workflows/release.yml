@@ -173,6 +173,38 @@ jobs:
           echo "Uploading $IPA"
           IPA_PATH="$IPA" bundle exec fastlane ios beta
 
+  macos-gate:
+    # Preflight: checks whether the macOS release secrets are configured.
+    # Until they are, the two macOS release jobs (mas + dmg) skip cleanly
+    # instead of failing the whole Release workflow at `security import`
+    # with a cryptic "bad p12" error. Mirrors the MSIX pattern in ci.yml
+    # (which gates on MSIX_PUBLISHER). Once you paste the cert/profile
+    # secrets per DEPLOYMENT.md, the downstream jobs auto-activate — no
+    # workflow edit required.
+    runs-on: ubuntu-latest
+    outputs:
+      mas_enabled: ${{ steps.check.outputs.mas_enabled }}
+      dmg_enabled: ${{ steps.check.outputs.dmg_enabled }}
+    steps:
+      - name: Check macOS secret presence
+        id: check
+        env:
+          MAS_CERT: ${{ secrets.MAC_MAS_CERT_BASE64 }}
+          DMG_CERT: ${{ secrets.MAC_DEV_ID_CERT_BASE64 }}
+        run: |
+          if [ -n "$MAS_CERT" ]; then
+            echo "mas_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mas_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "macos-mas-release skipped: MAC_MAS_CERT_BASE64 not set."
+          fi
+          if [ -n "$DMG_CERT" ]; then
+            echo "dmg_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dmg_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "macos-dmg-release skipped: MAC_DEV_ID_CERT_BASE64 not set."
+          fi
+
   macos-mas-release:
     # Builds a sandboxed, manually-signed .app, wraps it in a
     # product-signed .pkg, and uploads to App Store Connect for the Mac
@@ -180,6 +212,8 @@ jobs:
     # approved builds go live on id6762313502 without another click.
     # Reuses the team-wide APPSTORE_CONNECT_API_KEY_* secrets — same key
     # handles iOS TestFlight and macOS submissions.
+    needs: macos-gate
+    if: needs.macos-gate.outputs.mas_enabled == 'true'
     runs-on: macos-15
     timeout-minutes: 45
     steps:
@@ -278,6 +312,8 @@ jobs:
     # attached to the same GitHub Release as the APK / Windows artifacts.
     # Distinct from the MAS job: no provisioning profile, Developer ID
     # signing instead of MAS, notarytool staple replaces store review.
+    needs: macos-gate
+    if: needs.macos-gate.outputs.dmg_enabled == 'true'
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
