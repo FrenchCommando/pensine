@@ -25,7 +25,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-python3 tool/screenshot_server.py \
+# Pin to system /usr/bin/python3 — it ships with `pyobjc-framework-Quartz`
+# (required for `_find_pensine_window_id`). GHA macos-15's bare `python3`
+# usually resolves to Homebrew Python, which lacks pyobjc out of the box,
+# so `from Quartz import ...` would fall back to full-display capture and
+# screenshots would be the wrong resolution for Mac App Store validation.
+PYTHON=${PYTHON:-/usr/bin/python3}
+"$PYTHON" tool/screenshot_server.py \
   --mode macos \
   --port "$PORT" --out "$OUT_DIR" &
 SERVER_PID=$!

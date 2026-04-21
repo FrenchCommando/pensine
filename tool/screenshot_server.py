@@ -65,8 +65,8 @@ def _find_pensine_window_id():
     """Find Pensine's CGWindowID via CoreGraphics (pyobjc's Quartz).
 
     Preinstalled in macOS's /usr/bin/python3 and on GHA macos runners.
-    Returns None if the module is unavailable or the window isn't on
-    screen, letting the caller fall back.
+    Returns None (with a diagnostic log line) if the module is unavailable
+    or the window isn't visible, letting the caller fall back.
     """
     try:
         from Quartz import (  # type: ignore[import-not-found]
@@ -74,17 +74,31 @@ def _find_pensine_window_id():
             kCGWindowListOptionOnScreenOnly,
             kCGNullWindowID,
         )
-    except ImportError:
+    except ImportError as e:
+        sys.stderr.write(
+            f"[screenshot-server] Quartz import failed: {e}\n"
+        )
         return None
     windows = CGWindowListCopyWindowInfo(
         kCGWindowListOptionOnScreenOnly, kCGNullWindowID
     )
+    # Exact match against the product name ("pensine" per AppInfo.xcconfig).
     for w in windows:
-        name = (w.get("kCGWindowOwnerName") or "").lower()
-        # kCGWindowLayer == 0 filters to normal app windows (skips menu
-        # bar, status items, offscreen helpers).
-        if name == "pensine" and w.get("kCGWindowLayer") == 0:
+        name = (w.get("kCGWindowOwnerName") or "")
+        if name.lower() == "pensine":
             return int(w["kCGWindowNumber"])
+    # Substring fallback in case the process name has a wrapper/suffix
+    # ("pensine Helper", "Runner", etc.).
+    for w in windows:
+        name = (w.get("kCGWindowOwnerName") or "")
+        if "pensine" in name.lower():
+            return int(w["kCGWindowNumber"])
+    # Nothing matched — log the candidates so the next run tells us what
+    # the window is actually called.
+    owners = sorted({(w.get("kCGWindowOwnerName") or "<none>") for w in windows})
+    sys.stderr.write(
+        f"[screenshot-server] no 'pensine' window in visible list; owners were: {owners}\n"
+    )
     return None
 
 
