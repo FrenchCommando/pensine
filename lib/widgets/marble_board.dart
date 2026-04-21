@@ -801,13 +801,20 @@ class _MarblePainter extends CustomPainter {
           } else {
             label = '${stepIndex + 1}';
           }
+          // Countdown labels use the retro-LCD VT323 (bundled in pubspec)
+          // for the arcade-timer vibe; checklist/timer step indices stay on
+          // the system font so they blend with the rest of the board chrome.
+          final useCountdownFont =
+              boardType == BoardType.countdown && !isStartSentinel;
           final stepPainter = TextPainter(
             text: TextSpan(
               text: label,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: isDone ? 0.4 : 0.7),
-                fontSize: r * 0.25,
+                fontSize: r * (useCountdownFont ? 0.32 : 0.25),
                 fontWeight: FontWeight.w900,
+                fontFamily: useCountdownFont ? 'VT323' : null,
+                letterSpacing: useCountdownFont ? 1.2 : null,
               ),
             ),
             textAlign: TextAlign.center,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../behavior/board_tap.dart';
+import '../behavior/countdown_remaining.dart';
 import '../main.dart';
 import '../models/board.dart';
 import '../theme.dart';
@@ -417,9 +418,10 @@ class _BoardScreenState extends State<BoardScreen> {
     if (activeIndex < 0) return null;
     final dur = widget.board.items[activeIndex].durationSeconds;
     if (dur == null || dur <= 0) return null;
-    final elapsed = DateTime.now().difference(_stepStartTime!).inSeconds;
-    final remaining = dur - elapsed;
-    return remaining < 0 ? 0 : remaining;
+    return countdownRemainingSeconds(
+      durationSeconds: dur,
+      elapsed: DateTime.now().difference(_stepStartTime!),
+    );
   }
 
   Widget _sizeSlider(double value, ValueChanged<double> onChanged) {
@@ -482,9 +484,11 @@ class _TimerOverlay extends StatelessWidget {
             final nextIndex = board.items.indexWhere((i) => !i.done);
             final dur = board.items[nextIndex].durationSeconds;
             if (dur != null && dur > 0) {
-              final remaining = Duration(seconds: dur) - stepElapsed;
-              final clamped = remaining.isNegative ? Duration.zero : remaining;
-              stepText = _format(clamped);
+              final remaining = countdownRemainingSeconds(
+                durationSeconds: dur,
+                elapsed: stepElapsed,
+              );
+              stepText = _format(Duration(seconds: remaining));
             }
           } else {
             stepText = 'step ${_format(stepElapsed)}';
@@ -521,7 +525,15 @@ class _TimerOverlay extends StatelessWidget {
                   Text(
                     stepText,
                     style: TextStyle(
-                      fontSize: 13,
+                      // Countdown remainder gets the VT323 retro-LCD face so
+                      // the ticking digits read like an arcade timer. Timer
+                      // boards keep the default Quicksand for `step Ns`.
+                      fontFamily:
+                          board.type == BoardType.countdown ? 'VT323' : null,
+                      fontSize:
+                          board.type == BoardType.countdown ? 16 : 13,
+                      letterSpacing:
+                          board.type == BoardType.countdown ? 1.2 : null,
                       color: PensineColors.muted(context),
                     ),
                   ),
