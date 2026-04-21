@@ -40,8 +40,24 @@ class AppDelegate: FlutterAppDelegate {
     let didAccess = url.startAccessingSecurityScopedResource()
     defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
     guard let data = try? Data(contentsOf: url) else { return }
-    let target = URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("pensine_incoming.pensine")
+
+    // Match what Dart's `getTemporaryDirectory()` returns on macOS:
+    // `<caches>/<bundle-id>/` — NOT `NSTemporaryDirectory()` (which is the
+    // iOS convention and resolves to a different path on macOS). The
+    // bundle-id subdir isn't auto-created until something writes into it,
+    // so ensure it exists before the write.
+    guard let cachesDir = try? FileManager.default.url(
+      for: .cachesDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ) else { return }
+    let bundleId = Bundle.main.bundleIdentifier ?? "com.frenchcommando.pensine"
+    let targetDir = cachesDir.appendingPathComponent(bundleId)
+    try? FileManager.default.createDirectory(
+      at: targetDir, withIntermediateDirectories: true
+    )
+    let target = targetDir.appendingPathComponent("pensine_incoming.pensine")
     try? data.write(to: target)
   }
 }

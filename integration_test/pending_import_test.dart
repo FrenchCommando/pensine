@@ -64,6 +64,13 @@ void main() {
   testWidgets('Cold-launch import from temp file surfaces on home',
       (tester) async {
     final tempDir = await getTemporaryDirectory();
+    // On sandboxed macOS, `getTemporaryDirectory()` returns
+    // `<caches>/<bundle-id>/`, where the bundle-id subdir is lazily
+    // created on first access by the native app. A cold-launch test
+    // run may arrive before any such access, so ensure the dir exists
+    // before writing. No-op on Windows (its %TEMP% already exists) and
+    // on iOS (its tmp is the container root).
+    await Directory(tempDir.path).create(recursive: true);
     final pending = File('${tempDir.path}/pensine_incoming.pensine');
     // Clean up any stale file from a prior run so we know we're reading ours.
     if (await pending.exists()) {
