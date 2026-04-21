@@ -12,10 +12,15 @@ Modes:
   ios     — `xcrun simctl io <udid> screenshot <file>`. The sim shares the
             host's loopback, so plain HTTP on 127.0.0.1 is fine and no cert
             is needed.
-  macos   — `screencapture -x <file>` on the host itself (Flutter macOS app
-            runs in-process, not in a sim). Captures the full primary
-            display; cropping to just the Pensine window is a v2 problem if
-            the artifact ends up noisy. Plain HTTP on loopback, same as iOS.
+  macos   — `screencapture -l <CGWindowID>` on the host itself (Flutter
+            macOS app runs in-process, not in a sim). CGWindowID comes
+            from Quartz's CGWindowListCopyWindowInfo (pyobjc, preinstalled
+            in /usr/bin/python3). Window is pinned to 1440x900 points by
+            PENSINE_WINDOW_SIZE in MainFlutterWindow so the PNG lands on
+            a Mac-App-Store-accepted resolution (Retina → 2880x1800 px,
+            non-Retina → 1440x900 px, both accepted). Plain HTTP on
+            loopback, same as iOS. Falls back to full-display capture if
+            Quartz is unavailable or the window isn't found.
 
 Why host-driven at all: `binding.takeScreenshot` / `convertFlutterSurfaceToImage`
 both hang on continuous-animation Flutter apps (the ticker calls setState
@@ -56,10 +61,51 @@ def capture_ios(out_path: Path, udid: str) -> None:
     )
 
 
+def _find_pensine_window_id():
+    """Find Pensine's CGWindowID via CoreGraphics (pyobjc's Quartz).
+
+    Preinstalled in macOS's /usr/bin/python3 and on GHA macos runners.
+    Returns None if the module is unavailable or the window isn't on
+    screen, letting the caller fall back.
+    """
+    try:
+        from Quartz import (  # type: ignore[import-not-found]
+            CGWindowListCopyWindowInfo,
+            kCGWindowListOptionOnScreenOnly,
+            kCGNullWindowID,
+        )
+    except ImportError:
+        return None
+    windows = CGWindowListCopyWindowInfo(
+        kCGWindowListOptionOnScreenOnly, kCGNullWindowID
+    )
+    for w in windows:
+        name = (w.get("kCGWindowOwnerName") or "").lower()
+        # kCGWindowLayer == 0 filters to normal app windows (skips menu
+        # bar, status items, offscreen helpers).
+        if name == "pensine" and w.get("kCGWindowLayer") == 0:
+            return int(w["kCGWindowNumber"])
+    return None
+
+
 def capture_macos(out_path: Path) -> None:
-    # -x: suppress shutter sound · full primary display. Cropping to the
-    # Pensine window is deferred — if artifacts come back noisy we'll add
-    # AppleScript + screencapture -R <region>.
+    # `screencapture -l <windowID>` captures just the window's pixels
+    # (window shadow suppressed via -o). The window is pinned to 1440x900
+    # points via PENSINE_WINDOW_SIZE in MainFlutterWindow — Retina yields
+    # a 2880x1800 PNG, non-Retina yields 1440x900; both on Apple's
+    # accepted list. CGWindowID comes from CoreGraphics (pyobjc Quartz).
+    wid = _find_pensine_window_id()
+    if wid is not None:
+        subprocess.run(
+            ["screencapture", "-x", "-o", "-l", str(wid), str(out_path)],
+            check=True,
+        )
+        return
+    # Fallback: Quartz unavailable, or Pensine not yet on screen. Capture
+    # the full display so there's still an artifact to inspect.
+    sys.stderr.write(
+        "[screenshot-server] pensine window not found → full-display capture\n"
+    )
     subprocess.run(
         ["screencapture", "-x", str(out_path)],
         check=True,
