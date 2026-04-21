@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +18,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// for local debugging — accepting the data pollution — set `CI=true` in
 /// the shell before `flutter drive`.
 void requireCIOnWindows() {
+  // `Platform` from `dart:io` throws `UnsupportedError` on web at runtime
+  // (even though the import resolves at compile time). Chrome driver
+  // builds this test, `main()` runs under the web engine, and without
+  // the `kIsWeb` short-circuit `Platform.isWindows` throws, `main()`
+  // never finishes, and `flutter drive` hangs until the job times out.
+  // Web always runs sandboxed browser storage anyway — no data leak
+  // concern — so the guard is a no-op there.
+  if (kIsWeb) return;
   if (Platform.isWindows && Platform.environment['CI'] != 'true') {
     throw StateError(
       'Windows integration tests are CI-only: dev builds share user data '
