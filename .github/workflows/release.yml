@@ -434,6 +434,7 @@ jobs:
             "$APP_PATH"
 
       - name: Sign + notarize + staple
+        timeout-minutes: 25
         env:
           APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
           APPSTORE_CONNECT_API_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_API_ISSUER_ID }}
@@ -454,21 +455,36 @@ jobs:
           # rejection log so we can actually see what Apple flagged.
           # Without this, failures are opaque "Invalid ... stapler error 65"
           # and every fix is blind guessing.
+          #
+          # `--timeout 20m` caps the wall clock: without it, `--wait` polls
+          # Apple forever, and a slow/stuck notary run eats the whole
+          # 45-min job budget before the log-fetching block below ever
+          # gets to run. 20m is generous for Apple's typical 2-5m.
+          # Capture exit code without aborting (bash -e): on --timeout
+          # notarytool exits non-zero, and we still want to try the log
+          # fetch below using whatever submission id is in $SUBMIT_JSON.
+          set +e
           SUBMIT_JSON=$(xcrun notarytool submit "$ZIP_FOR_NOTARY" \
             --key "$RUNNER_TEMP/asc_api_key.p8" \
             --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
             --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" \
             --wait \
+            --timeout 20m \
             --output-format json)
+          NOTARY_EXIT=$?
+          set -e
           echo "$SUBMIT_JSON"
-          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id')
-          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status')
+          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""')
+          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"')
           if [ "$STATUS" != "Accepted" ]; then
-            echo "::error::Notarization returned $STATUS. Apple's detailed log:"
-            xcrun notarytool log "$SUB_ID" \
-              --key "$RUNNER_TEMP/asc_api_key.p8" \
-              --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
-              --issuer "$APPSTORE_CONNECT_API_ISSUER_ID"
+            echo "::error::Notarization returned status='$STATUS' (notarytool exit=$NOTARY_EXIT)."
+            if [ -n "$SUB_ID" ]; then
+              echo "Apple's detailed log for submission $SUB_ID:"
+              xcrun notarytool log "$SUB_ID" \
+                --key "$RUNNER_TEMP/asc_api_key.p8" \
+                --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
+                --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" || true
+            fi
             exit 1
           fi
 
@@ -493,6 +509,7 @@ jobs:
           echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
 
       - name: Notarize + staple the .dmg itself
+        timeout-minutes: 25
         env:
           APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
           APPSTORE_CONNECT_API_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_API_ISSUER_ID }}
@@ -500,22 +517,31 @@ jobs:
           # Stapling the .app isn't enough — the .dmg itself needs
           # notarization so Gatekeeper clears it on download before the
           # inner .app is ever launched. Same api key + same
-          # Accepted-or-fetch-the-log pattern as the .app notarization.
+          # Accepted-or-fetch-the-log pattern as the .app notarization,
+          # plus the same 20m `--timeout` guard so this step can't eat
+          # the job budget waiting on Apple.
+          set +e
           SUBMIT_JSON=$(xcrun notarytool submit "$DMG_PATH" \
             --key "$RUNNER_TEMP/asc_api_key.p8" \
             --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
             --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" \
             --wait \
+            --timeout 20m \
             --output-format json)
+          NOTARY_EXIT=$?
+          set -e
           echo "$SUBMIT_JSON"
-          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id')
-          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status')
+          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""')
+          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"')
           if [ "$STATUS" != "Accepted" ]; then
-            echo "::error::DMG notarization returned $STATUS. Apple's detailed log:"
-            xcrun notarytool log "$SUB_ID" \
-              --key "$RUNNER_TEMP/asc_api_key.p8" \
-              --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
-              --issuer "$APPSTORE_CONNECT_API_ISSUER_ID"
+            echo "::error::DMG notarization returned status='$STATUS' (notarytool exit=$NOTARY_EXIT)."
+            if [ -n "$SUB_ID" ]; then
+              echo "Apple's detailed log for submission $SUB_ID:"
+              xcrun notarytool log "$SUB_ID" \
+                --key "$RUNNER_TEMP/asc_api_key.p8" \
+                --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
+                --issuer "$APPSTORE_CONNECT_API_ISSUER_ID" || true
+            fi
             exit 1
           fi
           xcrun stapler staple "$DMG_PATH"
