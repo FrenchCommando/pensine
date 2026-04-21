@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 
-run-name: CI · ${{ github.event.head_commit.message || github.event.pull_request.title || github.ref_name }}
+run-name: CI · ${{ github.sha }} · ${{ github.event.head_commit.message || github.event.pull_request.title || github.ref_name }}
 
 # Parallel jobs — static + compile checks that must pass before merge.
 # Integration tests live in `integration.yml` (separate workflow — slower,

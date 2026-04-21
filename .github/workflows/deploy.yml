@@ -6,7 +6,7 @@ on:
     types: [completed]
     branches: [main]
 
-run-name: Deploy · ${{ github.event.workflow_run.head_commit.message }}
+run-name: Deploy · ${{ github.event.workflow_run.head_sha }} · ${{ github.event.workflow_run.head_commit.message }}
 
 permissions:
   contents: read

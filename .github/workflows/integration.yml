@@ -16,7 +16,7 @@ on:
   pull_request:
     branches: [main]
 
-run-name: Integration · ${{ github.event.head_commit.message || github.event.pull_request.title || github.ref_name }}
+run-name: Integration · ${{ github.sha }} · ${{ github.event.head_commit.message || github.event.pull_request.title || github.ref_name }}
 
 jobs:
   chrome:
