@@ -95,6 +95,30 @@ jobs:
               --target=integration_test/smoke_test.dart \
               -d "$UDID"
 
+  macos:
+    # Real shared_preferences + path_provider + Cocoa file-open handoff on
+    # macOS. pending_import_test.dart covers the native -> Dart hand-off
+    # that AppDelegate.application(_:open:) writes to
+    # NSTemporaryDirectory(); smoke_test.dart covers the rest of the app
+    # surface under sandboxed debug entitlements.
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+      - uses: ./.github/actions/setup-flutter
+
+      # Same belt-and-suspenders pattern as Windows: tool script blocks
+      # local runs before build, workflow sets CI=true so both steps pass
+      # the guard on GHA.
+      - name: Run integration smoke test
+        run: tool/run_macos_integration.sh integration_test/smoke_test.dart
+
+      - name: Run pending-import integration test
+        run: tool/run_macos_integration.sh integration_test/pending_import_test.dart
+
   windows:
     # Exercises real shared_preferences + path_provider on Windows, and
     # specifically covers the native -> Dart temp-file handoff added for

@@ -276,7 +276,7 @@ Every bugfix or feature ships with a test. Unit/widget if `flutter_tester` can s
 - Local emulator uses swiftshader (software renderer) — adequate for debugging test logic but too slow for sustained physics rendering; full suite runs reliably on CI with KVM hardware acceleration
 
 ### Not yet set up
-- `.pensine` file association on macOS (no macOS build targeted yet) + Linux `.desktop` MimeType entry (same). iOS + Android + web + Windows (installer channel) are all wired.
+- `.pensine` file association on macOS is wired (`CFBundleDocumentTypes` + `UTExportedTypeDeclarations` + `AppDelegate.swift::application(_:open:)` — mirrors iOS SceneDelegate handoff into `NSTemporaryDirectory()/pensine_incoming.pensine`). Linux `.desktop` MimeType entry is still TODO — no Linux build targeted yet. iOS + Android + web + Windows (installer channel) + macOS (MAS + DMG) are all wired.
 
 ## Feature Graphic
 - Play Store banner (1024x500) in `assets/feature_graphic.svg`

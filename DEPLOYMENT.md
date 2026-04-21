@@ -59,6 +59,45 @@
 - Release signing + TestFlight upload: see Release Automation below
 - Not using `fastlane match` (solo-dev, CI-only signing → GitHub Secrets directly is simpler)
 
+## macOS (Mac App Store + Developer ID DMG)
+
+**Two parallel channels, both automated:**
+- **Mac App Store** — `macos-mas-release` job builds, signs, wraps in `.pkg`, uploads to App Store Connect. Release setting is **Automatically release this version**, same pattern as iOS (you still click **Add for Review** per version in App Store Connect; auto-release fires on approval).
+- **Developer ID DMG** — `macos-dmg-release` job builds, Developer-ID-signs, notarizes with `xcrun notarytool`, staples, wraps in a notarized `.dmg` via `create-dmg`, attaches it to the same GitHub Release tag as the APK/zip/installer.
+
+**Testing story:** Primary path is CI — `integration.yml`'s `macos` job runs `smoke_test.dart` + `pending_import_test.dart` on `macos-15` for every PR, which is the guaranteed signal since you don't have a Mac. The OSX-KVM VM under `local/IOS/` is also a candidate for local `flutter drive -d macos` runs (QEMU is already set up there for iOS work; `flutter drive` talks to the Dart VM Service over a port, so VNC isn't in the hot path) — viability hasn't been measured yet. `tool/run_macos_integration.sh` gates on `CI=true`; override locally if you want to try the VM and accept the data-pollution risk.
+
+**App Store Connect listing:**
+- Add macOS to the existing app record `id6762313502` (App Store Connect → Pensine → **+ macOS**). Keeps the unified "Works on iPhone, iPad, Mac" listing. Bundle ID stays `com.frenchcommando.pensine`; SKU is `pensine-macos` (distinct from iOS's `pensine`).
+- Category: `public.app-category.productivity` (baked into `macos/Runner/Info.plist`).
+- Min macOS: 11.0 Big Sur (Flutter default, ~95% of active Macs).
+- Release setting: **Automatically release this version** (match iOS).
+- Screenshots: separate set required for Mac (1280×800 up to 2880×1800). No automation for macOS screenshots yet — capture manually on first submission.
+
+**Certificates (three required — generate CSR with openssl on Windows, same pattern as the iOS `ios_dist.csr` flow already documented below):**
+
+| Cert type | For | GitHub Secret |
+|---|---|---|
+| **3rd Party Mac Developer Application** | Code-signs `.app` inside `.pkg` for MAS | `MAC_MAS_CERT_BASE64` + `MAC_MAS_CERT_PASSWORD` |
+| **3rd Party Mac Developer Installer** | Product-signs the `.pkg` for MAS | `MAC_INSTALLER_CERT_BASE64` + `MAC_INSTALLER_CERT_PASSWORD` |
+| **Developer ID Application** | Signs the `.app` for outside-store DMG distribution | `MAC_DEV_ID_CERT_BASE64` + `MAC_DEV_ID_CERT_PASSWORD` |
+
+Plus one provisioning profile:
+
+| Profile | GitHub Secret |
+|---|---|
+| **Mac App Store Distribution** (tied to `com.frenchcommando.pensine` + the MAS Application cert) | `MAC_MAS_PROFILE_BASE64` + `MAC_MAS_PROFILE_NAME` |
+
+**Reused from iOS pipeline (no new values to add):** `APPSTORE_CONNECT_API_KEY_ID`, `APPSTORE_CONNECT_API_ISSUER_ID`, `APPSTORE_CONNECT_API_KEY_P8_BASE64`, `APPLE_TEAM_ID`. The team-wide API key authenticates both iOS TestFlight uploads, macOS App Store uploads, and `xcrun notarytool` submissions.
+
+**Entitlements** (`macos/Runner/Release.entitlements`): `app-sandbox` (MAS requires; kept on for DMG too for consistency) + `files.user-selected.read-write` (file picker) + `network.client` (`url_launcher` outbound). Debug adds `cs.allow-jit` + `network.server` for the Flutter debug bridge.
+
+**`.pensine` file association** is declared in `macos/Runner/Info.plist` (`CFBundleDocumentTypes` + `UTExportedTypeDeclarations`, same UTI `com.frenchcommando.pensine.workspace` as iOS). `AppDelegate.swift::application(_:open:)` writes the bytes to `NSTemporaryDirectory()/pensine_incoming.pensine` — `pending_import_native.dart` polls that file on cold launch and on resume, matching the iOS SceneDelegate pattern.
+
+**DMG not notarizing?** Most likely causes in order: (1) hardened runtime not enabled — check `ENABLE_HARDENED_RUNTIME = YES` in `macos/Runner/Configs/Release.xcconfig` at build time (the job's `cat >>` appends it); (2) Developer ID cert not installed with the right `productbuild`/`codesign` partition list — keychain import in the job uses the same `-T /usr/bin/codesign` pattern as iOS; (3) notarytool auth — check the API key is the same one that works for iOS TestFlight.
+
+**Mac TestFlight:** skipped initially. Available on the same `upload_to_testflight` fastlane action if we want it later — would need a fourth cert (Mac App Distribution without "3rd Party" prefix) and a separate profile. Direct App Store submission with auto-release matches the iOS cadence you already run.
+
 ## Windows — Inno Setup installer + sideload zip (primary channels)
 
 Windows ships two artifacts on every GitHub Release alongside the APK:

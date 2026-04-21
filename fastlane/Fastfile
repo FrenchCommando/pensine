@@ -18,6 +18,35 @@ platform :ios do
   end
 end
 
+platform :mac do
+  desc "Upload signed .pkg to App Store Connect (Mac App Store)"
+  lane :mas do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPSTORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APPSTORE_CONNECT_API_ISSUER_ID"],
+      key_filepath: ENV["APPSTORE_CONNECT_API_KEY_FILE"],
+      in_house: false,
+    )
+
+    # `upload_to_app_store` with skip_* flags behaves like `upload_to_testflight`
+    # for macOS: takes a signed .pkg, pushes it to App Store Connect, does
+    # not touch metadata or screenshots. Auto-release-after-approval is
+    # configured on the App Store Connect side (see DEPLOYMENT.md), so
+    # this lane's job ends at "build uploaded".
+    upload_to_app_store(
+      api_key: api_key,
+      pkg: ENV["PKG_PATH"] || "build/macos/Build/Products/Release/pensine.pkg",
+      platform: "osx",
+      skip_metadata: true,
+      skip_screenshots: true,
+      skip_app_version_update: true,
+      submit_for_review: false,
+      force: true,
+      precheck_include_in_app_purchases: false,
+    )
+  end
+end
+
 platform :android do
   desc "Build signed AAB and upload to Play Console internal track"
   lane :beta do

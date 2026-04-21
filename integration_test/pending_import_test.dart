@@ -9,24 +9,28 @@ import 'package:pensine/main.dart';
 import 'test_helpers.dart';
 
 /// Verifies the native -> Dart file-import handoff on real desktop targets
-/// (currently Windows via `integration.yml`'s `windows` job).
+/// (Windows + macOS, via `integration.yml`'s `windows` / `macos` jobs).
 ///
-/// The native side (Windows: `windows/runner/utils.cpp::HandleIncomingPensineFile`)
-/// writes the incoming `.pensine` contents to
+/// The native side writes the incoming `.pensine` contents to
 /// `getTemporaryDirectory()/pensine_incoming.pensine` before the Flutter
-/// window is created. `pending_import_native.dart` polls that file on
-/// cold launch. This test simulates the native write by dropping the file
-/// directly, then boots the app and asserts the imported workspace surfaces.
+/// window/view is created:
+///   - Windows: `windows/runner/utils.cpp::HandleIncomingPensineFile`
+///     runs in `wWinMain` with the paths from `GetCommandLineW`.
+///   - macOS: `macos/Runner/AppDelegate.swift::application(_:open:)`
+///     runs when Cocoa hands off the URL(s) from Finder / `open`.
+/// `pending_import_native.dart` polls that file on cold launch. This test
+/// simulates the native write by dropping the file directly, then boots
+/// the app and asserts the imported workspace surfaces.
 ///
-/// Also guards the path alignment: if Dart's `getTemporaryDirectory()` ever
-/// stops resolving to the same dir Windows' `GetTempPathW()` returns, the
-/// import won't fire and this test fails.
+/// Also guards the path alignment: if Dart's `getTemporaryDirectory()`
+/// ever diverges from what the native side writes to (Win32's
+/// `GetTempPathW()` / Cocoa's `NSTemporaryDirectory()`), the import won't
+/// fire and this test fails.
 ///
-/// Run locally:
-///   flutter drive \
-///       --driver=test_driver/integration_test.dart \
-///       --target=integration_test/pending_import_test.dart \
-///       -d windows
+/// Run locally (inside CI or the OSX-KVM VM — blocked otherwise by
+/// `requireCIForNativeDesktop`):
+///   tool/run_windows_integration.sh integration_test/pending_import_test.dart
+///   tool/run_macos_integration.sh   integration_test/pending_import_test.dart
 void main() {
   requireCIForNativeDesktop();
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
