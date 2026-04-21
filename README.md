@@ -27,20 +27,19 @@
   &nbsp;
   <a href="https://apps.apple.com/app/pensine/id6762313502"><img src="https://img.shields.io/badge/App_Store-0D96F6?logo=apple&logoColor=white&style=for-the-badge" alt="App Store"></a>
   &nbsp;
-  <a href="https://play.google.com/store/apps/details?id=com.frenchcommando.pensine"><img src="https://img.shields.io/badge/Google_Play-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Google Play"></a>
+  <a href="#-android--two-step-install"><img src="https://img.shields.io/badge/Android_(beta)-34A853?logo=googleplay&logoColor=white&style=for-the-badge" alt="Android (beta)"></a>
   &nbsp;
   <a href="https://github.com/FrenchCommando/pensine/releases/latest"><img src="https://img.shields.io/badge/Windows_installer-0078D6?logo=windows11&logoColor=white&style=for-the-badge" alt="Windows installer"></a>
 </p>
 
 <p align="center">
-  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android via closed test (join below) · 🪟 Windows 10 1809+ / 11 ARM64</sub>
+  <sub>🌐 Web works offline as a PWA · 🍎 iOS live on the App Store · 🤖 Android is in closed test — <a href="#-android--two-step-install">two-step install below</a> · 🪟 Windows 10 1809+ / 11 ARM64</sub>
 </p>
 
 ### 🧪 Beta + alternative paths
 
-| 🍎 iOS | 🤖 Android | 🪟 Windows |
-|---|---|---|
-| [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for bleeding-edge builds | [Testers group](https://groups.google.com/g/pensine-testers) (join first) · [Web install](https://play.google.com/apps/testing/com.frenchcommando.pensine) · [Sideload APK](https://github.com/FrenchCommando/pensine/releases/latest) | [Portable zip](https://github.com/FrenchCommando/pensine/releases/latest) — extract, run, leave no trace |
+- 🍎 **iOS beta** — [TestFlight](https://testflight.apple.com/join/KDHvbWKH) for bleeding-edge builds before they hit the App Store
+- 🪟 **Windows portable** — [zip from Releases](https://github.com/FrenchCommando/pensine/releases/latest): extract, run `pensine.exe`, leave no trace. Good for locked-down PCs or USB-stick installs.
 
 <details>
 <summary>💡 <strong>Windows heads-up</strong> — SmartScreen + uninstall notes</summary>
@@ -52,6 +51,30 @@ Both Windows artifacts are unsigned while Microsoft Store listing is pending —
 **Uninstall the portable zip:** just delete the extracted folder.
 
 </details>
+
+## 🤖 Android — two-step install
+
+Android ships through Google Play's **closed test** track, so the Play Store listing is hidden by default. You need to opt in before it shows up.
+
+### Step 1 · Join the testers group
+
+Sign up here with the Google account you'll use on your phone:
+
+👉 **[groups.google.com/g/pensine-testers](https://groups.google.com/g/pensine-testers)**
+
+Free, needs a Google login, approval is near-instant. This is the account gate — whichever Google account joins the group is the one that can see the Play listing.
+
+### Step 2 · Pick an install path
+
+| Route | What it looks like |
+|---|---|
+| 📱 **Play Store on the phone** | Open [this link](https://play.google.com/store/apps/details?id=com.frenchcommando.pensine) on your Android device (signed into the same Google account from Step 1). Install button appears normally. |
+| 🌐 **Web enrol first** | Open [this link](https://play.google.com/apps/testing/com.frenchcommando.pensine) from any browser (even desktop) to flip the per-account opt-in flag. Then open Play Store on the phone and install as usual. |
+| ⚡ **Sideload the APK** | Skip Play entirely. Grab the latest `.apk` from [Releases](https://github.com/FrenchCommando/pensine/releases/latest), open it on the phone, enable "Install unknown apps" for your browser when prompted. |
+
+> ⚠️ **Sideload vs. Play are not interchangeable on the same device.** The sideloaded APK is signed with the upload key; the Play version is re-signed by Google. If you have one installed, Android will refuse the other with a signature-conflict error — uninstall first to switch.
+
+Pensine hasn't been promoted to Google Play's production track yet. When it is, Step 1 goes away and the listing becomes a normal one-click install like the App Store.
 
 ---
 
