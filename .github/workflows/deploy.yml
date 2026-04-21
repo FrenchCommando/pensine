@@ -6,6 +6,8 @@ on:
     types: [completed]
     branches: [main]
 
+run-name: Deploy · ${{ github.event.workflow_run.head_commit.message }}
+
 permissions:
   contents: read
   pages: write

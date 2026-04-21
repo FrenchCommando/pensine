@@ -8,6 +8,8 @@ name: Artifacts
 on:
   workflow_dispatch:  # manual trigger only
 
+run-name: Artifacts · build ${{ github.run_number }}
+
 jobs:
   ios-screenshots:
     runs-on: macos-latest
