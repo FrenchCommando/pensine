@@ -284,6 +284,23 @@ jobs:
             --build-number=${{ github.run_number }} \
             "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
+      - name: Re-sign .app with entitlements (MAS)
+        # `flutter build macos` + xcconfig manual signing was observed to
+        # ship a binary without `com.apple.security.app-sandbox` embedded,
+        # which App Store Connect's uploader rejects with
+        # "App sandbox not enabled". Re-sign inside-out with explicit
+        # entitlements to guarantee the flag lands in the final signature.
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/pensine.app"
+          if [ -d "$APP_PATH/Contents/Frameworks" ]; then
+            find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read fw; do
+              codesign --force --sign "3rd Party Mac Developer Application" "$fw"
+            done
+          fi
+          codesign --force --sign "3rd Party Mac Developer Application" \
+            --entitlements macos/Runner/Release.entitlements \
+            "$APP_PATH"
+
       - name: Product-sign .pkg for Mac App Store
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -357,7 +374,7 @@ jobs:
           CODE_SIGN_IDENTITY = Developer ID Application
           DEVELOPMENT_TEAM = $TEAM_ID
           PROVISIONING_PROFILE_SPECIFIER =
-          # Developer ID builds need the hardened runtime for notarytool.
+          // Developer ID builds need the hardened runtime for notarytool.
           ENABLE_HARDENED_RUNTIME = YES
           EOF
 
