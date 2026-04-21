@@ -494,12 +494,19 @@ jobs:
             --wait \
             --timeout 20m \
             --no-s3-acceleration \
-            --output-format json)
+            --output-format json 2>&1)
           NOTARY_EXIT=$?
           set -e
           echo "$SUBMIT_JSON"
-          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""')
-          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"')
+          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""' 2>/dev/null)
+          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"' 2>/dev/null)
+          # Paranoid fallback: if notarytool printed progress lines before
+          # the terminal JSON, or jq choked on multi-line output, pull any
+          # UUID-shaped string from the raw capture so the log-fetch can
+          # still run.
+          if [ -z "$SUB_ID" ]; then
+            SUB_ID=$(echo "$SUBMIT_JSON" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          fi
           if [ "$STATUS" != "Accepted" ]; then
             echo "::error::Notarization returned status='$STATUS' (notarytool exit=$NOTARY_EXIT)."
             if [ -n "$SUB_ID" ]; then
@@ -552,12 +559,19 @@ jobs:
             --wait \
             --timeout 20m \
             --no-s3-acceleration \
-            --output-format json)
+            --output-format json 2>&1)
           NOTARY_EXIT=$?
           set -e
           echo "$SUBMIT_JSON"
-          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""')
-          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"')
+          SUB_ID=$(echo "$SUBMIT_JSON" | jq -r '.id // ""' 2>/dev/null)
+          STATUS=$(echo "$SUBMIT_JSON" | jq -r '.status // "Unknown"' 2>/dev/null)
+          # Paranoid fallback: if notarytool printed progress lines before
+          # the terminal JSON, or jq choked on multi-line output, pull any
+          # UUID-shaped string from the raw capture so the log-fetch can
+          # still run.
+          if [ -z "$SUB_ID" ]; then
+            SUB_ID=$(echo "$SUBMIT_JSON" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          fi
           if [ "$STATUS" != "Accepted" ]; then
             echo "::error::DMG notarization returned status='$STATUS' (notarytool exit=$NOTARY_EXIT)."
             if [ -n "$SUB_ID" ]; then
