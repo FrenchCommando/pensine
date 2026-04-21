@@ -13,7 +13,8 @@ void listenForPendingImports(void Function(String content) onImport) {
       (Platform.isAndroid ||
           Platform.isIOS ||
           Platform.isMacOS ||
-          Platform.isWindows)) {
+          Platform.isWindows ||
+          Platform.isLinux)) {
     _observer = _PendingImportObserver();
     WidgetsBinding.instance.addObserver(_observer!);
   }

@@ -5,7 +5,44 @@
 #include <gdk/gdkx.h>
 #endif
 
+#include <string>
+
 #include "flutter/generated_plugin_registrant.h"
+
+// Mirrors windows/runner/utils.cpp::HandleIncomingPensineFile.
+// Nautilus / any .desktop-aware file manager launches `pensine <path>`
+// when a .pensine file is opened. The Dart side (pending_import_native.dart)
+// polls `${g_get_tmp_dir()}/pensine_incoming.pensine` on cold launch and on
+// AppLifecycleState.resumed; all we have to do here is copy the file's
+// bytes into that well-known location before the Flutter engine spins up.
+// First `.pensine` argument wins; cap at 10 MB to match the Dart import cap.
+static void HandleIncomingPensineFile(gchar** arguments) {
+  if (arguments == nullptr) return;
+  const gsize kMaxBytes = 10 * 1024 * 1024;
+  const std::string suffix = ".pensine";
+
+  for (gchar** p = arguments; *p != nullptr; ++p) {
+    const std::string arg = *p;
+    if (arg.size() < suffix.size()) continue;
+    bool match = true;
+    for (size_t i = 0; i < suffix.size(); ++i) {
+      gchar c = arg[arg.size() - suffix.size() + i];
+      if (g_ascii_tolower(c) != suffix[i]) { match = false; break; }
+    }
+    if (!match) continue;
+
+    g_autofree gchar* contents = nullptr;
+    gsize length = 0;
+    g_autoptr(GError) err = nullptr;
+    if (!g_file_get_contents(arg.c_str(), &contents, &length, &err)) continue;
+    if (length == 0 || length > kMaxBytes) continue;
+
+    g_autofree gchar* out_path =
+        g_build_filename(g_get_tmp_dir(), "pensine_incoming.pensine", nullptr);
+    g_file_set_contents(out_path, contents, length, nullptr);
+    return;  // first .pensine arg wins
+  }
+}
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -85,6 +122,10 @@ static gboolean my_application_local_command_line(GApplication* application,
   MyApplication* self = MY_APPLICATION(application);
   // Strip out the first argument as it is the binary name.
   self->dart_entrypoint_arguments = g_strdupv(*arguments + 1);
+
+  // Before Flutter starts, drop any incoming .pensine file into the
+  // well-known temp location that pending_import_native.dart polls.
+  HandleIncomingPensineFile(self->dart_entrypoint_arguments);
 
   g_autoptr(GError) error = nullptr;
   if (!g_application_register(application, nullptr, &error)) {

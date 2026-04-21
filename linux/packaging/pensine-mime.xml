@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-pensine">
+    <comment>Pensine workspace</comment>
+    <glob pattern="*.pensine"/>
+    <icon name="pensine"/>
+  </mime-type>
+</mime-info>

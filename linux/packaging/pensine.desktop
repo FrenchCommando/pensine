@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Pensine
+GenericName=Notes
+Comment=A fun, visual notes app where ideas float as marbles.
+Exec=pensine %F
+Icon=pensine
+Terminal=false
+Categories=Office;Utility;
+MimeType=application/x-pensine;
+StartupWMClass=com.frenchcommando.pensine

@@ -127,6 +127,26 @@ Both attached to the release tagged `build-<run_number>` via `softprops/action-g
 
 **Uninstall** is handled by the Inno-generated `unins000.exe` plus the standard Settings → Apps → Pensine entry. Every `[Registry]` line uses `uninsdeletevalue` / `uninsdeletekey` flags so the file association cleans up. User data under `%APPDATA%\pensine\` is intentionally preserved across uninstall/reinstall — `path_provider` writes there, outside `{app}`, so the uninstaller never touches it. The portable zip has no uninstaller — `delete the folder` is the uninstall path.
 
+## Linux — AppImage + .deb (GitHub Release only)
+
+Linux ships two unsigned artifacts on every GitHub Release alongside the APK / .dmg / Windows assets:
+
+- **AppImage** — `pensine-v<version>-build<N>-linux-x86_64.AppImage`. Single self-contained file. Chmod +x, double-click (or run from a terminal). Works on any reasonably modern glibc-based distro (Ubuntu 20.04+, Fedora, Arch, Debian stable, etc.). No install step, no system integration, no uninstaller — delete the file to remove.
+- **.deb** — `pensine-v<version>-build<N>-linux-amd64.deb`. Debian/Ubuntu native install: `sudo apt install ./pensine-...deb`. Installs to `/usr/lib/pensine/`, drops a shim at `/usr/bin/pensine`, registers the `.desktop` entry (app launcher menu), the icon, and the `.pensine` MIME type (`application/x-pensine`). Uninstall via `sudo apt remove pensine`. Not signed, no GPG key — apt will warn once about "untrusted origin," same as every sideloaded .deb.
+
+Both come from the `linux-release` job in `release.yml` running on `ubuntu-latest`:
+- Install build deps (`clang cmake ninja-build pkg-config libgtk-3-dev libfuse2`)
+- `flutter build linux --release` → `build/linux/x64/release/bundle/*`
+- `linux/packaging/build_deb.sh` stages the install tree, writes `DEBIAN/control` with declared deps (`libgtk-3-0`, `libglib2.0-0`, `libstdc++6`, `libc6`), runs `dpkg-deb --build` → the .deb
+- `linux/packaging/build_appimage.sh` stages an `AppDir`, downloads `linuxdeploy` + `linuxdeploy-plugin-gtk` into a tmp dir (nothing checked in), `--appimage-extract`s linuxdeploy to sidestep the GHA runner's FUSE policy, runs it against the AppDir → the AppImage
+- Both uploaded via `softprops/action-gh-release@v2` to the same `build-<run_number>` tag as every other platform.
+
+**File association** is declared in `linux/packaging/pensine-mime.xml` (`application/x-pensine` for `*.pensine`) and referenced from `linux/packaging/pensine.desktop` (`MimeType=application/x-pensine;`). The .deb's `postinst` / `postrm` run `update-mime-database` + `update-desktop-database` + `gtk-update-icon-cache` so the association is live immediately, no re-login. AppImage carries the same `.desktop` + MIME files inside; desktop integration kicks in if the user has `appimaged` installed (optional; the binary runs fine without it — just no menu entry). The C++ runner picks up a `.pensine` path from `argv[1]` the same way the Windows runner does; the existing `pending_import_native.dart` polling pipeline handles the handoff to Dart.
+
+**Requirements (.deb):** Ubuntu 20.04+ / Debian 11+ or equivalent. GTK 3 is the only non-trivial dep and it's preinstalled on every desktop distro. **Requirements (AppImage):** glibc 2.31+ (same floor; AppImage bundles everything else).
+
+**Not pursued:** Flathub, Snap Store, distro-native repos (PPA, AUR, Fedora Copr). The AppImage+.deb combo covers ~95% of Linux desktop users with zero store-review latency and zero ongoing maintenance. Revisit if (a) we want the "auto-update from the store" experience, (b) a specific distro user base complains, or (c) the Flathub review value becomes worth it for discoverability.
+
 ## Microsoft Store (Windows)
 
 **Status: deferred indefinitely, not actively pursued.** The Inno Setup installer channel now fills the same user-facing role the Store would (proper install/uninstall, `.pensine` file association) without depending on a Store account, so the Store path is nice-to-have, not a gap.

@@ -139,3 +139,43 @@ jobs:
       - name: Run pending-import integration test
         shell: bash
         run: tool/run_windows_integration.sh integration_test/pending_import_test.dart
+
+  linux:
+    # Real shared_preferences + path_provider + argv .pensine handoff on
+    # Linux. pending_import_test.dart covers the native -> Dart hand-off
+    # that `my_application.cc::HandleIncomingPensineFile` writes to
+    # `${g_get_tmp_dir()}/pensine_incoming.pensine`; smoke_test.dart
+    # covers the rest of the app surface under the default Flutter GTK
+    # runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-flutter
+
+      - name: Install Linux build deps + Xvfb
+        # clang / cmake / ninja / gtk are the `flutter build linux` prereqs;
+        # xvfb gives us a virtual X display so the GTK app can render
+        # without a physical screen.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            xvfb
+
+      # Xvfb server on :99 so `flutter drive -d linux` has something to
+      # render into. Matches the iOS pattern of booting a simulator first.
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      # Same belt-and-suspenders pattern as Windows/macOS: tool script
+      # blocks local runs before build; workflow sets CI=true so both
+      # steps pass the guard on GHA.
+      - name: Run integration smoke test
+        run: tool/run_linux_integration.sh integration_test/smoke_test.dart
+
+      - name: Run pending-import integration test
+        run: tool/run_linux_integration.sh integration_test/pending_import_test.dart
