@@ -156,26 +156,31 @@ jobs:
       - name: Install Linux build deps + Xvfb
         # clang / cmake / ninja / gtk are the `flutter build linux` prereqs;
         # xvfb gives us a virtual X display so the GTK app can render
-        # without a physical screen.
+        # without a physical screen. No libstdc++-*-dev pin — Ubuntu's
+        # default (libstdc++-13-dev on 24.04) is what flutter needs.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libgtk-3-dev liblzma-dev \
             xvfb
 
       # Xvfb server on :99 so `flutter drive -d linux` has something to
-      # render into. Matches the iOS pattern of booting a simulator first.
+      # render into. Matches the iOS pattern of booting a simulator
+      # first. `nohup` + `/dev/null` redirect keeps the daemon alive
+      # across the step boundary — a bare `&` would let the shell's
+      # SIGHUP kill Xvfb when the step exits.
       - name: Start Xvfb
         run: |
-          Xvfb :99 -screen 0 1280x720x24 &
+          nohup Xvfb :99 -screen 0 1440x900x24 >/dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
 
       # Same belt-and-suspenders pattern as Windows/macOS: tool script
       # blocks local runs before build; workflow sets CI=true so both
-      # steps pass the guard on GHA.
+      # steps pass the guard on GHA. `bash` prefix avoids relying on
+      # the executable bit surviving a Windows-created git commit.
       - name: Run integration smoke test
-        run: tool/run_linux_integration.sh integration_test/smoke_test.dart
+        run: bash tool/run_linux_integration.sh integration_test/smoke_test.dart
 
       - name: Run pending-import integration test
-        run: tool/run_linux_integration.sh integration_test/pending_import_test.dart
+        run: bash tool/run_linux_integration.sh integration_test/pending_import_test.dart

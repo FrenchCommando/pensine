@@ -24,24 +24,28 @@ fi
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-# --- AppDir layout expected by linuxdeploy.
+# --- AppDir layout.
+#
+# Flutter's Linux bundle is pinned together: the binary locates its
+# flutter_assets/icudtl.dat via `/proc/self/exe` + `./data`, and finds
+# libflutter_linux_gtk.so + libapp.so + plugin .so's via the binary's
+# RPATH `$ORIGIN/lib` (set in linux/CMakeLists.txt). These three pieces
+# (binary, data/, lib/) have to stay siblings.
+#
+# Simplest AppDir layout that preserves the sibling relationship *and*
+# makes linuxdeploy trace the binary's system-lib deps: drop the whole
+# bundle flat into `usr/bin/`. linuxdeploy scans `usr/bin/*` by default,
+# picks up `pensine` as the main ELF, and follows its dependencies into
+# `usr/lib/` where linuxdeploy-plugin-gtk bundles GTK/glib/gdk libraries.
+# The AppImage runtime's default AppRun adds `usr/lib/` to LD_LIBRARY_PATH
+# so those system libs are found at launch.
 APPDIR="$WORK/pensine.AppDir"
 install -d "$APPDIR/usr/bin"
-install -d "$APPDIR/usr/lib/pensine"
 install -d "$APPDIR/usr/share/applications"
 install -d "$APPDIR/usr/share/icons/hicolor/512x512/apps"
 install -d "$APPDIR/usr/share/mime/packages"
 
-cp -r "$BUNDLE_DIR/." "$APPDIR/usr/lib/pensine/"
-# `Exec=pensine` in the .desktop expects $PATH — AppImage runtime puts
-# AppDir/usr/bin on PATH, so a thin wrapper there starts the real binary
-# from /usr/lib/pensine/ where its data/ and lib/ sit.
-cat > "$APPDIR/usr/bin/pensine" <<'EOF'
-#!/usr/bin/env bash
-DIR="$(dirname "$(readlink -f "$0")")"
-exec "$DIR/../lib/pensine/pensine" "$@"
-EOF
-chmod 755 "$APPDIR/usr/bin/pensine"
+cp -r "$BUNDLE_DIR/." "$APPDIR/usr/bin/"
 
 install -m 644 "$REPO_ROOT/linux/packaging/pensine.desktop" \
   "$APPDIR/usr/share/applications/pensine.desktop"
@@ -50,26 +54,40 @@ install -m 644 "$REPO_ROOT/linux/packaging/pensine-mime.xml" \
 install -m 644 "$REPO_ROOT/assets/app_icon.png" \
   "$APPDIR/usr/share/icons/hicolor/512x512/apps/pensine.png"
 
-# --- Download linuxdeploy + GTK plugin into $WORK.
+# --- Download tools into $WORK.
+# Three separate tools:
+#   linuxdeploy              — orchestrator (AppImage)
+#   linuxdeploy-plugin-gtk   — pulls in GTK themes, schemas, transitive deps (bash script)
+#   linuxdeploy-plugin-appimage — assembles the final .AppImage (AppImage; NOT bundled in linuxdeploy)
+# `linuxdeploy --output appimage` looks up `linuxdeploy-plugin-appimage`
+# on PATH at runtime — forgetting this one gives a cryptic "no plugin
+# found for 'appimage'" error deep in the build.
 TOOLS="$WORK/tools"
 install -d "$TOOLS"
 curl -sSL -o "$TOOLS/linuxdeploy" \
   https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
 curl -sSL -o "$TOOLS/linuxdeploy-plugin-gtk" \
   https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
-chmod +x "$TOOLS/linuxdeploy" "$TOOLS/linuxdeploy-plugin-gtk"
+curl -sSL -o "$TOOLS/linuxdeploy-plugin-appimage" \
+  https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+chmod +x "$TOOLS/linuxdeploy" "$TOOLS/linuxdeploy-plugin-gtk" "$TOOLS/linuxdeploy-plugin-appimage"
 
-# Some GHA runners have FUSE disabled; extract the linuxdeploy AppImage
-# and run it directly to avoid the "please install fuse" error.
-(cd "$TOOLS" && ./linuxdeploy --appimage-extract >/dev/null)
-LDEPLOY="$TOOLS/squashfs-root/AppRun"
+# APPIMAGE_EXTRACT_AND_RUN=1 tells the AppImage runtime to extract-and-run
+# instead of mount-via-FUSE — works on systems without a usable FUSE
+# setup (some container runners, hardened sandboxes). The env var
+# propagates to child AppImages (the plugin-appimage we just downloaded)
+# so both linuxdeploy itself and the plugin extract cleanly.
+# libfuse2 still needs to be installed on the host — the AppImage's
+# ELF launcher links against libfuse.so.2 at load time regardless of
+# whether FUSE mount is actually used.
+export APPIMAGE_EXTRACT_AND_RUN=1
 
 # --- Build the AppImage. LDAI_OUTPUT pins the output filename;
 # linuxdeploy's default embeds version/arch awkwardly.
 export LDAI_OUTPUT="$OUTPUT"
 export VERSION="${VERSION}-${BUILD_NUMBER}"
 
-PATH="$TOOLS:$PATH" "$LDEPLOY" \
+PATH="$TOOLS:$PATH" "$TOOLS/linuxdeploy" \
   --appdir "$APPDIR" \
   --plugin gtk \
   --desktop-file "$APPDIR/usr/share/applications/pensine.desktop" \
