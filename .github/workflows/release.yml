@@ -284,14 +284,19 @@ jobs:
             --build-number=${{ github.run_number }} \
             "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
-      - name: Re-sign .app with entitlements (MAS)
+      - name: Re-sign .app with entitlements + embed profile (MAS)
         # `flutter build macos` + xcconfig manual signing was observed to
-        # ship a binary without `com.apple.security.app-sandbox` embedded,
-        # which App Store Connect's uploader rejects with
-        # "App sandbox not enabled". Re-sign inside-out with explicit
-        # entitlements to guarantee the flag lands in the final signature.
+        # ship a binary without `com.apple.security.app-sandbox` embedded
+        # (App Store Connect rejects with "App sandbox not enabled") and
+        # without the MAS provisioning profile in `Contents/embedded.provisionprofile`
+        # (App Store Connect warns ITMS-90889 — TestFlight ineligible,
+        # blocks "Add for Review"). Fix both: copy the profile into the
+        # bundle, then re-sign inside-out with explicit entitlements so
+        # the new signature covers the profile file.
         run: |
           APP_PATH="build/macos/Build/Products/Release/pensine.app"
+          cp "$RUNNER_TEMP/mas_profile.provisionprofile" \
+             "$APP_PATH/Contents/embedded.provisionprofile"
           if [ -d "$APP_PATH/Contents/Frameworks" ]; then
             find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read fw; do
               codesign --force --sign "3rd Party Mac Developer Application" "$fw"
