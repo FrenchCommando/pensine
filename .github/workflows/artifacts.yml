@@ -73,6 +73,38 @@ jobs:
           name: preview-ios
           path: build/preview-ios.mp4
 
+  macos-screenshots:
+    # Flutter macOS app runs as a native process on the runner itself —
+    # no simulator boot, no status-bar override (no menu-bar override
+    # either for now; if captures look cluttered we'll add AppleScript
+    # hide-menu-bar + window-region crop). First-pass captures the full
+    # primary display via `screencapture -x`.
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+      - uses: ./.github/actions/setup-flutter
+
+      # Same retry pattern as ios-screenshots: GHA macOS runners
+      # occasionally hang on Xcode build with no output. Per-attempt
+      # timeout + one retry absorbs the typical one-shot flake.
+      - name: Run screenshot tests
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 12
+          max_attempts: 2
+          command: bash tool/run_macos_screenshot_test.sh
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots-macos
+          path: build/screenshots/
+
   android-screenshots:
     runs-on: ubuntu-latest
     timeout-minutes: 30

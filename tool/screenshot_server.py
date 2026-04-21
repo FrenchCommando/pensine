@@ -12,6 +12,10 @@ Modes:
   ios     — `xcrun simctl io <udid> screenshot <file>`. The sim shares the
             host's loopback, so plain HTTP on 127.0.0.1 is fine and no cert
             is needed.
+  macos   — `screencapture -x <file>` on the host itself (Flutter macOS app
+            runs in-process, not in a sim). Captures the full primary
+            display; cropping to just the Pensine window is a v2 problem if
+            the artifact ends up noisy. Plain HTTP on loopback, same as iOS.
 
 Why host-driven at all: `binding.takeScreenshot` / `convertFlutterSurfaceToImage`
 both hang on continuous-animation Flutter apps (the ticker calls setState
@@ -48,6 +52,16 @@ def capture_ios(out_path: Path, udid: str) -> None:
     subprocess.run(
         ["xcrun", "simctl", "io", udid, "screenshot",
          "--type=png", str(out_path)],
+        check=True,
+    )
+
+
+def capture_macos(out_path: Path) -> None:
+    # -x: suppress shutter sound · full primary display. Cropping to the
+    # Pensine window is deferred — if artifacts come back noisy we'll add
+    # AppleScript + screencapture -R <region>.
+    subprocess.run(
+        ["screencapture", "-x", str(out_path)],
         check=True,
     )
 
@@ -90,7 +104,7 @@ def make_handler(out_dir: Path, capture):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", required=True, choices=["android", "ios"])
+    ap.add_argument("--mode", required=True, choices=["android", "ios", "macos"])
     ap.add_argument("--udid", help="iOS simulator UDID (required for --mode ios)")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--out", required=True, type=Path)
@@ -101,10 +115,12 @@ def main():
 
     if args.mode == "android":
         capture = lambda path: capture_android(path)
-    else:
+    elif args.mode == "ios":
         if not args.udid:
             ap.error("--udid is required for --mode ios")
         capture = lambda path: capture_ios(path, args.udid)
+    else:  # macos
+        capture = lambda path: capture_macos(path)
 
     server = ThreadingHTTPServer(
         ("0.0.0.0", args.port), make_handler(args.out, capture)
