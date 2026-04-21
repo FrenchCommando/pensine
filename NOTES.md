@@ -286,3 +286,7 @@ Every bugfix or feature ships with a test. Unit/widget if `flutter_tester` can s
 ## App Store Deployment
 
 See `DEPLOYMENT.md` for full details.
+
+## Code Stats
+
+LOC-by-theme treemap + custom-vs-boilerplate split: see `STATS.md`.
