@@ -389,6 +389,24 @@ jobs:
             --build-number=${{ github.run_number }} \
             "--dart-define=BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')"
 
+      - name: Re-sign .app with Developer ID + hardened runtime (DMG)
+        # Build 31 notarization returned `status: Invalid` — exit 65 from
+        # the stapler, generic. Empirically (matches MAS pattern where
+        # xcconfig manual signing didn't embed sandbox) this is hardened
+        # runtime missing. Re-sign inside-out with `--options runtime` so
+        # notarytool accepts the binary.
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/pensine.app"
+          if [ -d "$APP_PATH/Contents/Frameworks" ]; then
+            find "$APP_PATH/Contents/Frameworks" -maxdepth 2 -name "*.framework" -type d | while read fw; do
+              codesign --force --sign "Developer ID Application" --options runtime --timestamp "$fw"
+            done
+          fi
+          codesign --force --sign "Developer ID Application" \
+            --entitlements macos/Runner/Release.entitlements \
+            --options runtime --timestamp \
+            "$APP_PATH"
+
       - name: Sign + notarize + staple
         env:
           APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
@@ -399,8 +417,8 @@ jobs:
 
           printf '%s' "$P8_BASE64" | tr -d ' \n\r\t' | base64 --decode > "$RUNNER_TEMP/asc_api_key.p8"
 
-          # `flutter build` signs with Developer ID (xcconfig above); zip
-          # the .app for notarytool, submit, wait, staple.
+          # Previous step re-signed the .app with Developer ID + hardened
+          # runtime. Zip it for notarytool, submit, wait, staple.
           ZIP_FOR_NOTARY="$RUNNER_TEMP/pensine-notary.zip"
           ditto -c -k --keepParent "$APP_PATH" "$ZIP_FOR_NOTARY"
 
