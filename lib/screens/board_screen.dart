@@ -82,6 +82,22 @@ class _BoardScreenState extends State<BoardScreen> {
     _stepStartTime = null;
   }
 
+  /// Reset everything a board can reset: item done flags, laps, flip state,
+  /// timers, and marble sizes. No-op for boards with nothing resettable
+  /// (e.g. thoughts, empty boards), so it's safe to bind to an always-on key.
+  void _resetBoard() {
+    setState(() {
+      for (final item in widget.board.items) {
+        item.done = false;
+      }
+      widget.board.laps.clear();
+      _anyFlipped = false;
+    });
+    _stopTimers();
+    _marbleBoardKey.currentState?.resetSizes();
+    widget.onChanged();
+  }
+
   /// Cancel tickers but keep [_timerStartTime] so the overlay keeps showing
   /// the final total after the last step completes.
   void _freezeTimers() {
@@ -177,7 +193,20 @@ class _BoardScreenState extends State<BoardScreen> {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyN): () => _itemDialog(),
-        const SingleActivator(LogicalKeyboardKey.keyT): () => _setTableMode(!widget.board.tableMode),
+        const SingleActivator(LogicalKeyboardKey.keyT): () =>
+            _setTableMode(!widget.board.tableMode),
+        // S = shake marbles (no-op in table mode, where there's no marble state).
+        const SingleActivator(LogicalKeyboardKey.keyS): () =>
+            _marbleBoardKey.currentState?.shake(),
+        // R = reset everything that can be reset (done flags, laps, timer,
+        // flip state, marble sizes). No-op on boards with no resettable state.
+        const SingleActivator(LogicalKeyboardKey.keyR): _resetBoard,
+        // D = toggle dark/light theme.
+        const SingleActivator(LogicalKeyboardKey.keyD): () =>
+            PensineApp.of(context)?.toggleBrightness(),
+        // A = about dialog.
+        const SingleActivator(LogicalKeyboardKey.keyA): () =>
+            showPensineAbout(context),
       },
       child: Focus(
         autofocus: true,
@@ -218,18 +247,7 @@ class _BoardScreenState extends State<BoardScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Reset',
-              onPressed: () {
-                setState(() {
-                  for (final item in widget.board.items) {
-                    item.done = false;
-                  }
-                  widget.board.laps.clear();
-                  _anyFlipped = false;
-                });
-                _stopTimers();
-                _marbleBoardKey.currentState?.resetSizes();
-                widget.onChanged();
-              },
+              onPressed: _resetBoard,
             ),
           IconButton(
             icon: Icon(widget.board.tableMode ? Icons.bubble_chart : Icons.table_chart_outlined),

@@ -104,10 +104,20 @@
 - Quicksand font bundled in `assets/fonts/` (no internet needed on first launch)
 
 ## Keyboard (desktop / web)
-- Shortcuts are wired via `CallbackShortcuts` at the Scaffold root (`Focus(autofocus: true)` wrapper so they fire with no other focus). Bindings: `N` = new item (board screen), `T` = toggle marble/table view, `Ctrl/Cmd+N` = new board (home screen).
-- Item dialog: plain `Enter` submits, wired via `CallbackShortcuts` around the `AlertDialog` (Flutter has no "default button" concept — without this wrapper Enter only activates the focused button). Multiline `TextField`s (description only) consume Enter as newline before it bubbles; single-line fields (title, back, duration) let it through. `includeRepeats: false` guards against held-Enter double-submit.
+- Shortcuts wired via `CallbackShortcuts` at the Scaffold root (`Focus(autofocus: true)` wrapper so they fire with no other focus).
+  - **Home screen:** `Ctrl/Cmd+N` = new board.
+  - **Board screen (all board types):** `N` = new item, `T` = toggle marble/table view, `S` = shake marbles (no-op in table mode), `R` = reset (clears done flags, laps, flip state, timers — no-op if nothing to reset), `D` = toggle dark/light theme, `A` = about dialog.
+  - Single-letter bindings are swallowed by focused TextFields, so typing `R` in an item dialog inserts `R` (doesn't fire reset). Dialog route scope also traps shortcuts away from the board scaffold.
+- **Item dialog keyboard nav:** `Tab` moves through title → description → back → duration → color picker (as one stop) → size slider → buttons. `Enter` submits (via the dialog's own `CallbackShortcuts`; Flutter has no "default button" concept). Multiline description consumes Enter as newline; single-line fields let it through. `includeRepeats: false` guards against held-Enter double-submit.
+- **Color picker is a radio group**, not N-tab-stops. Tab enters, arrow keys (↑↓←→) move selection + wrap at edges, Tab leaves. Selected swatch's ring thickens while the group has focus so users can see they're in it. Same widget used everywhere a color is picked (new/edit item, workspace color).
+- **Table mode is keyboard-navigable.** One tab stop for the whole table. `↑/↓` moves a selection highlight (focus ring + tinted row bg + colored left edge), `E` opens the edit dialog on the selected row, `Enter/Space` activates (toggles done / advances step / etc. — matches mouse click). Selection survives reorder and clamps on delete.
 - **Title and back are single-line; only description is multiline.** UX rule — keeps Enter-submits predictable everywhere except the one field that actually needs newlines. If you need more room on a flashcard answer, put it in the description (which now renders on the flipped card).
 - About dialog lists the shortcuts gated on `kIsWeb || desktop` — Android/iOS builds never show the section.
+
+## Desktop pointer UX
+- `lib/utils/platform.dart::isDesktopUX` = true on native Windows/macOS/Linux and on web when `defaultTargetPlatform` reports a desktop OS (web-mobile browsers report android/iOS, so they stay touch). Drives the "right-click not long-press" swap below.
+- **Edit gesture split.** Marble mode: right-click (`onSecondaryTapDown`) on a marble opens the edit dialog; right-click empty space opens the new-item dialog. Table mode: right-click (`onSecondaryTap`) on a row opens edit, right-click empty-state opens new-item. Long-press is disabled on desktop so a mouse click-and-hold doesn't fire the wrong action. On touch (android/iOS/web-mobile) long-press still works, no right-click wired.
+- Empty-state hint text adapts (`Right-click to add something.` on desktop vs `Long-press to add something.` on touch).
 
 ## Export / Import
 - `.pensine` file format spec: see `PENSINE_FORMAT.md`

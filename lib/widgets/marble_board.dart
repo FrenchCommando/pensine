@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../models/board.dart';
 import '../theme.dart';
+import '../utils/platform.dart';
 
 /// When true, the marble physics ticker early-returns. Screenshot tests
 /// toggle this so the captured frame is stable and `binding.takeScreenshot`
@@ -480,14 +481,31 @@ class MarbleBoardState extends State<MarbleBoard>
               }
             }
           },
-          onLongPressStart: (details) {
-            final idx = _hitTest(details.localPosition);
-            if (idx != null && widget.onLongPress != null) {
-              widget.onLongPress!(_marbles[idx].item);
-            } else if (idx == null && widget.onLongPressEmpty != null) {
-              widget.onLongPressEmpty!();
-            }
-          },
+          // Long-press opens the edit dialog on touch platforms. Omitted on
+          // desktop — right-click (onSecondaryTapDown below) replaces it.
+          onLongPressStart: isDesktopUX
+              ? null
+              : (details) {
+                  final idx = _hitTest(details.localPosition);
+                  if (idx != null && widget.onLongPress != null) {
+                    widget.onLongPress!(_marbles[idx].item);
+                  } else if (idx == null && widget.onLongPressEmpty != null) {
+                    widget.onLongPressEmpty!();
+                  }
+                },
+          // Desktop edit/add shortcut: right-click an item to edit, right-click
+          // empty space to add. Same onLongPress/onLongPressEmpty callbacks —
+          // opens the _ItemDialog either way.
+          onSecondaryTapDown: !isDesktopUX
+              ? null
+              : (details) {
+                  final idx = _hitTest(details.localPosition);
+                  if (idx != null && widget.onLongPress != null) {
+                    widget.onLongPress!(_marbles[idx].item);
+                  } else if (idx == null && widget.onLongPressEmpty != null) {
+                    widget.onLongPressEmpty!();
+                  }
+                },
           child: Semantics(
             label: '${widget.boardType.name} board with ${widget.items.length} items',
             child: CustomPaint(

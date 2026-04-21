@@ -88,12 +88,11 @@ Both attached to the release tagged `build-<run_number>` via `softprops/action-g
 
 ## Microsoft Store (Windows)
 
-Deferred until Partner Center individual-developer registration
-unblocks. The MSIX pipeline stays in place but gates on
-`MSIX_PUBLISHER` secret being set — until that lands, MSIX build +
-WACK validation are skipped automatically. When the account comes
-through, setting the 4 `MSIX_*` secrets re-enables the full flow with
-zero code change.
+**Status: deferred indefinitely, not actively pursued.** The Inno Setup installer channel now fills the same user-facing role the Store would (proper install/uninstall, `.pensine` file association) without depending on a Store account, so the Store path is nice-to-have, not a gap.
+
+Background: Partner Center individual-developer registration (free, ID-verified) has been unreliable in practice — signup flow errors with no clear remediation. Don't interpret the dormant MSIX pipeline as "one step away from shipping" — it's been tried. Only revisit if Microsoft fixes the signup flow or we decide the Store listing itself adds enough marketing value to push through the friction.
+
+If the account ever does come through, the plumbing is already in place: the MSIX pipeline in `ci.yml` + `pubspec.yaml` gates on the `MSIX_PUBLISHER` secret, so MSIX build + WACK validation are skipped automatically until that lands. Setting the 4 `MSIX_*` secrets re-enables the full flow with zero code change.
 
 **Account:** Microsoft Partner Center — **free** for individual developers at `partner.microsoft.com/dashboard` (new onboarding flow, ~200 markets). Identity is verified via government-issued ID + selfie (MFA enforced); verified data auto-fills the developer profile, then redirects to Partner Center. Account is tied to a Microsoft account (personal MSA or work/school Azure AD) — ownership is hard to transfer, so pick deliberately. (Historical: the $19 one-time fee was waived for individuals in the new flow; organization accounts still pay.)
 
