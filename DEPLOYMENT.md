@@ -61,8 +61,8 @@
 
 Windows ships two artifacts on every GitHub Release alongside the APK:
 
-- **Installer** — `pensine-v<version>-build<N>-setup.exe`. Per-user install (no admin), Start Menu entry, `.pensine` file association, proper uninstaller. Recommended path.
-- **Sideload zip** — `pensine-v<version>-build<N>-windows.zip`. Extract anywhere, run `pensine.exe`. No file association, no uninstaller. Useful for portable/USB-stick use.
+- **Installer** — `pensine-v<version>-build<N>-setup.exe`. Per-user install (no admin), Start Menu entry, `.pensine` file association, proper uninstaller. Recommended path for most users.
+- **Portable zip** — `pensine-v<version>-build<N>-windows.zip`. Extract anywhere, run `pensine.exe`. No file association, no uninstaller. Use case: USB-stick installs, locked-down corporate PCs that block installers but allow zip extraction, or anyone who wants to leave no trace on the host machine.
 
 **Requirements:** Windows 10 version 1809 (build 17763) or later, on an x64 PC or an ARM64 Windows 11 PC. Enforced by the installer via `MinVersion=10.0.17763` + `ArchitecturesAllowed=x64compatible` in `pensine.iss` — wrong-OS / wrong-CPU users see a single "you need …" dialog instead of the cryptic Inno Setup default.
 
@@ -83,6 +83,8 @@ Both attached to the release tagged `build-<run_number>` via `softprops/action-g
 `ci.yml`'s `build-windows` job additionally uploads both as workflow artifacts on every push/PR, so any green build is downloadable for QA without cutting a formal release.
 
 **File association** comes from registry entries in the Inno Setup script (`windows/installer/pensine.iss`): `.pensine` → `Pensine.Workspace` ProgId → `pensine.exe "%1"`. The C++ runner (`windows/runner/utils.cpp::HandleIncomingPensineFile`) reads `argv` for the first `.pensine` path, copies its bytes to `%TEMP%\pensine_incoming.pensine`, and the existing Dart polling pipeline (`pending_import_native.dart`) picks it up on cold launch — same handoff pattern as iOS/Android.
+
+**Uninstall** is handled by the Inno-generated `unins000.exe` plus the standard Settings → Apps → Pensine entry. Every `[Registry]` line uses `uninsdeletevalue` / `uninsdeletekey` flags so the file association cleans up. User data under `%APPDATA%\pensine\` is intentionally preserved across uninstall/reinstall — `path_provider` writes there, outside `{app}`, so the uninstaller never touches it. The portable zip has no uninstaller — `delete the folder` is the uninstall path.
 
 ## Microsoft Store (Windows)
 

@@ -29,10 +29,12 @@ Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/
 
 **Windows:** requires **Windows 10 (version 1809) or later, on an x64 PC or Windows 11 ARM64**. Two options on the [latest release page](https://github.com/FrenchCommando/pensine/releases/latest):
 
-- `pensine-v*-setup.exe` — installer (recommended): Start Menu entry, `.pensine` file association, proper uninstaller.
-- `pensine-v*-windows.zip` — portable: extract, run `pensine.exe`.
+- `pensine-v*-setup.exe` — **installer (recommended for most users)**: Start Menu entry, `.pensine` file association, proper uninstaller.
+- `pensine-v*-windows.zip` — **portable build**: extract anywhere, run `pensine.exe`. Use this for USB-stick installs, locked-down PCs where you can't run installers, or to leave no trace on the host machine.
 
 Both are unsigned while Microsoft Store listing is pending — SmartScreen warns on first launch; click "More info → Run anyway".
+
+To uninstall the installer build: Settings → Apps → Pensine → Uninstall (or use the "Uninstall Pensine" shortcut in the Start Menu folder). Removes all installed files and the `.pensine` file association. Your boards and workspaces live under `%APPDATA%\pensine\` and are kept on uninstall — delete that folder by hand if you want a clean wipe, or use the in-app **About → Reset** before uninstalling. To uninstall the portable zip: just delete the extracted folder.
 
 ## Board Types
 
