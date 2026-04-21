@@ -83,6 +83,27 @@ jobs:
           path: ${{ env.ZIP_NAME }}
           if-no-files-found: error
 
+      # Inno Setup installer: Start Menu entry, .pensine file association,
+      # uninstaller. Uploaded as a workflow artifact on every push/PR so any
+      # green build is downloadable for QA without cutting a release.
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          ISCC.exe `
+            /DAppVersion=${env:PENSINE_VERSION} `
+            /DBuildNumber=${{ github.run_number }} `
+            windows\installer\pensine.iss
+          $installer = "build\windows\installer\pensine-v${env:PENSINE_VERSION}-build${{ github.run_number }}-setup.exe"
+          if (-not (Test-Path $installer)) { throw "Installer not produced at $installer" }
+          "INSTALLER_PATH=$installer" >> $env:GITHUB_ENV
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pensine-windows-setup-build-${{ github.run_number }}
+          path: ${{ env.INSTALLER_PATH }}
+          if-no-files-found: error
+
       - name: Check if MSIX secrets are configured
         id: msix_check
         shell: bash

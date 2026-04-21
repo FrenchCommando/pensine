@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <windows.h>
 
+#include <cctype>
 #include <iostream>
 
 void CreateAndAttachConsole() {
@@ -39,6 +40,61 @@ std::vector<std::string> GetCommandLineArguments() {
   ::LocalFree(argv);
 
   return command_line_arguments;
+}
+
+void HandleIncomingPensineFile(const std::vector<std::string>& args) {
+  constexpr size_t kMaxBytes = 10 * 1024 * 1024;  // matches Dart-side import cap
+  const std::string suffix = ".pensine";
+
+  for (const auto& arg : args) {
+    if (arg.size() < suffix.size()) continue;
+    bool match = true;
+    for (size_t i = 0; i < suffix.size(); ++i) {
+      char c = arg[arg.size() - suffix.size() + i];
+      if (std::tolower(static_cast<unsigned char>(c)) != suffix[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (!match) continue;
+
+    int wide_len = ::MultiByteToWideChar(CP_UTF8, 0, arg.c_str(), -1, nullptr, 0);
+    if (wide_len <= 0) continue;
+    std::vector<wchar_t> wide_path(wide_len);
+    ::MultiByteToWideChar(CP_UTF8, 0, arg.c_str(), -1, wide_path.data(), wide_len);
+
+    HANDLE src = ::CreateFileW(wide_path.data(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (src == INVALID_HANDLE_VALUE) continue;
+
+    LARGE_INTEGER size{};
+    if (!::GetFileSizeEx(src, &size) || size.QuadPart <= 0 ||
+        static_cast<size_t>(size.QuadPart) > kMaxBytes) {
+      ::CloseHandle(src);
+      continue;
+    }
+
+    std::vector<char> buffer(static_cast<size_t>(size.QuadPart));
+    DWORD read = 0;
+    BOOL ok = ::ReadFile(src, buffer.data(), static_cast<DWORD>(buffer.size()),
+                         &read, nullptr);
+    ::CloseHandle(src);
+    if (!ok || read == 0) continue;
+
+    wchar_t temp_dir[MAX_PATH];
+    DWORD temp_len = ::GetTempPathW(MAX_PATH, temp_dir);
+    if (temp_len == 0 || temp_len >= MAX_PATH) continue;
+    std::wstring out_path(temp_dir);
+    out_path += L"pensine_incoming.pensine";
+
+    HANDLE dst = ::CreateFileW(out_path.c_str(), GENERIC_WRITE, 0, nullptr,
+                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (dst == INVALID_HANDLE_VALUE) continue;
+    DWORD written = 0;
+    ::WriteFile(dst, buffer.data(), read, &written, nullptr);
+    ::CloseHandle(dst);
+    return;  // first .pensine arg wins
+  }
 }
 
 std::string Utf8FromUtf16(const wchar_t* utf16_string) {

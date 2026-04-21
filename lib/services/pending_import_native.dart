@@ -9,7 +9,8 @@ void listenForPendingImports(void Function(String content) onImport) {
   _currentListener = onImport;
   _checkForIncomingFile();
 
-  if (_observer == null && (Platform.isAndroid || Platform.isIOS)) {
+  if (_observer == null &&
+      (Platform.isAndroid || Platform.isIOS || Platform.isWindows)) {
     _observer = _PendingImportObserver();
     WidgetsBinding.instance.addObserver(_observer!);
   }

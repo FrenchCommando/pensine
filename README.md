@@ -27,7 +27,12 @@ Or sideload the [latest APK](https://github.com/FrenchCommando/pensine/releases/
 
 **iOS beta (TestFlight):** [join the beta](https://testflight.apple.com/join/KDHvbWKH) — tap the link on iPhone/iPad; installs the TestFlight app if needed.
 
-**Windows:** download the [latest zip](https://github.com/FrenchCommando/pensine/releases/latest), extract, run `pensine.exe`. SmartScreen warns on first launch — click "More info → Run anyway" (the build is unsigned while Microsoft Store listing is pending).
+**Windows:** requires **Windows 10 (version 1809) or later, on an x64 PC or Windows 11 ARM64**. Two options on the [latest release page](https://github.com/FrenchCommando/pensine/releases/latest):
+
+- `pensine-v*-setup.exe` — installer (recommended): Start Menu entry, `.pensine` file association, proper uninstaller.
+- `pensine-v*-windows.zip` — portable: extract, run `pensine.exe`.
+
+Both are unsigned while Microsoft Store listing is pending — SmartScreen warns on first launch; click "More info → Run anyway".
 
 ## Board Types
 

@@ -16,4 +16,10 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string);
 // encoded in UTF-8. Returns an empty std::vector<std::string> on failure.
 std::vector<std::string> GetCommandLineArguments();
 
+// If `args` contains a path ending in `.pensine`, copies that file's contents
+// into `%TEMP%\pensine_incoming.pensine` so `pending_import_native.dart` picks
+// it up on cold launch. Mirrors the Android/iOS native -> Dart handoff: native
+// only ever writes the temp file, Dart only ever reads it.
+void HandleIncomingPensineFile(const std::vector<std::string>& args);
+
 #endif  // RUNNER_UTILS_H_
