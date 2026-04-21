@@ -44,7 +44,11 @@ install -m 644 "$REPO_ROOT/linux/packaging/pensine.desktop" \
   "$STAGE/usr/share/applications/pensine.desktop"
 install -m 644 "$REPO_ROOT/linux/packaging/pensine-mime.xml" \
   "$STAGE/usr/share/mime/packages/pensine.xml"
-install -m 644 "$REPO_ROOT/assets/app_icon.png" \
+# Reuse the 512x512 variant flutter_launcher_icons generates for macOS
+# (same source, same byte stream; regenerating via tool/generate_icon.*
+# keeps it in sync). Matches the hicolor/512x512 directory name, so
+# desktop environments that trust the directory name render crisply.
+install -m 644 "$REPO_ROOT/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png" \
   "$STAGE/usr/share/icons/hicolor/512x512/apps/pensine.png"
 
 # --- Installed-Size: KB, excluding DEBIAN/. dpkg-deb's default is correct

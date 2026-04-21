@@ -47,11 +47,20 @@ install -d "$APPDIR/usr/share/mime/packages"
 
 cp -r "$BUNDLE_DIR/." "$APPDIR/usr/bin/"
 
+# linuxdeploy rejects icons that aren't at a freedesktop canonical size
+# (8, 16, 22, 24, 32, 36, 42, 48, 64, 72, 96, 128, 160, 192, 256, 384,
+# 480, 512). Our source `assets/app_icon.png` is 1024x1024 — reuse the
+# 512x512 variant flutter_launcher_icons already generated under the
+# macOS asset catalog. Cross-platform-folder but it's the same byte
+# stream: pubspec.yaml's flutter_launcher_icons writes it from the same
+# source, and regenerating via tool/generate_icon.* keeps it in sync.
+ICON_512="$REPO_ROOT/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png"
+
 install -m 644 "$REPO_ROOT/linux/packaging/pensine.desktop" \
   "$APPDIR/usr/share/applications/pensine.desktop"
 install -m 644 "$REPO_ROOT/linux/packaging/pensine-mime.xml" \
   "$APPDIR/usr/share/mime/packages/pensine.xml"
-install -m 644 "$REPO_ROOT/assets/app_icon.png" \
+install -m 644 "$ICON_512" \
   "$APPDIR/usr/share/icons/hicolor/512x512/apps/pensine.png"
 
 # --- Download tools into $WORK.
@@ -91,7 +100,7 @@ PATH="$TOOLS:$PATH" "$TOOLS/linuxdeploy" \
   --appdir "$APPDIR" \
   --plugin gtk \
   --desktop-file "$APPDIR/usr/share/applications/pensine.desktop" \
-  --icon-file "$REPO_ROOT/assets/app_icon.png" \
+  --icon-file "$ICON_512" \
   --icon-filename pensine \
   --output appimage
 
