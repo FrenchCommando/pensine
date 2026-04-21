@@ -77,7 +77,21 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Create'));
     await settle(tester);
 
-    expect(find.text('Integration Test'), findsOneWidget,
-        reason: 'Newly-created board should appear on the home screen');
+    // Scope to the home Scaffold: on iOS the dialog's pop + keyboard-
+    // dismiss animation outruns settle's 5s budget, leaving the dialog's
+    // TextField still mounted with "Integration Test" in its controller.
+    // An unscoped `find.text` matches both the home-list Text *and* that
+    // live EditableText — the test failed with "found 2 widgets" for
+    // exactly this reason. AlertDialog lives in a route overlay, not
+    // inside Scaffold, so descendant-of-Scaffold restricts the match to
+    // the home screen regardless of dialog-dismiss timing.
+    expect(
+      find.descendant(
+        of: find.byType(Scaffold),
+        matching: find.text('Integration Test'),
+      ),
+      findsOneWidget,
+      reason: 'Newly-created board should appear on the home screen',
+    );
   });
 }
