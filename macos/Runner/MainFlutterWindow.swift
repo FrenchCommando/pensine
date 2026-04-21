@@ -24,4 +24,18 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
   }
+
+  // GHA's headless macOS runner ships a ~1024x768 virtual display.
+  // NSWindow's default constrainFrameRect shrinks any setFrame request
+  // to fit the visible screen area, turning our 1440x900 target into
+  // ~1024x681 (screen height minus menu bar + dock). Returning the
+  // frame unchanged lets the window keep its intended size — the
+  // window's backing store renders at full 1440x900 and
+  // `screencapture -l <windowID>` captures from the backing store,
+  // not the display, so the PNG lands at 1440x900 (or 2880x1800 on
+  // Retina) regardless of the physical screen size. Harmless for
+  // real users: their screens are already >= 1440x900.
+  override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+    return frameRect
+  }
 }
