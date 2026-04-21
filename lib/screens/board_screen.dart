@@ -38,7 +38,15 @@ class _BoardScreenState extends State<BoardScreen> {
   @override
   void initState() {
     super.initState();
-    WakelockPlus.enable();
+    // Best-effort: wakelock_plus on Linux talks to
+    // org.freedesktop.portal.Desktop over DBus, which isn't present on
+    // headless CI runners, minimal tiling-WM setups, or ssh+X11 sessions.
+    // A missing portal throws DBusServiceUnknownException asynchronously
+    // and kills integration tests / crashes the app on cold launch.
+    // Wakelock is a UX nicety; swallow the error everywhere.
+    WakelockPlus.enable().catchError((Object e) {
+      debugPrint('wakelock enable failed (ignored): $e');
+    });
     _initTimerState();
   }
 
@@ -52,7 +60,9 @@ class _BoardScreenState extends State<BoardScreen> {
     _uiTicker?.cancel();
     _countdownTimer?.cancel();
     _overlayTick.dispose();
-    WakelockPlus.disable();
+    WakelockPlus.disable().catchError((Object e) {
+      debugPrint('wakelock disable failed (ignored): $e');
+    });
     super.dispose();
   }
 
