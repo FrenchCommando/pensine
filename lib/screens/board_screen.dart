@@ -374,23 +374,52 @@ class _BoardScreenState extends State<BoardScreen> {
         },
       );
     }
-    return MarbleBoard(
-      key: _marbleBoardKey,
-      items: widget.board.items,
-      boardType: widget.board.type,
-      accentColor: widget.board.colorIndex >= 0 ? PensineColors.boardAccent(widget.board.colorIndex) : null,
-      onChanged: () {
-        setState(() {});
-        widget.onChanged();
-      },
-      onRemove: (item) {
-        setState(() => widget.board.items.remove(item));
-        widget.onChanged();
-      },
-      onTap: _handleItemTap,
-      onLongPress: (item) => _itemDialog(existing: item),
-      onLongPressEmpty: () => _itemDialog(),
-    );
+    MarbleBoard buildMarble() => MarbleBoard(
+          key: _marbleBoardKey,
+          items: widget.board.items,
+          boardType: widget.board.type,
+          accentColor: widget.board.colorIndex >= 0
+              ? PensineColors.boardAccent(widget.board.colorIndex)
+              : null,
+          onChanged: () {
+            setState(() {});
+            widget.onChanged();
+          },
+          onRemove: (item) {
+            setState(() => widget.board.items.remove(item));
+            widget.onChanged();
+          },
+          onTap: _handleItemTap,
+          onLongPress: (item) => _itemDialog(existing: item),
+          onLongPressEmpty: () => _itemDialog(),
+          countdownRemainingSeconds: _countdownRemainingForActive(),
+        );
+
+    // Countdown boards rebuild on the UI tick so the live remaining-seconds
+    // label on the active marble keeps refreshing. The physics ticker can
+    // be idle (active marble is static), so we drive repaints from the same
+    // _overlayTick that powers the timer overlay.
+    if (widget.board.type == BoardType.countdown && _stepStartTime != null) {
+      return ValueListenableBuilder<int>(
+        valueListenable: _overlayTick,
+        builder: (_, _, _) => buildMarble(),
+      );
+    }
+    return buildMarble();
+  }
+
+  /// Seconds remaining on the active step of a countdown board, clamped at 0.
+  /// Null on non-countdown boards or when no step is currently running.
+  int? _countdownRemainingForActive() {
+    if (widget.board.type != BoardType.countdown) return null;
+    if (_stepStartTime == null) return null;
+    final activeIndex = widget.board.items.indexWhere((i) => !i.done);
+    if (activeIndex < 0) return null;
+    final dur = widget.board.items[activeIndex].durationSeconds;
+    if (dur == null || dur <= 0) return null;
+    final elapsed = DateTime.now().difference(_stepStartTime!).inSeconds;
+    final remaining = dur - elapsed;
+    return remaining < 0 ? 0 : remaining;
   }
 
   Widget _sizeSlider(double value, ValueChanged<double> onChanged) {

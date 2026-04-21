@@ -65,6 +65,10 @@ class MarbleBoard extends StatefulWidget {
   final void Function(BoardItem)? onLongPress;
   final VoidCallback? onLongPressEmpty;
   final Color? accentColor;
+  /// Seconds remaining on the active step of a countdown board, or null when
+  /// not applicable (non-countdown board, all steps done, no timer running).
+  /// Painted next to the step number on the active marble.
+  final int? countdownRemainingSeconds;
 
   const MarbleBoard({
     super.key,
@@ -76,6 +80,7 @@ class MarbleBoard extends StatefulWidget {
     this.onLongPress,
     this.onLongPressEmpty,
     this.accentColor,
+    this.countdownRemainingSeconds,
   });
 
   @override
@@ -520,6 +525,7 @@ class MarbleBoardState extends State<MarbleBoard>
                 itemOrder: widget.items.map((i) => i.id).toList(),
                 accentColor: widget.accentColor,
                 tick: _tickCount,
+                countdownRemainingSeconds: widget.countdownRemainingSeconds,
               ),
             ),
           ),
@@ -539,6 +545,7 @@ class _MarblePainter extends CustomPainter {
   final List<String> itemOrder;
   final Color? accentColor;
   final int tick;
+  final int? countdownRemainingSeconds;
 
   _MarblePainter({
     required this.marbles,
@@ -550,6 +557,7 @@ class _MarblePainter extends CustomPainter {
     required this.itemOrder,
     required this.tick,
     this.accentColor,
+    this.countdownRemainingSeconds,
   });
 
   Color get _overlayColor => accentColor ?? (brightness == Brightness.dark ? Colors.white : Colors.black);
@@ -762,9 +770,40 @@ class _MarblePainter extends CustomPainter {
       if (isSequential) {
         final stepIndex = itemOrder.indexOf(m.item.id);
         if (stepIndex >= 0) {
+          // Label rules for the bottom-of-marble annotation:
+          //  * Start sentinel (index 0 on timer/countdown, per NOTES.md
+          //    "Start marble convention") — before it's tapped, shows
+          //    "tap to start" instead of a number; after, shows "1".
+          //  * Countdown step (non-start) — always shows `N (x/y)` where
+          //    y is `durationSeconds` and x is remaining (0 when done,
+          //    live value when active, y when not-yet-active).
+          //  * Everything else (timer non-start, checklist) — just `N`.
+          final isStartSentinel =
+              (boardType == BoardType.timer || boardType == BoardType.countdown) &&
+                  stepIndex == 0;
+          final total = m.item.durationSeconds;
+          String label;
+          if (isStartSentinel && !isDone) {
+            label = 'tap to start';
+          } else if (boardType == BoardType.countdown &&
+              !isStartSentinel &&
+              total != null) {
+            final int shown;
+            if (isDone) {
+              shown = 0;
+            } else if (m.item.id == activeSequentialId &&
+                countdownRemainingSeconds != null) {
+              shown = countdownRemainingSeconds!;
+            } else {
+              shown = total; // not-yet-active: full duration
+            }
+            label = '${stepIndex + 1} ($shown/$total)';
+          } else {
+            label = '${stepIndex + 1}';
+          }
           final stepPainter = TextPainter(
             text: TextSpan(
-              text: '${stepIndex + 1}',
+              text: label,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: isDone ? 0.4 : 0.7),
                 fontSize: r * 0.25,
@@ -847,5 +886,7 @@ class _MarblePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MarblePainter oldDelegate) => oldDelegate.tick != tick;
+  bool shouldRepaint(covariant _MarblePainter oldDelegate) =>
+      oldDelegate.tick != tick ||
+      oldDelegate.countdownRemainingSeconds != countdownRemainingSeconds;
 }
