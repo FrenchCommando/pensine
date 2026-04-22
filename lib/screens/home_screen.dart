@@ -601,7 +601,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.all(16),
+                  // Extra bottom padding clears the stacked FABs (small
+                  // + regular, ~108px) plus their 16px margin — without
+                  // it the last board's popup menu / drag handle sits
+                  // under the new-board button when scrolled to the end.
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
                   children: _ctrl.workspaces.map(_buildWorkspaceSection).toList(),
                 ),
       floatingActionButton: Column(
