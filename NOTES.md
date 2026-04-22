@@ -107,7 +107,7 @@
 
 ## Keyboard (desktop / web)
 - Shortcuts wired via `CallbackShortcuts` at the Scaffold root (`Focus(autofocus: true)` wrapper so they fire with no other focus).
-  - **Home screen:** `Ctrl/Cmd+N` = new board.
+  - **Home screen:** `Ctrl/Cmd+N` = new board, `Ctrl/Cmd+F` = open search.
   - **Board screen (all board types):** `N` = new item, `T` = toggle marble/table view, `S` = shake marbles (no-op in table mode), `R` = reset (clears done flags, laps, flip state, timers — no-op if nothing to reset), `D` = toggle dark/light theme, `A` = about dialog.
   - Single-letter bindings are swallowed by focused TextFields, so typing `R` in an item dialog inserts `R` (doesn't fire reset). Dialog route scope also traps shortcuts away from the board scaffold.
 - **Item dialog keyboard nav:** `Tab` moves through title → description → back → duration → color picker (as one stop) → size slider → buttons. `Enter` submits (via the dialog's own `CallbackShortcuts`; Flutter has no "default button" concept). Multiline description consumes Enter as newline; single-line fields let it through. `includeRepeats: false` guards against held-Enter double-submit.
@@ -141,10 +141,20 @@
 - Packages: `file_picker` (import + desktop save dialog), `share_plus` (mobile share sheet), `web` (web download)
 - Implementation in `lib/services/board_io.dart` with conditional imports for web vs native
 
+## Search
+
+- Entry points: search icon in the home-screen app bar, and `Ctrl/Cmd+F` shortcut. Opens `SearchScreen` (`lib/screens/search_screen.dart`).
+- Matching is pure + case-insensitive substring across workspace names, board names, and item text fields (`content`, `description`, `backContent`). Logic lives in `lib/behavior/board_search.dart::searchBoards` — same pattern as `applyBoardTap`: no widgets, trivially unit-testable (`test/board_search_test.dart`).
+- Results are grouped workspace → board → item; within each group ordered by earliest match position, so prefix hits float up. One hit per item even if multiple fields match. Hard cap at 200 results.
+- Tapping a result: workspace → uncollapse if collapsed (stay on home); board / item → push `BoardScreen`. Item matches navigate to the containing board but don't highlight the specific item yet — deferred until someone needs it.
+- **150 ms debounce** on the text field (`search_screen.dart::_debounceDelay`); clearing via the X button or empty string bypasses the debounce for instant UX. Debounce behaviour covered by widget tests in `test/search_screen_test.dart`.
+- Lists passed to `SearchScreen` are captured at push time — fine because the home screen mutation surface is closed while search is open.
+
 ## Architecture
 
 - **`BoardsController`** (`lib/controllers/boards_controller.dart`) is a `ChangeNotifier` that owns workspaces, boards, collapsed state, loading flag, and the persistence calls. `HomeScreen` holds one, listens for changes, and renders. Don't call `LocalStorage` from screens — go through the controller so mutations are atomic (in-memory + disk + notify).
 - **`applyBoardTap`** (`lib/behavior/board_tap.dart`) is a pure function that encodes per-board-type tap rules. Takes `(Board, BoardItem, stepStart?)`, mutates `board` in place, returns a `BoardTapOutcome` describing what the screen should do next (fire haptics, start/stop/freeze timers, persist). The screen stays thin — it's an orchestrator, not a state machine. `test/board_tap_test.dart` exercises every tap variant directly (no widget pump).
+- **`searchBoards`** (`lib/behavior/board_search.dart`) is a pure substring-search function returning typed `SearchMatch` records. Same pattern as `applyBoardTap`: `SearchScreen` is a dumb consumer, and navigation is dispatched by the `onSelect` callback in `HomeScreen`. See the Search section above for entry points and scope.
 - **Default seed data** lives in `lib/data/defaults.dart` as `buildDefaults()`. Used on first launch and after Reset. Pure data — no `build()`, no `BuildContext`.
 - **Adding a new board type**: (a) add the enum value + extension metadata in `lib/models/board.dart`; (b) add one case to the switch in `applyBoardTap`; (c) add any type-specific UI branches in `board_screen.dart` / `items_table.dart` / `marble_board.dart` only if the visual/interaction is genuinely different. The pre-refactor pattern of switch statements scattered across 5 files is the anti-pattern to avoid.
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../behavior/board_search.dart';
 import '../controllers/boards_controller.dart';
 import '../main.dart';
 import '../models/board.dart';
@@ -11,6 +12,7 @@ import '../utils/pluralize.dart';
 import '../widgets/about_dialog.dart';
 import '../widgets/color_picker.dart';
 import 'board_screen.dart';
+import 'search_screen.dart';
 
 enum _BoardAction { rename, changeType, changeColor, move, duplicate, export, delete }
 
@@ -294,6 +296,43 @@ class _HomeScreenState extends State<HomeScreen> {
     await _ctrl.boardChanged(board);
   }
 
+  Future<void> _openBoard(Board board) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BoardScreen(
+          board: board,
+          onChanged: () => _ctrl.saveBoard(board),
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  void _handleSearchSelection(SearchMatch match) {
+    switch (match.kind) {
+      case SearchMatchKind.workspace:
+        final ws = match.workspace!;
+        if (_ctrl.collapsed.contains(ws.id)) _ctrl.toggleCollapsed(ws.id);
+      case SearchMatchKind.board:
+      case SearchMatchKind.item:
+        _openBoard(match.board!);
+    }
+  }
+
+  void _openSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchScreen(
+          workspaces: _ctrl.workspaces,
+          boards: _ctrl.boards,
+          onSelect: _handleSearchSelection,
+        ),
+      ),
+    );
+  }
+
   void _showAbout() {
     final totalItems = _ctrl.boards.fold<int>(0, (sum, b) => sum + b.items.length);
     showPensineAbout(
@@ -369,18 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BoardScreen(
-                board: board,
-                onChanged: () => _ctrl.saveBoard(board),
-              ),
-            ),
-          );
-          setState(() {});
-        },
+        onTap: () => _openBoard(board),
       ),
     );
   }
@@ -509,6 +537,8 @@ class _HomeScreenState extends State<HomeScreen> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyN, control: true): () => _createBoard(),
         const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () => _createBoard(),
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _openSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _openSearch,
       },
       child: Focus(
         autofocus: true,
@@ -523,6 +553,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: _openSearch,
+          ),
           IconButton(
             icon: const Icon(Icons.file_open),
             tooltip: 'Import',
